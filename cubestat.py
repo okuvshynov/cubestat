@@ -44,7 +44,7 @@ def collect_metrics(m):
 auto_domains = ['ane_energy', 'nw i kbytes/s', 'nw o kbytes/s', 'disk r kbytes/s', 'disk w kbytes/s']
 all_cells = get_cells()
 cubes = {}
-width = 120
+width = 80
 
 def append_data(new_point):
     for k, v in new_point.items():
