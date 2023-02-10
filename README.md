@@ -7,7 +7,13 @@ Just prints things to stdout, refreshes every second, monitors:
 4. disk io
 5. network io
 
+No use of curses or any other terminal interactivity. Needs 256 colors terminal.
+
+Example: running [deep RL loop](https://github.com/okuvshynov/rlscout) (self play to generate data, model training, model evaluation) on a single MacBook Air:
+
+![Deep Rl horizon chart here](static/DeepRL_example.png)
+
 next:
 1. can add frequencies
-2. make more interactive, show values
-3. figure out what 'ane power consumption' is
+2. make more interactive
+3. figure out what 'ane power consumption' is, what's the %% here
