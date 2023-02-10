@@ -24,12 +24,12 @@ def horizon_line(series, domain, cells):
         b = a + 1
     clamp = lambda v, a, b: max(a, min(v, b))
     cell = lambda v: cells[clamp(int((v - a) * range / (b - a)), 0, range - 1)]
-    return ''.join([cell(v) for v in series]) + f' {series[-1]:.3f}'
+    return ''.join([cell(v) for v in series]) + f' {series[-1]:.1f}'
 
 def collect_metrics(m):
     res = {}
-    res['gpu util %'] = 1.0 - m['gpu']['idle_ratio']
-    res['ane_energy'] = m['processor']['ane_energy']
+    res['gpu util %'] = 100.0 - 100.0 * m['gpu']['idle_ratio']
+    res['ane_util %'] = 100.0 * m['processor']['ane_energy'] / 10000.0
     res['nw i kbytes/s'] = m['network']['ibyte_rate'] / 1024.0
     res['nw o kbytes/s'] = m['network']['obyte_rate'] / 1024.0
     res['disk r kbytes/s'] = m['disk']['rbytes_per_s'] / 1024.0
@@ -37,7 +37,7 @@ def collect_metrics(m):
 
     for cluster in m['processor']['clusters']:
         for cpu in cluster['cpus']:
-            res[f'{cluster["name"]} cpu {cpu["cpu"]} util %'] = 1.0 - cpu['idle_ratio']
+            res[f'{cluster["name"]} cpu {cpu["cpu"]} util %'] = 100.0 - 100.0 * cpu['idle_ratio']
 
     return res
 
@@ -60,11 +60,11 @@ def render():
     print('-' * width)
     for k, v in cubes.items():
         print(k)
-        domain = (0.0, None) if k in auto_domains else (0.0, 1.0)
+        domain = (0.0, None) if k in auto_domains else (0.0, 100.0)
         print(horizon_line(v, domain, all_cells))
 
 def start():
-    cmd = ['sudo', 'powermetrics', '-f', 'plist', '-o', '/tmp/cubestat', '-i', '5000']
+    cmd = ['sudo', 'powermetrics', '-f', 'plist', '-o', '/tmp/cubestat', '-i', '1000']
     try:
         os.remove('/tmp/cubestat')
     except FileNotFoundError:
