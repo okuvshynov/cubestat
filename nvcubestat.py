@@ -53,11 +53,22 @@ if __name__ == '__main__':
     nvsmi = nvidia_smi.getInstance()
     started = time.time()
     delay = freq_ms / 1000.0
+    v = []
+    last_len = 0
     for i in itertools.count(start=0):
         res = nvsmi.DeviceQuery('utilization.gpu')
         gpu_util = res['gpu'][0]['utilization']['gpu_util']
-        append_data({'gpu_util': gpu_util})
-        render()
+        v.append(gpu_util)
+        if len(v) > width:
+            v = v[1:]
+        sys.stdout.write('\r')
+        out = horizon_line(v, (0.0, 100.0), all_cells)
+        out_len = len(out)
+        if last_len > out_len:
+            out = out + ' ' * (last_len - out_len)
+        last_len = out_len
+        sys.stdout.write(out)
+        sys.stdout.flush()
         passed = time.time() - started
         expected_to_pass = i * delay
         time.sleep(delay - (passed - expected_to_pass))
