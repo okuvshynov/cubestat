@@ -1,7 +1,11 @@
-import itertools
 import sys
-import os
-import time
+
+# TODO:
+# -- add options
+#  - keep reading (like tail -f)
+#  - range options (min/max), (0/max), etc.
+#  - squash vs rotate vs newline
+#  - two lines mode
 
 def horizon_line(series, cells):
     if not series:
