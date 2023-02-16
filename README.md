@@ -17,3 +17,7 @@ next:
 1. can add frequencies
 2. make more interactive
 3. figure out what 'ane power consumption' is, what's the %% here
+
+
+For nvidia version, pip install pynvml
+
