@@ -30,45 +30,24 @@ def horizon_line(series, domain, cells):
 all_cells = get_cells()
 cubes = {}
 width = 80
-freq_ms = 500
+freq_ms = 1000
 
-def append_data(new_point):
-    for k, v in new_point.items():
-        if k not in cubes.keys():
-            cubes[k] = [v]
-        else:
-            cubes[k].append(v)
-            if (len(cubes[k]) > width):
-                cubes[k] = cubes[k][1:]
-
-def render():
-    print('\n' * 10)
-    print('-' * width)
-    for k, v in cubes.items():
-        print(k)
-        print(horizon_line(v, (0.0, 100.0), all_cells))
-
-# we treat ',' ' ' the same
 if __name__ == '__main__':
     nvsmi = nvidia_smi.getInstance()
     started = time.time()
     delay = freq_ms / 1000.0
-    v = []
-    last_len = 0
-    for i in itertools.count(start=0):
+    v = None
+    for it in itertools.count(start=0):
         res = nvsmi.DeviceQuery('utilization.gpu')
-        gpu_util = res['gpu'][0]['utilization']['gpu_util']
-        v.append(gpu_util)
-        if len(v) > width:
-            v = v[1:]
-        sys.stdout.write('\r')
-        out = horizon_line(v, (0.0, 100.0), all_cells)
-        out_len = len(out)
-        if last_len > out_len:
-            out = out + ' ' * (last_len - out_len)
-        last_len = out_len
-        sys.stdout.write(out)
-        sys.stdout.flush()
+        if v is None:
+            v = [[] for _ in res['gpu']]
+        for i in range(len(res['gpu'])):
+            v[i].append(res['gpu'][i]['utilization']['gpu_util'])
+            if len(v[i]) > width:
+                v[i] = v[i][1:]
+            print(horizon_line(v[i], (0.0, 100.0), all_cells))
         passed = time.time() - started
-        expected_to_pass = i * delay
-        time.sleep(delay - (passed - expected_to_pass))
+        expected_to_pass = it * delay
+        to_sleep = delay - (passed - expected_to_pass)
+        if to_sleep > 0:
+            time.sleep(to_sleep)
