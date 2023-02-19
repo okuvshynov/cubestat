@@ -4,6 +4,9 @@ import os
 import time
 from pynvml.smi import nvidia_smi
 
+# a version of cubestat which polls data from nvidia_smi
+# and shows per-GPU utilization
+
 def get_cells():
     chr = [' ', '▁', '▂', '▃', '▄', '▅', '▆', '▇', '█']
     rst = '\033[0m'
