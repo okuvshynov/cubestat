@@ -1,6 +1,4 @@
 import itertools
-import sys
-import os
 import time
 from pynvml.smi import nvidia_smi
 

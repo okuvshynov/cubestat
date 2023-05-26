@@ -1,7 +1,9 @@
-import os
 import plistlib
 import subprocess
-import time
+import logging
+import select
+
+logging.basicConfig(format='%(asctime)s %(message)s', filename='/tmp/cubestat.log', level=logging.INFO)
 
 def get_cells():
     chr = [' ', '▁', '▂', '▃', '▄', '▅', '▆', '▇', '█']
@@ -29,6 +31,8 @@ def horizon_line(series, domain, cells):
 def collect_metrics(m):
     res = {}
     res['gpu util %'] = 100.0 - 100.0 * m['gpu']['idle_ratio']
+
+    # is 10000 right here?
     res['ane_util %'] = 100.0 * m['processor']['ane_energy'] / 10000.0
     res['nw i kbytes/s'] = m['network']['ibyte_rate'] / 1024.0
     res['nw o kbytes/s'] = m['network']['obyte_rate'] / 1024.0
@@ -64,36 +68,28 @@ def render():
         print(horizon_line(v, domain, all_cells))
 
 def start():
-    cmd = ['sudo', 'powermetrics', '-f', 'plist', '-o', '/tmp/cubestat', '-i', '1000']
-    try:
-        os.remove('/tmp/cubestat')
-    except FileNotFoundError:
-        pass
+    cmd = ['sudo', 'powermetrics', '-f', 'plist', '-i', '1000']
 
-    subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    buf = bytearray()
+
     while True:
-        try:
-            curr = bytearray()
-            with open('/tmp/cubestat', 'rb') as f:
-                while True:
-                    data = f.read(2 ** 20)
-                    curr.extend(data)
-                    if b'</plist>\n' in curr:
-                        readings = bytes(curr).split(b'\x00')
-                        if not readings[-1].endswith(b'</plist>\n'):
-                            curr = bytearray(readings.pop())
-                        else:
-                            curr = bytearray()
+        read_ready, _, _ = select.select([p.stdout], [], [])
 
-                        for r in readings:
-                            if r:
-                                append_data(collect_metrics(plistlib.loads(r)))
-                        render()
-                    else:
-                        time.sleep(0.05)
+        buf.extend(p.stdout.readline())
+        if b'</plist>\n' in buf:
+            snapshots = bytes(buf).strip(b'\x00').split(b'\x00')
+            if not snapshots[-1].endswith(b'</plist>\n'):
+                buf = bytearray(snapshots.pop())
+            else:
+                buf = bytearray()
 
-        except FileNotFoundError:
-            time.sleep(0.05)
+            for s in snapshots:
+                append_data(collect_metrics(plistlib.loads(s)))
+            render()
+
+        if p.poll() != None:
+            break
 
 if __name__ == '__main__':
     start()
