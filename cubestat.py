@@ -1,16 +1,13 @@
 import plistlib
 import subprocess
-import logging
 import select
-
-logging.basicConfig(format='%(asctime)s %(message)s', filename='/tmp/cubestat.log', level=logging.INFO)
 
 def get_cells():
     chr = [' ', '▁', '▂', '▃', '▄', '▅', '▆', '▇', '█']
     rst = '\033[0m'
-    colors = [231, 194, 150, 107, 64, 22]
-    fg = [f'\33[38;5;{c}m' for c in colors]
-    bg = [f'\33[48;5;{c}m' for c in colors]
+    colors = [194, 150, 107, 64, 22]
+    fg = [''] + [f'\33[38;5;{c}m' for c in colors]
+    bg = [''] + [f'\33[48;5;{c}m' for c in colors]
     res = [f'{f}{b}{c}{rst}' for f, b in zip(fg[1:], bg[:-1]) for c in chr]
     res.append(f'{bg[-1]}{fg[0]} {rst}')
     return res
@@ -33,7 +30,7 @@ def collect_metrics(m):
     res['gpu util %'] = 100.0 - 100.0 * m['gpu']['idle_ratio']
 
     # is 10000 right here?
-    res['ane_util %'] = 100.0 * m['processor']['ane_energy'] / 10000.0
+    res['ane util %'] = 100.0 * m['processor']['ane_energy'] / 10000.0
     res['nw i kbytes/s'] = m['network']['ibyte_rate'] / 1024.0
     res['nw o kbytes/s'] = m['network']['obyte_rate'] / 1024.0
     res['disk r kbytes/s'] = m['disk']['rbytes_per_s'] / 1024.0
@@ -47,8 +44,9 @@ def collect_metrics(m):
 
 auto_domains = ['ane_energy', 'nw i kbytes/s', 'nw o kbytes/s', 'disk r kbytes/s', 'disk w kbytes/s']
 all_cells = get_cells()
+
 cubes = {}
-width = 150
+width = 80
 
 def append_data(new_point):
     for k, v in new_point.items():
@@ -63,9 +61,9 @@ def render():
     print('\n' * 10)
     print('-' * width)
     for k, v in cubes.items():
-        print(k)
+        print('╔'+k)
         domain = (0.0, None) if k in auto_domains else (0.0, 100.0)
-        print(horizon_line(v, domain, all_cells))
+        print('╚'+horizon_line(v, domain, all_cells))
 
 def start():
     cmd = ['sudo', 'powermetrics', '-f', 'plist', '-i', '1000']
