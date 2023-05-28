@@ -1,78 +1,75 @@
 import plistlib
 import subprocess
 import select
+import curses
+import argparse
+import collections
 
-def get_cells():
-    chr = [' ', '▁', '▂', '▃', '▄', '▅', '▆', '▇', '█']
-    rst = '\033[0m'
-    colors = [194, 150, 107, 64, 22]
-    fg = [''] + [f'\33[38;5;{c}m' for c in colors]
-    bg = [''] + [f'\33[48;5;{c}m' for c in colors]
-    res = [f'{f}{b}{c}{rst}' for f, b in zip(fg[1:], bg[:-1]) for c in chr]
-    res.append(f'{bg[-1]}{fg[0]} {rst}')
-    return res
+parser = argparse.ArgumentParser("cubestate monitoring")
+parser.add_argument('--refresh_ms', type=int, default=1000)
+parser.add_argument('--width', '-w', type=int, default=80)
+args = parser.parse_args()
 
-def horizon_line(series, domain, cells):
-    if not series:
-        return ''
-    range = len(cells)
-    (a, b) = domain
-    if b is None:
-        b = max(series)
-    if a == b:
-        b = a + 1
-    clamp = lambda v, a, b: max(a, min(v, b))
-    cell = lambda v: cells[clamp(int((v - a) * range / (b - a)), 0, range - 1)]
-    return ''.join([cell(v) for v in series]) + f' {series[-1]:.1f}'
+auto_domains = ['ane_energy', 'nw i kbytes/s', 'nw o kbytes/s', 'disk r kbytes/s', 'disk w kbytes/s']
+cubes = collections.defaultdict(lambda: collections.deque(maxlen=args.width))
 
-def collect_metrics(m):
-    res = {}
-    res['gpu util %'] = 100.0 - 100.0 * m['gpu']['idle_ratio']
+def gen_cells():
+    chrs = [' ', '▁', '▂', '▃', '▄', '▅', '▆', '▇', '█']
+    colors = [-1, 194, 150, 107, 64, 22]
+    color_pairs = list(zip(colors[1:], colors[:-1]))
+    for i, (fg, bg) in enumerate(color_pairs):
+        curses.init_pair(i + 1, fg, bg)
+    return [(chr, i + 1) for i in range(len(color_pairs)) for chr in chrs]
 
-    # is 10000 right here?
-    res['ane util %'] = 100.0 * m['processor']['ane_energy'] / 10000.0
-    res['nw i kbytes/s'] = m['network']['ibyte_rate'] / 1024.0
-    res['nw o kbytes/s'] = m['network']['obyte_rate'] / 1024.0
-    res['disk r kbytes/s'] = m['disk']['rbytes_per_s'] / 1024.0
-    res['disk w kbytes/s'] = m['disk']['wbytes_per_s'] / 1024.0
+def process_snapshot(m):
+    cubes['gpu util %'].append(100.0 - 100.0 * m['gpu']['idle_ratio'])
+    cubes['ane util %'].append(100.0 * m['processor']['ane_energy'] / 10000.0)
+    cubes['nw i kbytes/s'].append(m['network']['ibyte_rate'] / 1024.0)
+    cubes['nw o kbytes/s'].append(m['network']['obyte_rate'] / 1024.0)
+    cubes['disk r kbytes/s'].append(m['disk']['rbytes_per_s'] / 1024.0)
+    cubes['disk w kbytes/s'].append(m['disk']['wbytes_per_s'] / 1024.0)
 
     for cluster in m['processor']['clusters']:
         for cpu in cluster['cpus']:
-            res[f'{cluster["name"]} cpu {cpu["cpu"]} util %'] = 100.0 - 100.0 * cpu['idle_ratio']
+            cubes[f'{cluster["name"]} cpu {cpu["cpu"]} util %'].append(100.0 - 100.0 * cpu['idle_ratio'])
 
-    return res
+def render_curses(stdscr, cells):
+    stdscr.clear()
+    range = len(cells)
+    for i, (k, series) in enumerate(cubes.items()):
+        stdscr.addstr(i * 2, 0, '╔ ' + k)
+        stdscr.addstr(i * 2 + 1, 0, '╚')
+        
+        b = max(1, max(series)) if k in auto_domains else 100.0
+        clamp = lambda v, a, b: max(a, min(v, b))
+        cell = lambda v: cells[clamp(int(v * range / b), 0, range - 1)]
+        for j, v in enumerate(series):
+            chr, color_pair = cell(v)
+            stdscr.addstr(i * 2 + 1, 2 + j, chr, curses.color_pair(color_pair))
+        
+        stdscr.addstr(i * 2 + 1, 2 + len(series), f' {series[-1]:.1f}')
 
-auto_domains = ['ane_energy', 'nw i kbytes/s', 'nw o kbytes/s', 'disk r kbytes/s', 'disk w kbytes/s']
-all_cells = get_cells()
+    stdscr.refresh()
 
-cubes = {}
-width = 80
+def main(stdscr):
+    stdscr.nodelay(True)
+    curses.curs_set(0)
+    curses.start_color()
+    curses.use_default_colors()
 
-def append_data(new_point):
-    for k, v in new_point.items():
-        if k not in cubes.keys():
-            cubes[k] = [v]
-        else:
-            cubes[k].append(v)
-            if (len(cubes[k]) > width):
-                cubes[k] = cubes[k][1:]
-
-def render():
-    print('\n' * 10)
-    print('-' * width)
-    for k, v in cubes.items():
-        print('╔'+k)
-        domain = (0.0, None) if k in auto_domains else (0.0, 100.0)
-        print('╚'+horizon_line(v, domain, all_cells))
-
-def start():
-    cmd = ['sudo', 'powermetrics', '-f', 'plist', '-i', '1000']
-
+    if curses.COLORS < 256 or not curses.can_change_color():
+        stdscr.addstr("Terminal does not support 256 colors.")
+        stdscr.refresh()
+        stdscr.getch()
+        return
+    
+    cmd = ['sudo', 'powermetrics', '-f', 'plist', '-i', str(args.refresh_ms)]
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     buf = bytearray()
+    cells = gen_cells()
 
     while True:
-        read_ready, _, _ = select.select([p.stdout], [], [])
+        _ = select.select([p.stdout], [], [])
 
         buf.extend(p.stdout.readline())
         if b'</plist>\n' in buf:
@@ -83,11 +80,11 @@ def start():
                 buf = bytearray()
 
             for s in snapshots:
-                append_data(collect_metrics(plistlib.loads(s)))
-            render()
+                process_snapshot(plistlib.loads(s))
+            render_curses(stdscr, cells)
 
         if p.poll() != None:
             break
 
 if __name__ == '__main__':
-    start()
+    curses.wrapper(main)
