@@ -2,17 +2,16 @@
 
 import plistlib
 import subprocess
-import select
 import curses
 import argparse
 import collections
 
 parser = argparse.ArgumentParser("cubestate monitoring")
-parser.add_argument('--refresh_ms', type=int, default=1000)
+parser.add_argument('--refresh_ms', '-i', type=int, default=1000)
 parser.add_argument('--width', '-w', type=int, default=80)
 args = parser.parse_args()
 
-auto_domains = ['ane_energy', 'nw i kbytes/s', 'nw o kbytes/s', 'disk r kbytes/s', 'disk w kbytes/s']
+auto_domains = ['nw i kbytes/s', 'nw o kbytes/s', 'disk r kbytes/s', 'disk w kbytes/s']
 cubes = collections.defaultdict(lambda: collections.deque(maxlen=args.width))
 
 def gen_cells():
@@ -66,8 +65,6 @@ def main(stdscr):
     cells = gen_cells()
 
     while True:
-        _ = select.select([p.stdout], [], [])
-
         buf.extend(p.stdout.readline())
         if b'</plist>\n' in buf:
             snapshots = bytes(buf).strip(b'\x00').split(b'\x00')
@@ -79,9 +76,6 @@ def main(stdscr):
             for s in snapshots:
                 process_snapshot(plistlib.loads(s))
             render(stdscr, cells)
-
-        if p.poll() != None:
-            break
 
 if __name__ == '__main__':
     curses.wrapper(main)
