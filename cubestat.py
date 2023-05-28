@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import plistlib
 import subprocess
 import select
@@ -16,10 +18,11 @@ cubes = collections.defaultdict(lambda: collections.deque(maxlen=args.width))
 def gen_cells():
     chrs = [' ', '▁', '▂', '▃', '▄', '▅', '▆', '▇', '█']
     colors = [-1, 194, 150, 107, 64, 22]
-    color_pairs = list(zip(colors[1:], colors[:-1]))
-    for i, (fg, bg) in enumerate(color_pairs):
+    cells = []
+    for i, (fg, bg) in enumerate(zip(colors[1:], colors[:-1])):
         curses.init_pair(i + 1, fg, bg)
-    return [(chr, i + 1) for i in range(len(color_pairs)) for chr in chrs]
+        cells.extend((chr, i + 1) for chr in chrs)
+    return cells
 
 def process_snapshot(m):
     cubes['gpu util %'].append(100.0 - 100.0 * m['gpu']['idle_ratio'])
@@ -33,7 +36,7 @@ def process_snapshot(m):
         for cpu in cluster['cpus']:
             cubes[f'{cluster["name"]} cpu {cpu["cpu"]} util %'].append(100.0 - 100.0 * cpu['idle_ratio'])
 
-def render_curses(stdscr, cells):
+def render(stdscr, cells):
     stdscr.clear()
     range = len(cells)
     for i, (k, series) in enumerate(cubes.items()):
@@ -56,12 +59,6 @@ def main(stdscr):
     curses.curs_set(0)
     curses.start_color()
     curses.use_default_colors()
-
-    if curses.COLORS < 256 or not curses.can_change_color():
-        stdscr.addstr("Terminal does not support 256 colors.")
-        stdscr.refresh()
-        stdscr.getch()
-        return
     
     cmd = ['sudo', 'powermetrics', '-f', 'plist', '-i', str(args.refresh_ms)]
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -81,7 +78,7 @@ def main(stdscr):
 
             for s in snapshots:
                 process_snapshot(plistlib.loads(s))
-            render_curses(stdscr, cells)
+            render(stdscr, cells)
 
         if p.poll() != None:
             break
