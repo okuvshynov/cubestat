@@ -14,8 +14,10 @@ logging.basicConfig(filename='/tmp/cubestat.log')
 parser = argparse.ArgumentParser("cubestate monitoring")
 parser.add_argument('--refresh_ms', '-i', type=int, default=500)
 parser.add_argument('--buffer_size', type=int, default=500)
-
 args = parser.parse_args()
+
+spacing_width = 1
+filling = '.'
 
 auto_domains = ['nw i kbytes/s', 'nw o kbytes/s', 'disk r kbytes/s', 'disk w kbytes/s']
 cubes = collections.defaultdict(lambda: collections.deque(maxlen=args.buffer_size))
@@ -43,21 +45,24 @@ def process_snapshot(m):
 def render(stdscr, cells):
     stdscr.erase()
     rows, cols = stdscr.getmaxyx()
-    spacing_width = 1
     spacing = ' ' * spacing_width
     range = len(cells)
     for i, (title, series) in enumerate(cubes.items()):
         if rows <= i * 2 + 1 or cols <= 3:
             break
 
-        stdscr.addstr(i * 2, 0, '╔' + spacing + title)
+        titlestr = f'╔{spacing}{title}'
+        stdscr.addstr(i * 2, 0, titlestr)
         stdscr.addstr(i * 2 + 1, 0, '╚')
         
         strvalue = f'{series[-1]:.1f}{spacing}╗'
         stdscr.addstr(i * 2, cols - len(strvalue), strvalue)
         stdscr.addstr(i * 2 + 1, cols - spacing_width - 1, f'{spacing}╝')
 
-        index = max(0, len(series) - (cols - 2 * spacing_width))
+        title_filling = filling * (cols - len(strvalue) - len(titlestr))
+        stdscr.addstr(i * 2, len(titlestr), title_filling)
+
+        index = max(0, len(series) - (cols - 2 * spacing_width - 2))
         data_slice = list(itertools.islice(series, index, None))
         b = max(1, max(data_slice)) if title in auto_domains else 100.0
 
@@ -84,14 +89,8 @@ def main(stdscr):
         line = p.stdout.readline()
         buf.extend(line)
         if b'</plist>\n' == line:
-            snapshots = bytes(buf).strip(b'\x00').split(b'\x00')
-            if not snapshots[-1].endswith(b'</plist>\n'):
-                buf = bytearray(snapshots.pop())
-            else:
-                buf = bytearray()
-
-            for s in snapshots:
-                process_snapshot(plistlib.loads(s))
+            process_snapshot(plistlib.loads(bytes(buf).strip(b'\x00')))
+            buf.clear()
             render(stdscr, cells)
 
 if __name__ == '__main__':
