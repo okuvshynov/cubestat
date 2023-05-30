@@ -1,29 +1,29 @@
-simpler version of horizon chart for terminal, for now has 3 versions:
+# Horizon charts for Apple M1/M2 monitoring
 
-1. apple M1/M2 SoC 
-2. nvidia GPU
-3. generic oneline
+Command-line utility to monitor various resource utilization on Apple M1/M2 devices.
 
-Just prints things to stdout, refreshes every second, monitors:
-1. CPU util
+Usage:
+```
+% ./cubestat.py --help
+usage: ./cubestat.py [-h] [--refresh_ms REFRESH_MS] [--buffer_size BUFFER_SIZE]
+
+options:
+  -h, --help            show this help message and exit
+  --refresh_ms REFRESH_MS, -i REFRESH_MS
+  --buffer_size BUFFER_SIZE
+```
+
+Needs sudo access as it calls powermetrics.
+
+Monitors:
+1. CPU utilization 
 2. GPU util
-3. ANE util (or, more precisely, power consumption)
+3. ANE power consumption
 4. disk io
 5. network io
 
-No use of curses or any other terminal interactivity. Needs 256 colors terminal.
 
 Example: running [deep RL loop](https://github.com/okuvshynov/rlscout) (self play to generate data, model training, model evaluation) on a single MacBook Air:
 
-![Deep Rl horizon chart here](static/DeepRL_example.png)
+![Deep Rl horizon chart here](static/cubestat_rl_loop.png)
 
-next:
-0. common lib for horizon itself, specific implementations
-1. can add frequencies
-2. make more interactive
-3. figure out what 'ane power consumption' is, what's the %% here
-
-
-For nvidia version, 
-
-```pip install pynvml```
