@@ -6,7 +6,6 @@ import curses
 import argparse
 import collections
 import itertools
-import sys
 import logging
 
 logging.basicConfig(filename='/tmp/cubestat.log')
@@ -21,33 +20,64 @@ filling = '.'
 
 auto_domains = ['nw i kbytes/s', 'nw o kbytes/s', 'disk r kbytes/s', 'disk w kbytes/s']
 cubes = collections.defaultdict(lambda: collections.deque(maxlen=args.buffer_size))
+colormap = {}
+
+colorschemes = {
+    'green5': [-1, 194, 150, 107, 64, 22],
+    'teal5': [-1, 195, 152, 109, 66, 23],
+    'red5': [-1, 224, 181, 138, 95, 52],
+    'green2': [-1, 10, 2],
+    'red2': [-1, 9, 1],
+    'blue2': [-1, 12, 4],
+    'green3': [-1, 10, 2, 22],
+    'red3': [-1, 9, 1, 52],
+    'blue3': [-1, 12, 4, 17],
+    'gray10': [-1, 254, 252, 250, 248, 246, 244, 242, 240, 238, 236],
+}
 
 def gen_cells():
     chrs = [' ', '▁', '▂', '▃', '▄', '▅', '▆', '▇', '█']
-    colors = [-1, 194, 150, 107, 64, 22]
-    cells = []
-    for i, (fg, bg) in enumerate(zip(colors[1:], colors[:-1])):
-        curses.init_pair(i + 1, fg, bg)
-        cells.extend((chr, i + 1) for chr in chrs)
+    cells = {}
+    colorpair = 1
+    for name, colors in colorschemes.items():
+        cells[name] = []
+        for fg, bg in zip(colors[1:], colors[:-1]):
+            curses.init_pair(colorpair, fg, bg)
+            cells[name].extend((chr, colorpair) for chr in chrs)
+            colorpair += 1
     return cells
 
 def process_snapshot(m):
-    cubes['gpu util %'].append(100.0 - 100.0 * m['gpu']['idle_ratio'])
-    cubes['ane util %'].append(100.0 * m['processor']['ane_energy'] / 10000.0)
+    initcolormap = not colormap
+    for cluster in m['processor']['clusters']:
+        for cpu in cluster['cpus']:
+            cubes[f'{cluster["name"]} cpu {cpu["cpu"]} util %'].append(100.0 - 100.0 * cpu['idle_ratio'])
+            if initcolormap:
+                colormap[f'{cluster["name"]} cpu {cpu["cpu"]} util %'] = 'gray10'
+    cubes['GPU util %'].append(100.0 - 100.0 * m['gpu']['idle_ratio'])
+    cubes['ANE util %'].append(100.0 * m['processor']['ane_energy'] / 10000.0)
+    if initcolormap:
+        colormap['GPU util %'] = 'gray10'
+        colormap['ANE util %'] = 'gray10'
+
     cubes['nw i kbytes/s'].append(m['network']['ibyte_rate'] / 1024.0)
     cubes['nw o kbytes/s'].append(m['network']['obyte_rate'] / 1024.0)
     cubes['disk r kbytes/s'].append(m['disk']['rbytes_per_s'] / 1024.0)
     cubes['disk w kbytes/s'].append(m['disk']['wbytes_per_s'] / 1024.0)
-    for cluster in m['processor']['clusters']:
-        for cpu in cluster['cpus']:
-            cubes[f'{cluster["name"]} cpu {cpu["cpu"]} util %'].append(100.0 - 100.0 * cpu['idle_ratio'])
 
-def render(stdscr, cells):
+    colormap['nw i kbytes/s'] = 'gray10'
+    colormap['nw o kbytes/s'] = 'gray10'
+    colormap['disk r kbytes/s'] = 'gray10'
+    colormap['disk w kbytes/s'] = 'gray10'
+
+def render(stdscr, cellsmap):
     stdscr.erase()
     rows, cols = stdscr.getmaxyx()
     spacing = ' ' * spacing_width
-    range = len(cells)
     for i, (title, series) in enumerate(cubes.items()):
+        cells = cellsmap[colormap[title]]
+        range = len(cells)
+    
         if rows <= i * 2 + 1 or cols <= 3:
             break
 
