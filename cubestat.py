@@ -151,8 +151,8 @@ def render(stdscr, cellsmap):
             index = max(0, len(series) - (cols - 2 * spacing_width - 2))
             data_slice = list(itertools.islice(series, index, None))
 
-            clamp = lambda v, a, b: max(a, min(v, b))
-            cell = lambda v: cells[clamp(int(v * range / 100.0), 0, range - 1)]
+            clamp = lambda v, a, b: int(max(a, min(v, b)))
+            cell = lambda v: cells[clamp(round(v * range / 100.0), 0, range - 1)]
             
             for j, v in enumerate(data_slice):
                 chr, color_pair = cell(v)
