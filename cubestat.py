@@ -7,12 +7,33 @@ import argparse
 import collections
 import itertools
 import logging
+from enum import Enum
 
 logging.basicConfig(filename='/tmp/cubestat.log')
+
+class CPUMode(Enum):
+    collapsed = 'collapsed'
+    expanded = 'expanded'
+    cluster = 'cluster'
+
+    def __str__(self):
+        return self.value
+    
+class Color(Enum):
+    red = 'red'
+    green = 'green'
+    blue = 'blue'
+    mixed = 'mixed'
+
+    def __str__(self):
+        return self.value
+
 
 parser = argparse.ArgumentParser("cubestate monitoring")
 parser.add_argument('--refresh_ms', '-i', type=int, default=500)
 parser.add_argument('--buffer_size', type=int, default=500)
+parser.add_argument('--cpu', type=CPUMode, default=CPUMode.expanded, choices=list(CPUMode))
+parser.add_argument('--color', type=Color, default=Color.mixed, choices=list(Color))
 args = parser.parse_args()
 
 spacing_width = 1
@@ -21,18 +42,14 @@ filling = '.'
 auto_domains = ['nw i kbytes/s', 'nw o kbytes/s', 'disk r kbytes/s', 'disk w kbytes/s']
 cubes = collections.defaultdict(lambda: collections.deque(maxlen=args.buffer_size))
 colormap = {}
+cpu_color = Color.red if args.color == Color.mixed else args.color
+gpu_ane_color = Color.blue if args.color == Color.mixed else args.color
+io_color = Color.green if args.color == Color.mixed else args.color
 
 colorschemes = {
-    'green5': [-1, 194, 150, 107, 64, 22],
-    'teal5': [-1, 195, 152, 109, 66, 23],
-    'red5': [-1, 224, 181, 138, 95, 52],
-    'green2': [-1, 10, 2],
-    'red2': [-1, 9, 1],
-    'blue2': [-1, 12, 4],
-    'green3': [-1, 10, 2, 22],
-    'red3': [-1, 9, 1, 52],
-    'blue3': [-1, 12, 4, 17],
-    'gray10': [-1, 254, 252, 250, 248, 246, 244, 242, 240, 238, 236],
+    Color.green: [-1, 150, 107, 22],
+    Color.red: [-1, 224, 138, 52],
+    Color.blue: [-1, 189, 103, 17],
 }
 
 def gen_cells():
@@ -49,26 +66,43 @@ def gen_cells():
 
 def process_snapshot(m):
     initcolormap = not colormap
+
+    idle, total = 0.0, 0.0
     for cluster in m['processor']['clusters']:
         for cpu in cluster['cpus']:
-            cubes[f'{cluster["name"]} cpu {cpu["cpu"]} util %'].append(100.0 - 100.0 * cpu['idle_ratio'])
+            if args.cpu == CPUMode.expanded:
+                cubes[f'{cluster["name"]} cpu {cpu["cpu"]} util %'].append(100.0 - 100.0 * cpu['idle_ratio'])
+                if initcolormap:
+                    colormap[f'{cluster["name"]} cpu {cpu["cpu"]} util %'] = cpu_color
+            else:
+                idle += cpu['idle_ratio']
+                total += 1.0
+        if args.cpu == CPUMode.cluster:
+            cubes[f'{cluster["name"]} total cpu util %'].append(100.0 - 100.0 * idle / total)
             if initcolormap:
-                colormap[f'{cluster["name"]} cpu {cpu["cpu"]} util %'] = 'gray10'
+                colormap[f'{cluster["name"]} total cpu util %'] = cpu_color
+            idle, total = 0.0, 0.0
+            
+        if args.cpu == CPUMode.collapsed:
+            cubes[f'total cpu util %'].append(100.0 - 100.0 * idle / total)
+            if initcolormap:
+                colormap[f'total cpu util %'] = cpu_color
+
     cubes['GPU util %'].append(100.0 - 100.0 * m['gpu']['idle_ratio'])
     cubes['ANE util %'].append(100.0 * m['processor']['ane_energy'] / 10000.0)
     if initcolormap:
-        colormap['GPU util %'] = 'gray10'
-        colormap['ANE util %'] = 'gray10'
+        colormap['GPU util %'] = gpu_ane_color
+        colormap['ANE util %'] = gpu_ane_color
 
     cubes['nw i kbytes/s'].append(m['network']['ibyte_rate'] / 1024.0)
     cubes['nw o kbytes/s'].append(m['network']['obyte_rate'] / 1024.0)
     cubes['disk r kbytes/s'].append(m['disk']['rbytes_per_s'] / 1024.0)
     cubes['disk w kbytes/s'].append(m['disk']['wbytes_per_s'] / 1024.0)
 
-    colormap['nw i kbytes/s'] = 'gray10'
-    colormap['nw o kbytes/s'] = 'gray10'
-    colormap['disk r kbytes/s'] = 'gray10'
-    colormap['disk w kbytes/s'] = 'gray10'
+    colormap['nw i kbytes/s'] = io_color
+    colormap['nw o kbytes/s'] = io_color
+    colormap['disk r kbytes/s'] = io_color
+    colormap['disk w kbytes/s'] = io_color
 
 def render(stdscr, cellsmap):
     stdscr.erase()
