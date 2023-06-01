@@ -147,25 +147,22 @@ def render(stdscr, cellsmap):
                 stdscr.addstr(i * 2 + 1, j + 1 + spacing_width, chr, curses.color_pair(color_pair))
     stdscr.refresh()
 
-def main(stdscr):
+def main(stdscr, powermetrics):
     stdscr.nodelay(True)
     curses.curs_set(0)
     curses.start_color()
     curses.use_default_colors()
     
-    cmd = ['sudo', 'powermetrics', '-f', 'plist', '-i', str(args.refresh_ms)]
-    p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     buf = bytearray()
     cells = gen_cells()
 
     def reader():
         while True:
-            line = p.stdout.readline()
+            line = powermetrics.stdout.readline()
             buf.extend(line)
             if b'</plist>\n' == line:
                 process_snapshot(plistlib.loads(bytes(buf).strip(b'\x00')))
                 buf.clear()
-
 
     reader_thread = Thread(target=reader, daemon=True)
     reader_thread.start()
@@ -178,4 +175,7 @@ def main(stdscr):
         sleep(0.005)
 
 if __name__ == '__main__':
-    curses.wrapper(main)
+    cmd = ['sudo', 'powermetrics', '-f', 'plist', '-i', str(args.refresh_ms)]
+    powermetrics = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    
+    curses.wrapper(main, powermetrics)
