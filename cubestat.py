@@ -121,7 +121,7 @@ def render(stdscr, cellsmap):
             cells = cellsmap[colormap[title]]
             range = len(cells)
         
-            if rows <= i * 2 + 1 or cols <= 3:
+            if rows <= i * 2 + 2 or cols <= 3:
                 break
 
             titlestr = f'╔{spacing}{title}'
@@ -147,13 +147,14 @@ def render(stdscr, cellsmap):
                 stdscr.addstr(i * 2 + 1, j + 1 + spacing_width, chr, curses.color_pair(color_pair))
     stdscr.refresh()
 
-def main(stdscr, powermetrics):
+def main(stdscr, powermetrics, firstline=''):
     stdscr.nodelay(True)
     curses.curs_set(0)
     curses.start_color()
     curses.use_default_colors()
-    
+
     buf = bytearray()
+    buf.extend(firstline)
     cells = gen_cells()
 
     def reader():
@@ -177,5 +178,5 @@ def main(stdscr, powermetrics):
 if __name__ == '__main__':
     cmd = ['sudo', 'powermetrics', '-f', 'plist', '-i', str(args.refresh_ms)]
     powermetrics = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    
-    curses.wrapper(main, powermetrics)
+    line = powermetrics.stdout.readline()
+    curses.wrapper(main, powermetrics, line)
