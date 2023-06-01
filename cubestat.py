@@ -13,6 +13,16 @@ from time import sleep
 
 logging.basicConfig(filename='/tmp/cubestat.log')
 
+class Percentages(Enum):
+    hidden = 'hidden'
+    last = 'last'
+
+    def __str__(self):
+        return self.value
+    
+    def other(self):
+        return Percentages.hidden if self == Percentages.last else Percentages.last
+
 class CPUMode(Enum):
     collapsed = 'collapsed'
     expanded = 'expanded'
@@ -36,6 +46,7 @@ parser.add_argument('--refresh_ms', '-i', type=int, default=500, help='This argu
 parser.add_argument('--buffer_size', type=int, default=500, help='How many datapoints to store. Having it larger than screen width is a good idea as terminal window can be resized')
 parser.add_argument('--cpu', type=CPUMode, default=CPUMode.expanded, choices=list(CPUMode))
 parser.add_argument('--color', type=Color, default=Color.mixed, choices=list(Color))
+parser.add_argument('--percentages', type=Percentages, default=Percentages.hidden, choices=list(Percentages))
 args = parser.parse_args()
 
 spacing_width = 1
@@ -51,6 +62,7 @@ cubes = collections.defaultdict(lambda: collections.deque(maxlen=args.buffer_siz
 colormap = {}
 snapshots_observed = 0
 snapshots_rendered = 0
+percentage_mode = args.percentages
 
 colorschemes = {
     Color.green: [-1, 150, 107, 22],
@@ -126,7 +138,10 @@ def render(stdscr, cellsmap):
             stdscr.addstr(i * 2, 0, titlestr)
             stdscr.addstr(i * 2 + 1, 0, '╚')
             
-            strvalue = f'{series[-1]:.1f}%{spacing}╗'
+            if percentage_mode == Percentages.last:
+                strvalue = f'last:{series[-1]:3.0f}%{spacing}╗'
+            else:
+                strvalue = f'{spacing}╗'
             stdscr.addstr(i * 2, cols - len(strvalue), strvalue)
             stdscr.addstr(i * 2 + 1, cols - spacing_width - 1, f'{spacing}╝')
 
@@ -146,6 +161,7 @@ def render(stdscr, cellsmap):
     stdscr.refresh()
 
 def main(stdscr, powermetrics, firstline=''):
+    global percentage_mode, cubelock
     stdscr.nodelay(False)
     stdscr.timeout(50)
     curses.curs_set(0)
@@ -172,6 +188,10 @@ def main(stdscr, powermetrics, firstline=''):
         key = stdscr.getch()
         if key == ord('q') or key == ord('Q'):
             exit(0)
+        if key == ord('p'):
+            with cubelock:
+                percentage_mode = percentage_mode.other()
+
 
 if __name__ == '__main__':
     cmd = ['sudo', 'powermetrics', '-f', 'plist', '-i', str(args.refresh_ms)]
