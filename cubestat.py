@@ -48,6 +48,8 @@ gpu_ane_color = Color.blue if args.color == Color.mixed else args.color
 cubelock = Lock()
 cubes = collections.defaultdict(lambda: collections.deque(maxlen=args.buffer_size))
 colormap = {}
+snapshots_observed = 0
+snapshots_rendered = 0
 
 colorschemes = {
     Color.green: [-1, 150, 107, 22],
@@ -68,6 +70,7 @@ def gen_cells():
     return cells
 
 def process_snapshot(m):
+    global snapshots_rendered, snapshots_observed
     initcolormap = not colormap
     
     idle, total = 0.0, 0.0
@@ -98,9 +101,14 @@ def process_snapshot(m):
         if initcolormap:
             colormap['GPU util %'] = gpu_ane_color
             colormap['ANE util %'] = gpu_ane_color
+        snapshots_observed += 1
 
 
 def render(stdscr, cellsmap):
+    global snapshots_rendered, snapshots_observed
+    with cubelock:
+        if snapshots_observed == snapshots_rendered:
+            return
     stdscr.erase()
     rows, cols = stdscr.getmaxyx()
     spacing = ' ' * spacing_width
@@ -133,10 +141,12 @@ def render(stdscr, cellsmap):
             for j, v in enumerate(data_slice):
                 chr, color_pair = cell(v)
                 stdscr.addstr(i * 2 + 1, j + 1 + spacing_width, chr, curses.color_pair(color_pair))
+            snapshots_rendered += 1
     stdscr.refresh()
 
 def main(stdscr, powermetrics, firstline=''):
-    stdscr.nodelay(True)
+    stdscr.nodelay(False)
+    stdscr.timeout(50)
     curses.curs_set(0)
     curses.start_color()
     curses.use_default_colors()
@@ -161,7 +171,6 @@ def main(stdscr, powermetrics, firstline=''):
         key = stdscr.getch()
         if key == ord('q') or key == ord('Q'):
             exit(0)
-        sleep(0.005)
 
 if __name__ == '__main__':
     cmd = ['sudo', 'powermetrics', '-f', 'plist', '-i', str(args.refresh_ms)]
