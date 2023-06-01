@@ -7,7 +7,9 @@ import argparse
 import collections
 import itertools
 import logging
+from threading import Thread, Lock
 from enum import Enum
+from time import sleep
 
 logging.basicConfig(filename='/tmp/cubestat.log')
 
@@ -40,11 +42,14 @@ spacing_width = 1
 filling = '.'
 
 auto_domains = ['nw i kbytes/s', 'nw o kbytes/s', 'disk r kbytes/s', 'disk w kbytes/s']
-cubes = collections.defaultdict(lambda: collections.deque(maxlen=args.buffer_size))
-colormap = {}
 cpu_color = Color.red if args.color == Color.mixed else args.color
 gpu_ane_color = Color.blue if args.color == Color.mixed else args.color
 io_color = Color.green if args.color == Color.mixed else args.color
+
+# these are mutable
+cubelock = Lock()
+cubes = collections.defaultdict(lambda: collections.deque(maxlen=args.buffer_size))
+colormap = {}
 
 colorschemes = {
     Color.green: [-1, 150, 107, 22],
@@ -66,76 +71,80 @@ def gen_cells():
 
 def process_snapshot(m):
     initcolormap = not colormap
-
+    
     idle, total = 0.0, 0.0
-    for cluster in m['processor']['clusters']:
-        for cpu in cluster['cpus']:
-            if args.cpu == CPUMode.expanded:
-                cubes[f'{cluster["name"]} cpu {cpu["cpu"]} util %'].append(100.0 - 100.0 * cpu['idle_ratio'])
+    
+    with cubelock:
+        for cluster in m['processor']['clusters']:
+            for cpu in cluster['cpus']:
+                if args.cpu == CPUMode.expanded:
+                    cubes[f'{cluster["name"]} cpu {cpu["cpu"]} util %'].append(100.0 - 100.0 * cpu['idle_ratio'])
+                    if initcolormap:
+                        colormap[f'{cluster["name"]} cpu {cpu["cpu"]} util %'] = cpu_color
+                else:
+                    idle += cpu['idle_ratio']
+                    total += 1.0
+            if args.cpu == CPUMode.cluster:
+                cubes[f'{cluster["name"]} total cpu util %'].append(100.0 - 100.0 * idle / total)
                 if initcolormap:
-                    colormap[f'{cluster["name"]} cpu {cpu["cpu"]} util %'] = cpu_color
-            else:
-                idle += cpu['idle_ratio']
-                total += 1.0
-        if args.cpu == CPUMode.cluster:
-            cubes[f'{cluster["name"]} total cpu util %'].append(100.0 - 100.0 * idle / total)
-            if initcolormap:
-                colormap[f'{cluster["name"]} total cpu util %'] = cpu_color
-            idle, total = 0.0, 0.0
-            
-        if args.cpu == CPUMode.collapsed:
-            cubes[f'total cpu util %'].append(100.0 - 100.0 * idle / total)
-            if initcolormap:
-                colormap[f'total cpu util %'] = cpu_color
+                    colormap[f'{cluster["name"]} total cpu util %'] = cpu_color
+                idle, total = 0.0, 0.0
+                
+            if args.cpu == CPUMode.collapsed:
+                cubes[f'total cpu util %'].append(100.0 - 100.0 * idle / total)
+                if initcolormap:
+                    colormap[f'total cpu util %'] = cpu_color
 
-    cubes['GPU util %'].append(100.0 - 100.0 * m['gpu']['idle_ratio'])
-    cubes['ANE util %'].append(100.0 * m['processor']['ane_energy'] / 10000.0)
-    if initcolormap:
-        colormap['GPU util %'] = gpu_ane_color
-        colormap['ANE util %'] = gpu_ane_color
+        cubes['GPU util %'].append(100.0 - 100.0 * m['gpu']['idle_ratio'])
+        cubes['ANE util %'].append(100.0 * m['processor']['ane_energy'] / 10000.0)
+        if initcolormap:
+            colormap['GPU util %'] = gpu_ane_color
+            colormap['ANE util %'] = gpu_ane_color
 
-    cubes['nw i kbytes/s'].append(m['network']['ibyte_rate'] / 1024.0)
-    cubes['nw o kbytes/s'].append(m['network']['obyte_rate'] / 1024.0)
-    cubes['disk r kbytes/s'].append(m['disk']['rbytes_per_s'] / 1024.0)
-    cubes['disk w kbytes/s'].append(m['disk']['wbytes_per_s'] / 1024.0)
+        cubes['nw i kbytes/s'].append(m['network']['ibyte_rate'] / 1024.0)
+        cubes['nw o kbytes/s'].append(m['network']['obyte_rate'] / 1024.0)
+        cubes['disk r kbytes/s'].append(m['disk']['rbytes_per_s'] / 1024.0)
+        cubes['disk w kbytes/s'].append(m['disk']['wbytes_per_s'] / 1024.0)
 
-    colormap['nw i kbytes/s'] = io_color
-    colormap['nw o kbytes/s'] = io_color
-    colormap['disk r kbytes/s'] = io_color
-    colormap['disk w kbytes/s'] = io_color
+        colormap['nw i kbytes/s'] = io_color
+        colormap['nw o kbytes/s'] = io_color
+        colormap['disk r kbytes/s'] = io_color
+        colormap['disk w kbytes/s'] = io_color
 
 def render(stdscr, cellsmap):
     stdscr.erase()
     rows, cols = stdscr.getmaxyx()
     spacing = ' ' * spacing_width
-    for i, (title, series) in enumerate(cubes.items()):
-        cells = cellsmap[colormap[title]]
-        range = len(cells)
-    
-        if rows <= i * 2 + 1 or cols <= 3:
-            break
 
-        titlestr = f'╔{spacing}{title}'
-        stdscr.addstr(i * 2, 0, titlestr)
-        stdscr.addstr(i * 2 + 1, 0, '╚')
+    with cubelock:
+        for i, (title, series) in enumerate(cubes.items()):
+            cells = cellsmap[colormap[title]]
+            range = len(cells)
         
-        strvalue = f'{series[-1]:.1f}{spacing}╗'
-        stdscr.addstr(i * 2, cols - len(strvalue), strvalue)
-        stdscr.addstr(i * 2 + 1, cols - spacing_width - 1, f'{spacing}╝')
+            if rows <= i * 2 + 1 or cols <= 3:
+                break
 
-        title_filling = filling * (cols - len(strvalue) - len(titlestr))
-        stdscr.addstr(i * 2, len(titlestr), title_filling)
+            titlestr = f'╔{spacing}{title}'
+            stdscr.addstr(i * 2, 0, titlestr)
+            stdscr.addstr(i * 2 + 1, 0, '╚')
+            
+            strvalue = f'{series[-1]:.1f}{spacing}╗'
+            stdscr.addstr(i * 2, cols - len(strvalue), strvalue)
+            stdscr.addstr(i * 2 + 1, cols - spacing_width - 1, f'{spacing}╝')
 
-        index = max(0, len(series) - (cols - 2 * spacing_width - 2))
-        data_slice = list(itertools.islice(series, index, None))
-        b = max(1, max(data_slice)) if title in auto_domains else 100.0
+            title_filling = filling * (cols - len(strvalue) - len(titlestr))
+            stdscr.addstr(i * 2, len(titlestr), title_filling)
 
-        clamp = lambda v, a, b: max(a, min(v, b))
-        cell = lambda v: cells[clamp(int(v * range / b), 0, range - 1)]
-        
-        for j, v in enumerate(data_slice):
-            chr, color_pair = cell(v)
-            stdscr.addstr(i * 2 + 1, j + 1 + spacing_width, chr, curses.color_pair(color_pair))
+            index = max(0, len(series) - (cols - 2 * spacing_width - 2))
+            data_slice = list(itertools.islice(series, index, None))
+            b = max(1, max(data_slice)) if title in auto_domains else 100.0
+
+            clamp = lambda v, a, b: max(a, min(v, b))
+            cell = lambda v: cells[clamp(int(v * range / b), 0, range - 1)]
+            
+            for j, v in enumerate(data_slice):
+                chr, color_pair = cell(v)
+                stdscr.addstr(i * 2 + 1, j + 1 + spacing_width, chr, curses.color_pair(color_pair))
     stdscr.refresh()
 
 def main(stdscr):
@@ -149,13 +158,24 @@ def main(stdscr):
     buf = bytearray()
     cells = gen_cells()
 
+    def reader():
+        while True:
+            line = p.stdout.readline()
+            buf.extend(line)
+            if b'</plist>\n' == line:
+                process_snapshot(plistlib.loads(bytes(buf).strip(b'\x00')))
+                buf.clear()
+
+
+    reader_thread = Thread(target=reader, daemon=True)
+    reader_thread.start()
+
     while True:
-        line = p.stdout.readline()
-        buf.extend(line)
-        if b'</plist>\n' == line:
-            process_snapshot(plistlib.loads(bytes(buf).strip(b'\x00')))
-            buf.clear()
-            render(stdscr, cells)
+        render(stdscr, cells)
+        key = stdscr.getch()
+        if key == ord('q') or key == ord('Q'):
+            exit(0)
+        sleep(0.005)
 
 if __name__ == '__main__':
     curses.wrapper(main)
