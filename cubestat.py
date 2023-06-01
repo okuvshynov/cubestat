@@ -32,8 +32,8 @@ class Color(Enum):
 
 
 parser = argparse.ArgumentParser("cubestate monitoring")
-parser.add_argument('--refresh_ms', '-i', type=int, default=500)
-parser.add_argument('--buffer_size', type=int, default=500)
+parser.add_argument('--refresh_ms', '-i', type=int, default=500, help='This argument is passed to powermetrics as -i')
+parser.add_argument('--buffer_size', type=int, default=500, help='How many datapoints to store. Having it larger than screen width is a good idea as terminal window can be resized')
 parser.add_argument('--cpu', type=CPUMode, default=CPUMode.expanded, choices=list(CPUMode))
 parser.add_argument('--color', type=Color, default=Color.mixed, choices=list(Color))
 args = parser.parse_args()
