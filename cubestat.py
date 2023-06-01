@@ -41,10 +41,8 @@ args = parser.parse_args()
 spacing_width = 1
 filling = '.'
 
-auto_domains = ['nw i kbytes/s', 'nw o kbytes/s', 'disk r kbytes/s', 'disk w kbytes/s']
 cpu_color = Color.red if args.color == Color.mixed else args.color
 gpu_ane_color = Color.blue if args.color == Color.mixed else args.color
-io_color = Color.green if args.color == Color.mixed else args.color
 
 # these are mutable
 cubelock = Lock()
@@ -101,15 +99,6 @@ def process_snapshot(m):
             colormap['GPU util %'] = gpu_ane_color
             colormap['ANE util %'] = gpu_ane_color
 
-        cubes['nw i kbytes/s'].append(m['network']['ibyte_rate'] / 1024.0)
-        cubes['nw o kbytes/s'].append(m['network']['obyte_rate'] / 1024.0)
-        cubes['disk r kbytes/s'].append(m['disk']['rbytes_per_s'] / 1024.0)
-        cubes['disk w kbytes/s'].append(m['disk']['wbytes_per_s'] / 1024.0)
-
-        colormap['nw i kbytes/s'] = io_color
-        colormap['nw o kbytes/s'] = io_color
-        colormap['disk r kbytes/s'] = io_color
-        colormap['disk w kbytes/s'] = io_color
 
 def render(stdscr, cellsmap):
     stdscr.erase()
@@ -137,10 +126,9 @@ def render(stdscr, cellsmap):
 
             index = max(0, len(series) - (cols - 2 * spacing_width - 2))
             data_slice = list(itertools.islice(series, index, None))
-            b = max(1, max(data_slice)) if title in auto_domains else 100.0
 
             clamp = lambda v, a, b: max(a, min(v, b))
-            cell = lambda v: cells[clamp(int(v * range / b), 0, range - 1)]
+            cell = lambda v: cells[clamp(int(v * range / 100.0), 0, range - 1)]
             
             for j, v in enumerate(data_slice):
                 chr, color_pair = cell(v)
