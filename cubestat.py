@@ -40,7 +40,6 @@ class Color(Enum):
     def __str__(self):
         return self.value
 
-
 parser = argparse.ArgumentParser("cubestate monitoring")
 parser.add_argument('--refresh_ms', '-i', type=int, default=500, help='This argument is passed to powermetrics as -i')
 parser.add_argument('--buffer_size', type=int, default=500, help='How many datapoints to store. Having it larger than screen width is a good idea as terminal window can be resized')
@@ -110,7 +109,8 @@ def process_snapshot(m):
                     colormap[f'total CPU util'] = cpu_color
 
         cubes['GPU util'].append(100.0 - 100.0 * m['gpu']['idle_ratio'])
-        cubes['ANE util'].append(100.0 * m['processor']['ane_energy'] / 10000.0)
+        ane_scaling = 8.0 * args.refresh_ms
+        cubes['ANE util'].append(100.0 * m['processor']['ane_energy'] / ane_scaling)
         if initcolormap:
             colormap['GPU util'] = gpu_color
             colormap['ANE util'] = ane_color
