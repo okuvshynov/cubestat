@@ -41,8 +41,9 @@ args = parser.parse_args()
 spacing_width = 1
 filling = '.'
 
-cpu_color = Color.red if args.color == Color.mixed else args.color
-gpu_ane_color = Color.blue if args.color == Color.mixed else args.color
+cpu_color = Color.green if args.color == Color.mixed else args.color
+gpu_color = Color.blue if args.color == Color.mixed else args.color
+ane_color = Color.red if args.color == Color.mixed else args.color
 
 # these are mutable
 cubelock = Lock()
@@ -79,28 +80,28 @@ def process_snapshot(m):
         for cluster in m['processor']['clusters']:
             for cpu in cluster['cpus']:
                 if args.cpu == CPUMode.expanded:
-                    cubes[f'{cluster["name"]} cpu {cpu["cpu"]} util %'].append(100.0 - 100.0 * cpu['idle_ratio'])
+                    cubes[f'{cluster["name"]} CPU {cpu["cpu"]} util'].append(100.0 - 100.0 * cpu['idle_ratio'])
                     if initcolormap:
-                        colormap[f'{cluster["name"]} cpu {cpu["cpu"]} util %'] = cpu_color
+                        colormap[f'{cluster["name"]} CPU {cpu["cpu"]} util'] = cpu_color
                 else:
                     idle += cpu['idle_ratio']
                     total += 1.0
             if args.cpu == CPUMode.cluster:
-                cubes[f'{cluster["name"]} total cpu util %'].append(100.0 - 100.0 * idle / total)
+                cubes[f'{cluster["name"]} total CPU util'].append(100.0 - 100.0 * idle / total)
                 if initcolormap:
-                    colormap[f'{cluster["name"]} total cpu util %'] = cpu_color
+                    colormap[f'{cluster["name"]} total CPU util'] = cpu_color
                 idle, total = 0.0, 0.0
                 
             if args.cpu == CPUMode.collapsed:
-                cubes[f'total cpu util %'].append(100.0 - 100.0 * idle / total)
+                cubes[f'total CPU util'].append(100.0 - 100.0 * idle / total)
                 if initcolormap:
-                    colormap[f'total cpu util %'] = cpu_color
+                    colormap[f'total CPU util'] = cpu_color
 
-        cubes['GPU util %'].append(100.0 - 100.0 * m['gpu']['idle_ratio'])
-        cubes['ANE util %'].append(100.0 * m['processor']['ane_energy'] / 10000.0)
+        cubes['GPU util'].append(100.0 - 100.0 * m['gpu']['idle_ratio'])
+        cubes['ANE util'].append(100.0 * m['processor']['ane_energy'] / 10000.0)
         if initcolormap:
-            colormap['GPU util %'] = gpu_ane_color
-            colormap['ANE util %'] = gpu_ane_color
+            colormap['GPU util'] = gpu_color
+            colormap['ANE util'] = ane_color
         snapshots_observed += 1
 
 
@@ -125,7 +126,7 @@ def render(stdscr, cellsmap):
             stdscr.addstr(i * 2, 0, titlestr)
             stdscr.addstr(i * 2 + 1, 0, '╚')
             
-            strvalue = f'{series[-1]:.1f}{spacing}╗'
+            strvalue = f'{series[-1]:.1f}%{spacing}╗'
             stdscr.addstr(i * 2, cols - len(strvalue), strvalue)
             stdscr.addstr(i * 2 + 1, cols - spacing_width - 1, f'{spacing}╝')
 
@@ -140,7 +141,7 @@ def render(stdscr, cellsmap):
             
             for j, v in enumerate(data_slice):
                 chr, color_pair = cell(v)
-                stdscr.addstr(i * 2 + 1, j + 1 + spacing_width, chr, curses.color_pair(color_pair))
+                stdscr.addstr(i * 2 + 1, cols - len(data_slice) + j - 1 - spacing_width, chr, curses.color_pair(color_pair))
             snapshots_rendered += 1
     stdscr.refresh()
 
