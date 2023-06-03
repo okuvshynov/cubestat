@@ -159,9 +159,11 @@ class Horizon:
                 cells = self.cells[self.colormap[title]]
                 range = len(cells)
 
-                titlestr = f'╔{spacing}{title}'
+                indent = '  ' if self.cpumode == CPUMode.all and title in self.cpu_cubes else ''
+
+                titlestr = f'{indent}╔{spacing}{title}'      
                 self.wl(i * 2, 0, titlestr)
-                self.wl(i * 2 + 1, 0, '╚')
+                self.wl(i * 2 + 1, 0, f'{indent}╚')
                 
                 strvalue = f'last:{series[-1]:3.0f}%{spacing}╗' if self.percentage_mode == Percentages.last else f'{spacing}╗'
                 self.wr(i * 2, 0, strvalue)
@@ -170,7 +172,7 @@ class Horizon:
                 title_filling = filling * (self.cols - len(strvalue) - len(titlestr))
                 self.wl(i * 2, len(titlestr), title_filling)
 
-                index = max(0, len(series) - (self.cols - 2 * spacing_width - 2))
+                index = max(0, len(series) - (self.cols - 2 * spacing_width - 2 - len(indent)))
                 data_slice = list(itertools.islice(series, index, None))
 
                 clamp = lambda v, a, b: int(max(a, min(v, b)))
