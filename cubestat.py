@@ -9,7 +9,6 @@ import itertools
 import logging
 from threading import Thread, Lock
 from enum import Enum
-from time import sleep
 
 logging.basicConfig(filename='/tmp/cubestat.log')
 
@@ -194,7 +193,7 @@ def main(stdscr, powermetrics, firstline=''):
 
 
 if __name__ == '__main__':
-    cmd = ['sudo', 'powermetrics', '-f', 'plist', '-i', str(args.refresh_ms)]
+    cmd = ['sudo', 'powermetrics', '-f', 'plist', '-i', str(args.refresh_ms), '-s', 'cpu_power,gpu_power,ane_power']
     powermetrics = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     line = powermetrics.stdout.readline()
     curses.wrapper(main, powermetrics, line)
