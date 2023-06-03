@@ -46,7 +46,7 @@ parser.add_argument('--refresh_ms', '-i', type=int, default=500, help='This argu
 parser.add_argument('--buffer_size', type=int, default=500, help='How many datapoints to store. Having it larger than screen width is a good idea as terminal window can be resized')
 parser.add_argument('--cpu', type=CPUMode, default=CPUMode.by_core, choices=list(CPUMode), help='CPU mode - showing all cores, only cumulative by cluster or both. Can be toggled by pressing c.')
 parser.add_argument('--color', type=Color, default=Color.mixed, choices=list(Color))
-parser.add_argument('--percentages', type=Percentages, default=Percentages.hidden, choices=list(Percentages), help='Show numeric utilization percentage. Also can be toggled by pressing p.')
+parser.add_argument('--percentages', type=Percentages, default=Percentages.hidden, choices=list(Percentages), help='Show/hide numeric utilization percentage. Can be toggled by pressing p.')
 args = parser.parse_args()
 
 spacing_width = 1

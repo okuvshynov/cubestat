@@ -1,11 +1,11 @@
 # Horizon charts for Apple M1/M2 monitoring
 
-Command-line utility to monitor CPU/GPU/NeuralEngine utilization on Apple M1/M2 devices.
+Command-line utility to monitor CPU/GPU/NeuralEngine utilization on Apple M1/M2 devices. Requires sudo access as it calls `powermetrics` and parses its output.
 
 ```
 usage: ./cubestat.py [-h] [--refresh_ms REFRESH_MS]
                      [--buffer_size BUFFER_SIZE]
-                     [--cpu {collapsed,expanded,cluster}]
+                     [--cpu {all,by_cluster,by_core}]
                      [--color {red,green,blue,mixed}]
                      [--percentages {hidden,last}]
 
@@ -17,17 +17,19 @@ options:
                         How many datapoints to store. Having it larger than
                         screen width is a good idea as terminal window can
                         be resized
-  --cpu {collapsed,expanded,cluster}
+  --cpu {all,by_cluster,by_core}
+                        CPU mode - showing all cores, only cumulative by
+                        cluster or both. Can be toggled by pressing c.
   --color {red,green,blue,mixed}
   --percentages {hidden,last}
-                        Show numeric utilization percentage. Also can be
+                        Show/hide numeric utilization percentage. Can be
                         toggled by pressing p.
 ```
 
-Will ask for sudo access as it calls `powermetrics` and parses its output.
+
 
 Monitors:
-1. CPU utilization - configurable per core ('expanded'), cluster of cores: Efficiency/Performance ('cluster') or overall ('collapsed');
+1. CPU utilization - configurable per core ('expanded'), cluster of cores: Efficiency/Performance ('cluster') or both;
 2. GPU utilization;
 3. ANE power consumption. According to `man powermetrics` it is an estimate, but seems working good enough as a proxy to ANE utilization.
 
