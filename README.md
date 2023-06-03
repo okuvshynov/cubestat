@@ -26,8 +26,6 @@ options:
                         toggled by pressing p.
 ```
 
-
-
 Monitors:
 1. CPU utilization - configurable per core ('expanded'), cluster of cores: Efficiency/Performance ('cluster') or both;
 2. GPU utilization;

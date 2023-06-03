@@ -16,30 +16,25 @@ class EnumLoop(Enum):
     def next(self):
         values = list(self.__class__)
         return values[(values.index(self) + 1) % len(values)]
-
-class Percentages(EnumLoop):
-    hidden = 'hidden'
-    last = 'last'
-
+    
+class EnumStr(Enum):
     def __str__(self):
         return self.value
+
+class Percentages(EnumLoop, EnumStr):
+    hidden = 'hidden'
+    last = 'last'
     
-class CPUMode(EnumLoop):
+class CPUMode(EnumLoop, EnumStr):
     all = 'all'
     by_cluster = 'by_cluster'
     by_core = 'by_core'
-
-    def __str__(self):
-        return self.value
     
-class Color(Enum):
+class Color(EnumStr):
     red = 'red'
     green = 'green'
     blue = 'blue'
     mixed = 'mixed'
-
-    def __str__(self):
-        return self.value
 
 parser = argparse.ArgumentParser("./cubestat.py")
 parser.add_argument('--refresh_ms', '-i', type=int, default=500, help='This argument is passed to powermetrics as -i')
@@ -49,6 +44,7 @@ parser.add_argument('--color', type=Color, default=Color.mixed, choices=list(Col
 parser.add_argument('--percentages', type=Percentages, default=Percentages.hidden, choices=list(Percentages), help='Show/hide numeric utilization percentage. Can be toggled by pressing p.')
 args = parser.parse_args()
 
+# settings
 spacing_width = 1
 filling = '.'
 colorschemes = {
@@ -65,6 +61,13 @@ class Horizon:
         curses.start_color()
         curses.use_default_colors()
 
+        self.cpu_color = Color.green if args.color == Color.mixed else args.color
+        self.gpu_color = Color.blue if args.color == Color.mixed else args.color
+        self.ane_color = Color.red if args.color == Color.mixed else args.color
+        self.cells = self._cells()
+        self.stdscr = stdscr
+
+        # all of the below fields are mutable and can be accessed from 2 threads
         self.lock = Lock()
         self.cubes = collections.defaultdict(lambda: collections.deque(maxlen=args.buffer_size))
         self.colormap = {}
@@ -74,12 +77,6 @@ class Horizon:
         self.cpu_cubes = []
         self.cpu_cluster_cubes = []
         self.cpumode = args.cpu
-
-        self.cpu_color = Color.green if args.color == Color.mixed else args.color
-        self.gpu_color = Color.blue if args.color == Color.mixed else args.color
-        self.ane_color = Color.red if args.color == Color.mixed else args.color
-        self.cells = self._cells()
-        self.stdscr = stdscr
 
     def _cells(self):
         chrs = [' ', '▁', '▂', '▃', '▄', '▅', '▆', '▇', '█']
@@ -187,6 +184,7 @@ class Horizon:
     def loop(self, powermetrics, firstline):
         buf = bytearray()
         buf.extend(firstline)
+        
         def reader():
             while True:
                 line = powermetrics.stdout.readline()
@@ -194,7 +192,6 @@ class Horizon:
                 if b'</plist>\n' == line:
                     self.process_snapshot(plistlib.loads(bytes(buf).strip(b'\x00')))
                     buf.clear()
-
         reader_thread = Thread(target=reader, daemon=True)
         reader_thread.start()
 
@@ -210,7 +207,7 @@ class Horizon:
                 with self.lock:
                     self.cpumode = self.cpumode.next()
 
-def main(stdscr, powermetrics, firstline=''):
+def main(stdscr, powermetrics, firstline):
     h = Horizon(stdscr)
     h.loop(powermetrics, firstline)
 
