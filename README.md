@@ -2,23 +2,26 @@
 
 Command-line utility to monitor CPU/GPU/NeuralEngine utilization on Apple M1/M2 devices.
 
-Usage:
 ```
-% ./cubestat.py --help
-usage: cubestate monitoring [-h] [--refresh_ms REFRESH_MS]
-                            [--buffer_size BUFFER_SIZE]
-                            [--cpu {collapsed,expanded,cluster}]
-                            [--color {red,green,blue,mixed}]
+usage: ./cubestat.py [-h] [--refresh_ms REFRESH_MS]
+                     [--buffer_size BUFFER_SIZE]
+                     [--cpu {collapsed,expanded,cluster}]
+                     [--color {red,green,blue,mixed}]
+                     [--percentages {hidden,last}]
 
 options:
   -h, --help            show this help message and exit
   --refresh_ms REFRESH_MS, -i REFRESH_MS
                         This argument is passed to powermetrics as -i
   --buffer_size BUFFER_SIZE
-                        How many datapoints to store. Having it larger than screen
-                        width is a good idea as terminal window can be resized
+                        How many datapoints to store. Having it larger than
+                        screen width is a good idea as terminal window can
+                        be resized
   --cpu {collapsed,expanded,cluster}
   --color {red,green,blue,mixed}
+  --percentages {hidden,last}
+                        Show numeric utilization percentage. Also can be
+                        toggled by pressing p.
 ```
 
 Will ask for sudo access as it calls `powermetrics` and parses its output.
@@ -30,6 +33,6 @@ Monitors:
 
 Could add more data from powermetrics (e.g. frequency, IO stats for disk and network), but it was adding too much visual noise.
 
-Example: running [deep RL loop](https://github.com/okuvshynov/rlscout) (self play to generate data, model training, model evaluation) on a single MacBook Air:
+Example: running [deep RL loop](https://github.com/okuvshynov/rlscout) (self play to generate data, model training, model evaluation) on a single MacMini M1:
 
-![Deep Rl horizon chart here](static/cubestat_rl_loop.png)
+![Deep Rl horizon chart here](static/cubestat_selfplay.png)
