@@ -12,27 +12,26 @@ from enum import Enum
 
 logging.basicConfig(filename='/tmp/cubestat.log')
 
-class Percentages(Enum):
+class EnumLoop(Enum):
+    def next(self):
+        values = list(self.__class__)
+        return values[(values.index(self) + 1) % len(values)]
+
+class Percentages(EnumLoop):
     hidden = 'hidden'
     last = 'last'
 
     def __str__(self):
         return self.value
     
-    def other(self):
-        return Percentages.hidden if self == Percentages.last else Percentages.last
 
-class CPUMode(Enum):
+class CPUMode(EnumLoop):
     all = 'all'
     by_cluster = 'by_cluster'
     by_core = 'by_core'
 
     def __str__(self):
         return self.value
-    
-    def next(self):
-        values = list(CPUMode)
-        return values[(values.index(self) + 1) % len(values)]
     
 class Color(Enum):
     red = 'red'
@@ -191,7 +190,6 @@ class Horizon:
             if key == ord('c'):
                 with self.lock:
                     self.cpumode = self.cpumode.next()
-
 
 def main(stdscr, powermetrics, firstline=''):
     h = Horizon(stdscr)
