@@ -24,7 +24,6 @@ class Percentages(EnumLoop):
     def __str__(self):
         return self.value
     
-
 class CPUMode(EnumLoop):
     all = 'all'
     by_cluster = 'by_cluster'
@@ -124,12 +123,33 @@ class Horizon:
                 self.colormap['ANE util'] = self.ane_color
             self.snapshots_observed += 1
 
-    def render(self, stdscr):
+    def wl(self, r, c, s):
+        if r < 0 or r >= self.rows or c < 0:
+            return
+        if c + len(s) >= self.cols:
+            s = s[:self.cols - c]
+        try:
+            self.stdscr.addstr(r, c, s)
+        except:
+            pass
+
+    def wr(self, r, c, s, color=0):
+        c = self.cols - c - 1
+        if r < 0 or r >= self.rows or c < 0:
+            return
+        if c < len(s):
+            s = s[-c:]
+        try:
+            self.stdscr.addstr(r, c - len(s) + 1, s, color)
+        except:
+            pass
+
+    def render(self):
         with self.lock:
             if self.snapshots_observed == self.snapshots_rendered:
                 return
-        stdscr.erase()
-        rows, cols = stdscr.getmaxyx()
+        self.stdscr.erase()
+        self.rows, self.cols = self.stdscr.getmaxyx()
         spacing = ' ' * spacing_width
 
         filter_cpu = lambda it : self.cpumode == CPUMode.all or (self.cpumode == CPUMode.by_cluster and it[0] not in self.cpu_cubes) or (self.cpumode == CPUMode.by_core and it[0] not in self.cpu_cluster_cubes)
@@ -138,22 +158,19 @@ class Horizon:
             for i, (title, series) in enumerate(filter(filter_cpu, self.cubes.items())):
                 cells = self.cells[self.colormap[title]]
                 range = len(cells)
-            
-                if rows <= i * 2 + 2 or cols <= 3:
-                    break
 
                 titlestr = f'╔{spacing}{title}'
-                stdscr.addstr(i * 2, 0, titlestr)
-                stdscr.addstr(i * 2 + 1, 0, '╚')
+                self.wl(i * 2, 0, titlestr)
+                self.wl(i * 2 + 1, 0, '╚')
                 
                 strvalue = f'last:{series[-1]:3.0f}%{spacing}╗' if self.percentage_mode == Percentages.last else f'{spacing}╗'
-                stdscr.addstr(i * 2, cols - len(strvalue), strvalue)
-                stdscr.addstr(i * 2 + 1, cols - spacing_width - 1, f'{spacing}╝')
+                self.wr(i * 2, 0, strvalue)
+                self.wr(i * 2 + 1, 0, f'{spacing}╝')
 
-                title_filling = filling * (cols - len(strvalue) - len(titlestr))
-                stdscr.addstr(i * 2, len(titlestr), title_filling)
+                title_filling = filling * (self.cols - len(strvalue) - len(titlestr))
+                self.wl(i * 2, len(titlestr), title_filling)
 
-                index = max(0, len(series) - (cols - 2 * spacing_width - 2))
+                index = max(0, len(series) - (self.cols - 2 * spacing_width - 2))
                 data_slice = list(itertools.islice(series, index, None))
 
                 clamp = lambda v, a, b: int(max(a, min(v, b)))
@@ -161,9 +178,9 @@ class Horizon:
                 
                 for j, v in enumerate(data_slice):
                     chr, color_pair = cell(v)
-                    stdscr.addstr(i * 2 + 1, cols - len(data_slice) + j - 1 - spacing_width, chr, curses.color_pair(color_pair))
+                    self.wr(i * 2 + 1, len(data_slice) - j + spacing_width, chr, curses.color_pair(color_pair))
                 self.snapshots_rendered += 1
-        stdscr.refresh()
+        self.stdscr.refresh()
 
     def loop(self, powermetrics, firstline):
         buf = bytearray()
@@ -180,13 +197,13 @@ class Horizon:
         reader_thread.start()
 
         while True:
-            self.render(self.stdscr)
+            self.render()
             key = self.stdscr.getch()
             if key == ord('q') or key == ord('Q'):
                 exit(0)
             if key == ord('p'):
                 with self.lock:
-                    self.percentage_mode = self.percentage_mode.other()
+                    self.percentage_mode = self.percentage_mode.next()
             if key == ord('c'):
                 with self.lock:
                     self.cpumode = self.cpumode.next()
