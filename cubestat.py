@@ -67,7 +67,7 @@ class Horizon:
         self.cells = self._cells()
         self.stdscr = stdscr
 
-        # all of the below fields are mutable and can be accessed from 2 threads
+        # all of the fields below are mutable and can be accessed from 2 threads
         self.lock = Lock()
         self.cubes = collections.defaultdict(lambda: collections.deque(maxlen=args.buffer_size))
         self.colormap = {}
@@ -92,7 +92,7 @@ class Horizon:
 
     def process_snapshot(self, m):
         initcolormap = not self.colormap
-        
+
         with self.lock:
             for cluster in m['processor']['clusters']:
                 idle_cluster, total_cluster = 0.0, 0.0
@@ -109,7 +109,6 @@ class Horizon:
                         self.colormap[title] = self.cpu_color
                     idle_cluster += cpu['idle_ratio']
                     total_cluster += 1.0
-                
                 self.cubes[cluster_title].append(100.0 - 100.0 * idle_cluster / total_cluster)
                     
             self.cubes['GPU util'].append(100.0 - 100.0 * m['gpu']['idle_ratio'])
@@ -120,13 +119,13 @@ class Horizon:
                 self.colormap['ANE util'] = self.ane_color
             self.snapshots_observed += 1
 
-    def wl(self, r, c, s):
+    def wl(self, r, c, s, color=0):
         if r < 0 or r >= self.rows or c < 0:
             return
         if c + len(s) >= self.cols:
             s = s[:self.cols - c]
         try:
-            self.stdscr.addstr(r, c, s)
+            self.stdscr.addstr(r, c, s, color)
         except:
             pass
 
@@ -156,6 +155,7 @@ class Horizon:
                 cells = self.cells[self.colormap[title]]
                 range = len(cells)
 
+                # indent is used to highlight cores which belong to the same cluster (efficiency vs performance).
                 indent = '  ' if self.cpumode == CPUMode.all and title in self.cpu_cubes else ''
 
                 titlestr = f'{indent}╔{spacing}{title}'      
@@ -184,11 +184,14 @@ class Horizon:
     def loop(self, powermetrics, firstline):
         buf = bytearray()
         buf.extend(firstline)
-        
+
         def reader():
             while True:
                 line = powermetrics.stdout.readline()
                 buf.extend(line)
+                # we check for </plist> rather than '0x00' because powermetrics injects 0x00 
+                # right before the measurement (in time), not right after. So, if we were to wait 
+                # for 0x00 we'll be delaying next sample by sampling period. 
                 if b'</plist>\n' == line:
                     self.process_snapshot(plistlib.loads(bytes(buf).strip(b'\x00')))
                     buf.clear()
