@@ -6,11 +6,8 @@ import curses
 import argparse
 import collections
 import itertools
-import logging
 from threading import Thread, Lock
 from enum import Enum
-
-logging.basicConfig(filename='/tmp/cubestat.log')
 
 class EnumLoop(Enum):
     def next(self):
