@@ -44,6 +44,8 @@ args = parser.parse_args()
 # settings
 spacing_width = 1
 filling = '.'
+disk_limit_mb = 5000
+network_limit_mb = 5000
 colorschemes = {
     Color.green: [-1, 150, 107, 22],
     Color.red: [-1, 224, 138, 52],
@@ -61,6 +63,7 @@ class Horizon:
         self.cpu_color = Color.green if args.color == Color.mixed else args.color
         self.gpu_color = Color.blue if args.color == Color.mixed else args.color
         self.ane_color = Color.red if args.color == Color.mixed else args.color
+        self.io_color = Color.green if args.color == Color.mixed else args.color
         self.cells = self._cells()
         self.stdscr = stdscr
 
@@ -74,6 +77,9 @@ class Horizon:
         self.cpu_cubes = []
         self.cpu_cluster_cubes = []
         self.cpumode = args.cpu
+        self.show_disk = False
+        self.show_network = False
+        self.settings_changes = False
 
     def _cells(self):
         chrs = [' ', '▁', '▂', '▃', '▄', '▅', '▆', '▇', '█']
@@ -93,13 +99,13 @@ class Horizon:
         with self.lock:
             for cluster in m['processor']['clusters']:
                 idle_cluster, total_cluster = 0.0, 0.0
-                cluster_title = f'{cluster["name"]} total CPU util'
+                cluster_title = f'{cluster["name"]} total CPU util %'
                 if not cluster_title in self.cubes:
                     self.cubes[cluster_title] = collections.deque(maxlen=args.buffer_size)
                     self.cpu_cluster_cubes.append(cluster_title)
                     self.colormap[cluster_title] = self.cpu_color
                 for cpu in cluster['cpus']:
-                    title = f'{cluster["name"]} CPU {cpu["cpu"]} util'
+                    title = f'{cluster["name"]} CPU {cpu["cpu"]} util %'
                     self.cubes[title].append(100.0 - 100.0 * cpu['idle_ratio'])
                     if initcolormap:
                         self.cpu_cubes.append(title)
@@ -108,12 +114,23 @@ class Horizon:
                     total_cluster += 1.0
                 self.cubes[cluster_title].append(100.0 - 100.0 * idle_cluster / total_cluster)
                     
-            self.cubes['GPU util'].append(100.0 - 100.0 * m['gpu']['idle_ratio'])
+            self.cubes['GPU util %'].append(100.0 - 100.0 * m['gpu']['idle_ratio'])
             ane_scaling = 8.0 * args.refresh_ms
-            self.cubes['ANE util'].append(100.0 * m['processor']['ane_energy'] / ane_scaling)
+            self.cubes['ANE util %'].append(100.0 * m['processor']['ane_energy'] / ane_scaling)
             if initcolormap:
-                self.colormap['GPU util'] = self.gpu_color
-                self.colormap['ANE util'] = self.ane_color
+                self.colormap['GPU util %'] = self.gpu_color
+                self.colormap['ANE util %'] = self.ane_color
+
+            self.cubes['network i MB/s'].append(m['network']['ibyte_rate'] / (2 ** 20))
+            self.cubes['network o MB/s'].append(m['network']['obyte_rate'] / (2 ** 20))
+            self.cubes['disk read MB/s'].append(m['disk']['rbytes_per_s'] / (2 ** 20))
+            self.cubes['disk write MB/s'].append(m['disk']['wbytes_per_s'] / (2 ** 20))
+            if initcolormap:
+                self.colormap['network i MB/s'] = self.io_color
+                self.colormap['network o MB/s'] = self.io_color
+                self.colormap['disk read MB/s'] = self.io_color
+                self.colormap['disk write MB/s'] = self.io_color
+
             self.snapshots_observed += 1
 
     def wl(self, r, c, s, color=0):
@@ -139,16 +156,22 @@ class Horizon:
 
     def render(self):
         with self.lock:
-            if self.snapshots_observed == self.snapshots_rendered:
+            if self.snapshots_observed == self.snapshots_rendered and not self.settings_changes:
                 return
         self.stdscr.erase()
         self.rows, self.cols = self.stdscr.getmaxyx()
         spacing = ' ' * spacing_width
 
         filter_cpu = lambda it : self.cpumode == CPUMode.all or (self.cpumode == CPUMode.by_cluster and it[0] not in self.cpu_cubes) or (self.cpumode == CPUMode.by_core and it[0] not in self.cpu_cluster_cubes)
-
+        filter_io = lambda it : (self.show_disk or 'disk' not in it[0]) and (self.show_network or 'network' not in it[0]) 
         with self.lock:
-            for i, (title, series) in enumerate(filter(filter_cpu, self.cubes.items())):
+
+            cubes = filter(lambda it: all([filter_cpu(it), filter_io(it)]), self.cubes.items())
+            for i, (title, series) in enumerate(cubes):
+                if 'disk' in title and not self.show_disk:
+                    continue
+                if 'network' in title and not self.show_network:
+                    continue
                 cells = self.cells[self.colormap[title]]
                 range = len(cells)
 
@@ -159,7 +182,7 @@ class Horizon:
                 self.wl(i * 2, 0, titlestr)
                 self.wl(i * 2 + 1, 0, f'{indent}╚')
                 
-                strvalue = f'last:{series[-1]:3.0f}%{spacing}╗' if self.percentage_mode == Percentages.last else f'{spacing}╗'
+                strvalue = f'last:{series[-1]:3.0f}{spacing}╗' if self.percentage_mode == Percentages.last else f'{spacing}╗'
                 self.wr(i * 2, 0, strvalue)
                 self.wr(i * 2 + 1, 0, f'{spacing}╝')
 
@@ -170,7 +193,8 @@ class Horizon:
                 data_slice = list(itertools.islice(series, index, None))
 
                 clamp = lambda v, a, b: int(max(a, min(v, b)))
-                cell = lambda v: cells[clamp(round(v * range / 100.0), 0, range - 1)]
+                B = disk_limit_mb if 'disk' in title else network_limit_mb if 'network' in title else 100.0    
+                cell = lambda v: cells[clamp(round(v * range / B), 0, range - 1)]
                 
                 for j, v in enumerate(data_slice):
                     chr, color_pair = cell(v)
@@ -203,16 +227,29 @@ class Horizon:
             if key == ord('p'):
                 with self.lock:
                     self.percentage_mode = self.percentage_mode.next()
+                    self.settings_changes = True
             if key == ord('c'):
                 with self.lock:
                     self.cpumode = self.cpumode.next()
+                    self.settings_changes = True
+            if key == ord('d'):
+                with self.lock:
+                    self.show_disk = not self.show_disk
+                    self.settings_changes = True
+            if key == ord('n'):
+                with self.lock:
+                    self.show_network = not self.show_network
+                    self.settings_changes = True
 
 def start(stdscr, powermetrics, firstline):
     h = Horizon(stdscr)
     h.loop(powermetrics, firstline)
 
 def main():
-    cmd = ['sudo', 'powermetrics', '-f', 'plist', '-i', str(args.refresh_ms), '-s', 'cpu_power,gpu_power,ane_power']
+    cmd = ['sudo', 'powermetrics', '-f', 'plist', '-i', str(args.refresh_ms), '-s', 'cpu_power,gpu_power,ane_power,network,disk']
     powermetrics = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     line = powermetrics.stdout.readline()
     curses.wrapper(start, powermetrics, line)
+
+if __name__ == '__main__':
+    main()
