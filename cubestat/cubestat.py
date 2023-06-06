@@ -207,12 +207,12 @@ class Horizon:
                 with self.lock:
                     self.cpumode = self.cpumode.next()
 
-def main(stdscr, powermetrics, firstline):
+def start(stdscr, powermetrics, firstline):
     h = Horizon(stdscr)
     h.loop(powermetrics, firstline)
 
-if __name__ == '__main__':
+def main():
     cmd = ['sudo', 'powermetrics', '-f', 'plist', '-i', str(args.refresh_ms), '-s', 'cpu_power,gpu_power,ane_power']
     powermetrics = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     line = powermetrics.stdout.readline()
-    curses.wrapper(main, powermetrics, line)
+    curses.wrapper(start, powermetrics, line)
