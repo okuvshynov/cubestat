@@ -62,9 +62,9 @@ class Horizon:
         curses.use_default_colors()
 
         self.cpu_color = Color.green if args.color == Color.mixed else args.color
-        self.gpu_color = Color.blue if args.color == Color.mixed else args.color
+        self.gpu_color = Color.red if args.color == Color.mixed else args.color
         self.ane_color = Color.red if args.color == Color.mixed else args.color
-        self.io_color = Color.green if args.color == Color.mixed else args.color
+        self.io_color = Color.blue if args.color == Color.mixed else args.color
         self.cells = self._cells()
         self.stdscr = stdscr
 
