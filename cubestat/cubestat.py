@@ -39,6 +39,9 @@ parser.add_argument('--buffer_size', type=int, default=500, help='How many datap
 parser.add_argument('--cpu', type=CPUMode, default=CPUMode.by_core, choices=list(CPUMode), help='CPU mode - showing all cores, only cumulative by cluster or both. Can be toggled by pressing c.')
 parser.add_argument('--color', type=Color, default=Color.mixed, choices=list(Color))
 parser.add_argument('--percentages', type=Percentages, default=Percentages.hidden, choices=list(Percentages), help='Show/hide numeric utilization percentage. Can be toggled by pressing p.')
+parser.add_argument('--disk', action="store_true", help="show disk read/write. Can be toggled by pressing d.")
+parser.add_argument('--network', action="store_true", help="show network io. Can be toggled by pressing n.")
+
 args = parser.parse_args()
 
 # settings
@@ -77,8 +80,8 @@ class Horizon:
         self.cpu_cubes = []
         self.cpu_cluster_cubes = []
         self.cpumode = args.cpu
-        self.show_disk = False
-        self.show_network = False
+        self.show_disk = args.disk
+        self.show_network = args.network
         self.settings_changes = False
 
     def _cells(self):
@@ -121,15 +124,15 @@ class Horizon:
                 self.colormap['GPU util %'] = self.gpu_color
                 self.colormap['ANE util %'] = self.ane_color
 
-            self.cubes['network i MB/s'].append(m['network']['ibyte_rate'] / (2 ** 20))
-            self.cubes['network o MB/s'].append(m['network']['obyte_rate'] / (2 ** 20))
-            self.cubes['disk read MB/s'].append(m['disk']['rbytes_per_s'] / (2 ** 20))
-            self.cubes['disk write MB/s'].append(m['disk']['wbytes_per_s'] / (2 ** 20))
+            self.cubes['network i KB/s'].append(m['network']['ibyte_rate'] / (2 ** 10))
+            self.cubes['network o KB/s'].append(m['network']['obyte_rate'] / (2 ** 10))
+            self.cubes['disk read KB/s'].append(m['disk']['rbytes_per_s'] / (2 ** 10))
+            self.cubes['disk write KB/s'].append(m['disk']['wbytes_per_s'] / (2 ** 10))
             if initcolormap:
-                self.colormap['network i MB/s'] = self.io_color
-                self.colormap['network o MB/s'] = self.io_color
-                self.colormap['disk read MB/s'] = self.io_color
-                self.colormap['disk write MB/s'] = self.io_color
+                self.colormap['network i KB/s'] = self.io_color
+                self.colormap['network o KB/s'] = self.io_color
+                self.colormap['disk read KB/s'] = self.io_color
+                self.colormap['disk write KB/s'] = self.io_color
 
             self.snapshots_observed += 1
 
@@ -165,7 +168,6 @@ class Horizon:
         filter_cpu = lambda it : self.cpumode == CPUMode.all or (self.cpumode == CPUMode.by_cluster and it[0] not in self.cpu_cubes) or (self.cpumode == CPUMode.by_core and it[0] not in self.cpu_cluster_cubes)
         filter_io = lambda it : (self.show_disk or 'disk' not in it[0]) and (self.show_network or 'network' not in it[0]) 
         with self.lock:
-
             cubes = filter(lambda it: all([filter_cpu(it), filter_io(it)]), self.cubes.items())
             for i, (title, series) in enumerate(cubes):
                 if 'disk' in title and not self.show_disk:
