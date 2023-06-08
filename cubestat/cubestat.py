@@ -47,8 +47,6 @@ args = parser.parse_args()
 # settings
 spacing_width = 1
 filling = '.'
-disk_limit_mb = 5000
-network_limit_mb = 5000
 colorschemes = {
     Color.green: [-1, 150, 107, 22],
     Color.red: [-1, 224, 138, 52],
@@ -169,33 +167,35 @@ class Horizon:
         filter_io = lambda it : (self.show_disk or 'disk' not in it[0]) and (self.show_network or 'network' not in it[0]) 
         with self.lock:
             cubes = filter(lambda it: all([filter_cpu(it), filter_io(it)]), self.cubes.items())
+            
             for i, (title, series) in enumerate(cubes):
-                if 'disk' in title and not self.show_disk:
-                    continue
-                if 'network' in title and not self.show_network:
-                    continue
                 cells = self.cells[self.colormap[title]]
                 range = len(cells)
 
                 # indent is used to highlight cores which belong to the same cluster (efficiency vs performance).
                 indent = '  ' if self.cpumode == CPUMode.all and title in self.cpu_cubes else ''
 
-                titlestr = f'{indent}╔{spacing}{title}'      
+                titlestr = f'{indent}╔{spacing}{title}'
                 self.wl(i * 2, 0, titlestr)
                 self.wl(i * 2 + 1, 0, f'{indent}╚')
                 
-                strvalue = f'last:{series[-1]:3.0f}{spacing}╗' if self.percentage_mode == Percentages.last else f'{spacing}╗'
-                self.wr(i * 2, 0, strvalue)
-                self.wr(i * 2 + 1, 0, f'{spacing}╝')
-
-                title_filling = filling * (self.cols - len(strvalue) - len(titlestr))
-                self.wl(i * 2, len(titlestr), title_filling)
-
                 index = max(0, len(series) - (self.cols - 2 * spacing_width - 2 - len(indent)))
                 data_slice = list(itertools.islice(series, index, None))
 
                 clamp = lambda v, a, b: int(max(a, min(v, b)))
-                B = disk_limit_mb if 'disk' in title else network_limit_mb if 'network' in title else 100.0    
+                B = 100.0
+                strvalue = f'last:{data_slice[-1]:3.0f}%{spacing}╗' if self.percentage_mode == Percentages.last else f'{spacing}╗'
+                if 'disk' in title or 'network' in title:
+                    B = max(data_slice)
+                    B = float(1 if B == 0 else 2 ** (int((B - 1)).bit_length()))
+                    strvalue =  f'last:{data_slice[-1]:3.0f}|{int(B)}Kb/s{spacing}╗' if self.percentage_mode == Percentages.last else f'{spacing}╗'
+
+                title_filling = filling * (self.cols - len(strvalue) - len(titlestr))
+                self.wl(i * 2, len(titlestr), title_filling)
+
+                self.wr(i * 2, 0, strvalue)
+                self.wr(i * 2 + 1, 0, f'{spacing}╝')
+                
                 cell = lambda v: cells[clamp(round(v * range / B), 0, range - 1)]
                 
                 for j, v in enumerate(data_slice):
