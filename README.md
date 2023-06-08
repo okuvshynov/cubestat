@@ -52,11 +52,11 @@ We could add more data from powermetrics (e.g. frequency), but it was adding too
 Example: running [deep RL loop](https://github.com/okuvshynov/rlscout) (self play to generate data, model training, model evaluation) on a single MacBook Air M2:
 
 First chart we have playing games to generate data on CPU only (as there's no trained model yet).
-![Self-play RL horizon chart here](static/selfplay_only.png)
+![Self-play RL horizon chart here](static/started_model_eval.png)
 
 Once we have enough data, we start training the model (on GPU):
 ![Self-play + training](static/started_training.png)
 
 After we have first model snapshot, we start model evaluation, which runs model inference (on Neural Engine):
-![Self-play + training + eval](static/started_model_eval.png)
+![Self-play + training + eval](static/selfplay_only.png)
 
