@@ -60,3 +60,5 @@ Once we have enough data, we start training the model (on GPU):
 After we have first model snapshot, we start model evaluation, which runs model inference (on Neural Engine):
 ![Self-play + training + eval](static/selfplay_only.png)
 
+Another example running [GPT inference on ggml](https://github.com/ggerganov/ggml): 
+![GPT inference](static/ggml_gpt.png)
