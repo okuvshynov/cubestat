@@ -3,6 +3,11 @@
 Command-line utility to monitor CPU/GPU/NeuralEngine utilization on Apple M1/M2 devices. Requires sudo access as it calls `powermetrics` and parses its output.
 Is useful when connecting to another OS X device remotely over ssh. 
 
+Installation:
+```
+pip3 install cubestat
+```
+
 ```
 usage: ./cubestat.py [-h]
                      [--refresh_ms REFRESH_MS]
