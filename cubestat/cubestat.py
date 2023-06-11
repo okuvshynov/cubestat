@@ -8,6 +8,7 @@ import collections
 import itertools
 from threading import Thread, Lock
 from enum import Enum
+from math import ceil, floor
 
 class EnumLoop(Enum):
     def next(self):
@@ -41,6 +42,7 @@ parser.add_argument('--color', type=Color, default=Color.mixed, choices=list(Col
 parser.add_argument('--percentages', type=Percentages, default=Percentages.hidden, choices=list(Percentages), help='Show/hide numeric utilization percentage. Can be toggled by pressing p.')
 parser.add_argument('--disk', action="store_true", help="show disk read/write. Can be toggled by pressing d.")
 parser.add_argument('--network', action="store_true", help="show network io. Can be toggled by pressing n.")
+parser.add_argument('--count', type=int, default=200)
 
 args = parser.parse_args()
 
@@ -134,6 +136,7 @@ class Horizon:
 
             self.snapshots_observed += 1
 
+
     def wl(self, r, c, s, color=0):
         if r < 0 or r >= self.rows or c < 0:
             return
@@ -157,6 +160,8 @@ class Horizon:
 
     def render(self):
         with self.lock:
+            if self.snapshots_observed >= args.count:
+                exit(0)
             if self.snapshots_observed == self.snapshots_rendered and not self.settings_changes:
                 return
         self.stdscr.erase()
@@ -182,8 +187,6 @@ class Horizon:
                 index = max(0, len(series) - (self.cols - 2 * spacing_width - 2 - len(indent)))
                 data_slice = list(itertools.islice(series, index, None))
 
-                clamp = lambda v, a, b: a if v < a else b if v > b else v
-
                 B = 100.0
                 strvalue = f'last:{data_slice[-1]:3.0f}%{spacing}╗' if self.percentage_mode == Percentages.last else f'{spacing}╗'
                 if 'disk' in title or 'network' in title:
@@ -197,12 +200,12 @@ class Horizon:
                 self.wr(i * 2, 0, strvalue)
                 self.wr(i * 2 + 1, 0, f'{spacing}╝')
                 
-                cell = lambda v: clamp(round(v * range / B), 0, range - 1)
-                
                 for j, v in enumerate(data_slice):
-                    cell_index = cell(v)
-                    if cell_index == 0:
+                    cell_index = floor(v * range / B)
+                    if cell_index <= 0:
                         continue
+                    if cell_index >= range:
+                        cell_index = range - 1
                     chr, color_pair = cells[cell_index]
                     self.wr(i * 2 + 1, len(data_slice) - j + spacing_width, chr, curses.color_pair(color_pair))
                 self.snapshots_rendered += 1
