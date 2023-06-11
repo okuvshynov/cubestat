@@ -207,7 +207,7 @@ class Horizon:
                     if cell_index >= range:
                         cell_index = range - 1
                     chr, color_pair = cells[cell_index]
-                    self.wr(i * 2 + 1, len(data_slice) - j + spacing_width, chr, curses.color_pair(color_pair))
+                    self.stdscr.addch(i * 2 + 1, self.cols - (len(data_slice) - j + spacing_width) - 1, chr, curses.color_pair(color_pair))
                 self.snapshots_rendered += 1
         self.stdscr.refresh()
 
