@@ -182,7 +182,8 @@ class Horizon:
                 index = max(0, len(series) - (self.cols - 2 * spacing_width - 2 - len(indent)))
                 data_slice = list(itertools.islice(series, index, None))
 
-                clamp = lambda v, a, b: int(max(a, min(v, b)))
+                clamp = lambda v, a, b: a if v < a else b if v > b else v
+
                 B = 100.0
                 strvalue = f'last:{data_slice[-1]:3.0f}%{spacing}╗' if self.percentage_mode == Percentages.last else f'{spacing}╗'
                 if 'disk' in title or 'network' in title:
@@ -196,10 +197,13 @@ class Horizon:
                 self.wr(i * 2, 0, strvalue)
                 self.wr(i * 2 + 1, 0, f'{spacing}╝')
                 
-                cell = lambda v: cells[clamp(round(v * range / B), 0, range - 1)]
+                cell = lambda v: clamp(round(v * range / B), 0, range - 1)
                 
                 for j, v in enumerate(data_slice):
-                    chr, color_pair = cell(v)
+                    cell_index = cell(v)
+                    if cell_index == 0:
+                        continue
+                    chr, color_pair = cells[cell_index]
                     self.wr(i * 2 + 1, len(data_slice) - j + spacing_width, chr, curses.color_pair(color_pair))
                 self.snapshots_rendered += 1
         self.stdscr.refresh()
