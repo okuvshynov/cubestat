@@ -42,7 +42,7 @@ parser.add_argument('--color', type=Color, default=Color.mixed, choices=list(Col
 parser.add_argument('--percentages', type=Percentages, default=Percentages.hidden, choices=list(Percentages), help='Show/hide numeric utilization percentage. Can be toggled by pressing p.')
 parser.add_argument('--disk', action="store_true", help="show disk read/write. Can be toggled by pressing d.")
 parser.add_argument('--network', action="store_true", help="show network io. Can be toggled by pressing n.")
-parser.add_argument('--count', type=int, default=200)
+parser.add_argument('--count', type=int, default=2**63)
 
 args = parser.parse_args()
 
