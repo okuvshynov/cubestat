@@ -158,6 +158,7 @@ class Horizon:
         except:
             pass
 
+    #@profile
     def render(self):
         with self.lock:
             if self.snapshots_observed >= args.count:
@@ -199,15 +200,20 @@ class Horizon:
 
                 self.wr(i * 2, 0, strvalue)
                 self.wr(i * 2 + 1, 0, f'{spacing}╝')
+
+                scaler = range / B
                 
-                for j, v in enumerate(data_slice):
-                    cell_index = floor(v * range / B)
+                col = self.cols - (len(data_slice) + spacing_width) - 2
+
+                for v in data_slice:
+                    col += 1
+                    cell_index = floor(v * scaler)
                     if cell_index <= 0:
                         continue
                     if cell_index >= range:
                         cell_index = range - 1
                     chr, color_pair = cells[cell_index]
-                    self.stdscr.addch(i * 2 + 1, self.cols - (len(data_slice) - j + spacing_width) - 1, chr, curses.color_pair(color_pair))
+                    self.stdscr.addch(i * 2 + 1, col, chr, curses.color_pair(color_pair))
                 self.snapshots_rendered += 1
         self.stdscr.refresh()
 
