@@ -8,7 +8,8 @@ import collections
 import itertools
 from threading import Thread, Lock
 from enum import Enum
-from math import ceil, floor
+from math import floor
+import psutil
 
 class EnumLoop(Enum):
     def next(self):
@@ -98,6 +99,7 @@ class Horizon:
 
     def process_snapshot(self, m):
         initcolormap = not self.colormap
+        ram_used = psutil.virtual_memory().percent
 
         with self.lock:
             for cluster in m['processor']['clusters']:
@@ -123,6 +125,10 @@ class Horizon:
             if initcolormap:
                 self.colormap['GPU util %'] = self.gpu_color
                 self.colormap['ANE util %'] = self.ane_color
+
+            self.cubes['RAM used %'].append(ram_used)
+            if initcolormap:
+                self.colormap['RAM used %'] = self.cpu_color
 
             self.cubes['network i KB/s'].append(m['network']['ibyte_rate'] / (2 ** 10))
             self.cubes['network o KB/s'].append(m['network']['obyte_rate'] / (2 ** 10))
