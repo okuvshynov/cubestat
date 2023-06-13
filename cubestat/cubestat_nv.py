@@ -256,9 +256,6 @@ def start(stdscr):
     h.loop()
 
 def main():
-    #cmd = ['sudo', 'powermetrics', '-f', 'plist', '-i', str(args.refresh_ms), '-s', 'cpu_power,gpu_power,ane_power,network,disk']
-    #powermetrics = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    #line = powermetrics.stdout.readline()
     curses.wrapper(start)
 
 if __name__ == '__main__':
