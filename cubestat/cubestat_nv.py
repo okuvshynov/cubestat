@@ -7,9 +7,9 @@ import argparse
 import collections
 import itertools
 from threading import Thread, Lock
-from enum import Enum
 from math import floor
 import psutil
+import time
 from ui import Percentages, CPUMode, Color
 
 parser = argparse.ArgumentParser("./cubestat.py")
@@ -61,6 +61,10 @@ class Horizon:
         self.show_disk = args.disk
         self.show_network = args.network
         self.settings_changes = False
+        self.disk_read_last = 0
+        self.disk_written_last = 0
+        self.network_read_last = 0
+        self.network_written_last = 0
 
     def _cells(self):
         chrs = [' ', '▁', '▂', '▃', '▄', '▅', '▆', '▇', '█']
@@ -74,48 +78,59 @@ class Horizon:
                 colorpair += 1
         return cells
 
-    def process_snapshot(self, m):
+    def process_snapshot(self):
         initcolormap = not self.colormap
         ram_used = psutil.virtual_memory().percent
+        cpu_load = psutil.cpu_percent(percpu=True)
+        disk_load = psutil.disk_io_counters()
+        disk_read_kb = disk_load.read_bytes / 2 ** 10
+        disk_written_kb = disk_load.write_bytes / 2 ** 10
+        nw_load = psutil.net_io_counters()
+        nw_read_kb = nw_load.bytes_recv / 2 ** 10
+        nw_written_kb = nw_load.bytes_sent / 2 ** 10
 
         with self.lock:
-            for cluster in m['processor']['clusters']:
-                idle_cluster, total_cluster = 0.0, 0.0
-                cluster_title = f'{cluster["name"]} total CPU util %'
-                if not cluster_title in self.cubes:
-                    self.cubes[cluster_title] = collections.deque(maxlen=args.buffer_size)
-                    self.cpu_cluster_cubes.append(cluster_title)
-                    self.colormap[cluster_title] = self.cpu_color
-                for cpu in cluster['cpus']:
-                    title = f'{cluster["name"]} CPU {cpu["cpu"]} util %'
-                    self.cubes[title].append(100.0 - 100.0 * cpu['idle_ratio'])
-                    if initcolormap:
-                        self.cpu_cubes.append(title)
-                        self.colormap[title] = self.cpu_color
-                    idle_cluster += cpu['idle_ratio']
-                    total_cluster += 1.0
-                self.cubes[cluster_title].append(100.0 - 100.0 * idle_cluster / total_cluster)
-                    
-            self.cubes['GPU util %'].append(100.0 - 100.0 * m['gpu']['idle_ratio'])
-            ane_scaling = 8.0 * args.refresh_ms
-            self.cubes['ANE util %'].append(100.0 * m['processor']['ane_energy'] / ane_scaling)
-            if initcolormap:
-                self.colormap['GPU util %'] = self.gpu_color
-                self.colormap['ANE util %'] = self.ane_color
+            cluster_title = f'Total CPU util %'
+            if not cluster_title in self.cubes:
+                self.cubes[cluster_title] = collections.deque(maxlen=args.buffer_size)
+                self.cpu_cluster_cubes.append(cluster_title)
+                self.colormap[cluster_title] = self.cpu_color
+            # is this correct?
+            total_load = 0.0
+            for i, v in enumerate(cpu_load):
+                title = f'CPU {i} util %'
+                self.cubes[title].append(v)
+                if initcolormap:
+                    self.cpu_cubes.append(title)
+                    self.colormap[title] = self.cpu_color
+                total_load += v
+            self.cubes[cluster_title].append(total_load / len(cpu_load))
 
             self.cubes['RAM used %'].append(ram_used)
             if initcolormap:
                 self.colormap['RAM used %'] = self.cpu_color
 
-            self.cubes['network i KB/s'].append(m['network']['ibyte_rate'] / (2 ** 10))
-            self.cubes['network o KB/s'].append(m['network']['obyte_rate'] / (2 ** 10))
-            self.cubes['disk read KB/s'].append(m['disk']['rbytes_per_s'] / (2 ** 10))
-            self.cubes['disk write KB/s'].append(m['disk']['wbytes_per_s'] / (2 ** 10))
             if initcolormap:
-                self.colormap['network i KB/s'] = self.io_color
-                self.colormap['network o KB/s'] = self.io_color
                 self.colormap['disk read KB/s'] = self.io_color
                 self.colormap['disk write KB/s'] = self.io_color
+                self.disk_read_last = disk_read_kb
+                self.disk_written_last = disk_written_kb
+
+            self.cubes['disk read KB/s'].append(disk_read_kb - self.disk_read_last)
+            self.cubes['disk write KB/s'].append(disk_written_kb - self.disk_written_last)
+            self.disk_read_last = disk_read_kb
+            self.disk_written_last = disk_written_kb
+
+            if initcolormap:
+                self.colormap['network i KB/s'] = self.io_color
+                self.colormap['network w KB/s'] = self.io_color
+                self.network_read_last = nw_read_kb
+                self.network_written_last = nw_written_kb
+
+            self.cubes['network i KB/s'].append(nw_read_kb - self.network_read_last)
+            self.cubes['network w KB/s'].append(nw_written_kb - self.network_written_last)
+            self.network_read_last = nw_read_kb
+            self.network_written_last = nw_written_kb
 
             self.snapshots_observed += 1
 
@@ -200,21 +215,18 @@ class Horizon:
                 self.snapshots_rendered += 1
         self.stdscr.refresh()
 
-    def loop(self, powermetrics, firstline):
-        buf = bytearray()
-        buf.extend(firstline)
-
-        def reader():
+    def loop(self):
+        def reader_loop():
+            begin_ts = time.time()
+            n = 0
+            d = args.refresh_ms / 1000.0
             while True:
-                line = powermetrics.stdout.readline()
-                buf.extend(line)
-                # we check for </plist> rather than '0x00' because powermetrics injects 0x00 
-                # right before the measurement (in time), not right after. So, if we were to wait 
-                # for 0x00 we'll be delaying next sample by sampling period. 
-                if b'</plist>\n' == line:
-                    self.process_snapshot(plistlib.loads(bytes(buf).strip(b'\x00')))
-                    buf.clear()
-        reader_thread = Thread(target=reader, daemon=True)
+                n += 1
+                expected_time = begin_ts + n * d
+                time.sleep(expected_time - time.time())
+                self.process_snapshot()
+
+        reader_thread = Thread(target=reader_loop, daemon=True)
         reader_thread.start()
 
         while True:
@@ -239,15 +251,15 @@ class Horizon:
                     self.show_network = not self.show_network
                     self.settings_changes = True
 
-def start(stdscr, powermetrics, firstline):
+def start(stdscr):
     h = Horizon(stdscr)
-    h.loop(powermetrics, firstline)
+    h.loop()
 
 def main():
-    cmd = ['sudo', 'powermetrics', '-f', 'plist', '-i', str(args.refresh_ms), '-s', 'cpu_power,gpu_power,ane_power,network,disk']
-    powermetrics = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    line = powermetrics.stdout.readline()
-    curses.wrapper(start, powermetrics, line)
+    #cmd = ['sudo', 'powermetrics', '-f', 'plist', '-i', str(args.refresh_ms), '-s', 'cpu_power,gpu_power,ane_power,network,disk']
+    #powermetrics = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    #line = powermetrics.stdout.readline()
+    curses.wrapper(start)
 
 if __name__ == '__main__':
     main()
