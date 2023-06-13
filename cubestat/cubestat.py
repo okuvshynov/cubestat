@@ -285,7 +285,7 @@ class Horizon:
 
 
     def loop_linux(self):
-        def reader_loop_linux(self):
+        def reader_loop_linux():
             begin_ts = time.time()
             n = 0
             d = args.refresh_ms / 1000.0
