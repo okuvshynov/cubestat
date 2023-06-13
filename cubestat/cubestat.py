@@ -16,9 +16,9 @@ from sys import platform
 parser = argparse.ArgumentParser("./cubestat.py")
 parser.add_argument('--refresh_ms', '-i', type=int, default=500, help='Update frequency, milliseconds')
 parser.add_argument('--buffer_size', type=int, default=500, help='How many datapoints to store. Having it larger than screen width is a good idea as terminal window can be resized')
-parser.add_argument('--cpu', type=CPUMode, default=CPUMode.by_core, choices=list(CPUMode), help='CPU mode - showing all cores, only cumulative by cluster or both. Can be toggled by pressing c.')
+parser.add_argument('--cpu', type=CPUMode, default=CPUMode.all, choices=list(CPUMode), help='CPU mode - showing all cores, only cumulative by cluster or both. Can be toggled by pressing c.')
 parser.add_argument('--color', type=Color, default=Color.mixed, choices=list(Color))
-parser.add_argument('--percentages', type=Percentages, default=Percentages.hidden, choices=list(Percentages), help='Show/hide numeric utilization percentage. Can be toggled by pressing p.')
+parser.add_argument('--percentages', type=Percentages, default=Percentages.last, choices=list(Percentages), help='Show/hide numeric utilization percentage. Can be toggled by pressing p.')
 parser.add_argument('--disk', action="store_true", help="show disk read/write. Can be toggled by pressing d.")
 parser.add_argument('--network', action="store_true", help="show network io. Can be toggled by pressing n.")
 parser.add_argument('--count', type=int, default=2**63)
@@ -86,6 +86,7 @@ class Horizon:
         nw_load = psutil.net_io_counters()
         nw_read_kb = nw_load.bytes_recv / 2 ** 10
         nw_written_kb = nw_load.bytes_sent / 2 ** 10
+        d = args.refresh_ms / 1000.0
 
         with self.lock:
             cluster_title = f'Total CPU util %'
@@ -114,8 +115,8 @@ class Horizon:
                 self.disk_read_last = disk_read_kb
                 self.disk_written_last = disk_written_kb
 
-            self.cubes['disk read KB/s'].append(disk_read_kb - self.disk_read_last)
-            self.cubes['disk write KB/s'].append(disk_written_kb - self.disk_written_last)
+            self.cubes['disk read KB/s'].append((disk_read_kb - self.disk_read_last) / d)
+            self.cubes['disk write KB/s'].append((disk_written_kb - self.disk_written_last) / d)
             self.disk_read_last = disk_read_kb
             self.disk_written_last = disk_written_kb
 
@@ -125,8 +126,8 @@ class Horizon:
                 self.network_read_last = nw_read_kb
                 self.network_written_last = nw_written_kb
 
-            self.cubes['network i KB/s'].append(nw_read_kb - self.network_read_last)
-            self.cubes['network w KB/s'].append(nw_written_kb - self.network_written_last)
+            self.cubes['network i KB/s'].append((nw_read_kb - self.network_read_last) / d)
+            self.cubes['network w KB/s'].append((nw_written_kb - self.network_written_last) / d)
             self.network_read_last = nw_read_kb
             self.network_written_last = nw_written_kb
 
@@ -258,20 +259,7 @@ class Horizon:
                 self.snapshots_rendered += 1
         self.stdscr.refresh()
 
-    def loop_linux(self):
-        def reader_loop():
-            begin_ts = time.time()
-            n = 0
-            d = args.refresh_ms / 1000.0
-            while True:
-                n += 1
-                expected_time = begin_ts + n * d
-                time.sleep(expected_time - time.time())
-                self.process_snapshot_linux()
-
-        reader_thread = Thread(target=reader_loop, daemon=True)
-        reader_thread.start()
-
+    def render_loop(self):
         while True:
             self.render()
             key = self.stdscr.getch()
@@ -294,11 +282,28 @@ class Horizon:
                     self.show_network = not self.show_network
                     self.settings_changes = True
 
-    def loop_apple(self, powermetrics, firstline):
-        buf = bytearray()
-        buf.extend(firstline)
 
-        def reader():
+
+    def loop_linux(self):
+        def reader_loop_linux(self):
+            begin_ts = time.time()
+            n = 0
+            d = args.refresh_ms / 1000.0
+            while True:
+                n += 1
+                expected_time = begin_ts + n * d
+                time.sleep(expected_time - time.time())
+                self.process_snapshot_linux()
+        reader_thread = Thread(target=reader_loop_linux, daemon=True)
+        reader_thread.start()
+        self.render_loop()
+
+
+
+    def loop_apple(self, powermetrics, firstline):
+        def reader_loop_apple():
+            buf = bytearray()
+            buf.extend(firstline)
             while True:
                 line = powermetrics.stdout.readline()
                 buf.extend(line)
@@ -308,30 +313,9 @@ class Horizon:
                 if b'</plist>\n' == line:
                     self.process_snapshot_apple(plistlib.loads(bytes(buf).strip(b'\x00')))
                     buf.clear()
-        reader_thread = Thread(target=reader, daemon=True)
+        reader_thread = Thread(target=reader_loop_apple, daemon=True)
         reader_thread.start()
-
-        while True:
-            self.render()
-            key = self.stdscr.getch()
-            if key == ord('q') or key == ord('Q'):
-                exit(0)
-            if key == ord('p'):
-                with self.lock:
-                    self.percentage_mode = self.percentage_mode.next()
-                    self.settings_changes = True
-            if key == ord('c'):
-                with self.lock:
-                    self.cpumode = self.cpumode.next()
-                    self.settings_changes = True
-            if key == ord('d'):
-                with self.lock:
-                    self.show_disk = not self.show_disk
-                    self.settings_changes = True
-            if key == ord('n'):
-                with self.lock:
-                    self.show_network = not self.show_network
-                    self.settings_changes = True
+        self.render_loop()
 
 def start_apple(stdscr, powermetrics, firstline):
     h = Horizon(stdscr)
