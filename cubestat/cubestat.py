@@ -11,6 +11,7 @@ from math import floor
 import psutil
 import time
 from ui import Percentages, CPUMode, Color
+from sys import platform
 
 parser = argparse.ArgumentParser("./cubestat.py")
 parser.add_argument('--refresh_ms', '-i', type=int, default=500, help='Update frequency, milliseconds')
@@ -266,7 +267,7 @@ class Horizon:
                 n += 1
                 expected_time = begin_ts + n * d
                 time.sleep(expected_time - time.time())
-                self.process_snapshot()
+                self.process_snapshot_linux()
 
         reader_thread = Thread(target=reader_loop, daemon=True)
         reader_thread.start()
@@ -341,10 +342,13 @@ def start_linux(stdscr):
     h.loop_linux()
 
 def main():
-    cmd = ['sudo', 'powermetrics', '-f', 'plist', '-i', str(args.refresh_ms), '-s', 'cpu_power,gpu_power,ane_power,network,disk']
-    powermetrics = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    line = powermetrics.stdout.readline()
-    curses.wrapper(start_apple, powermetrics, line)
+    if platform == "darwin":
+        cmd = ['sudo', 'powermetrics', '-f', 'plist', '-i', str(args.refresh_ms), '-s', 'cpu_power,gpu_power,ane_power,network,disk']
+        powermetrics = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        line = powermetrics.stdout.readline()
+        curses.wrapper(start_apple, powermetrics, line)
+    if platform == "linux" or platform == "linux2":
+        curses.wrapper(start_linux)
 
 if __name__ == '__main__':
     main()
