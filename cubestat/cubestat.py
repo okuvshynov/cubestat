@@ -10,8 +10,32 @@ from threading import Thread, Lock
 from math import floor
 import psutil
 import time
-from ui import Percentages, CPUMode, Color
 from sys import platform
+from enum import Enum
+
+class EnumLoop(Enum):
+    def next(self):
+        values = list(self.__class__)
+        return values[(values.index(self) + 1) % len(values)]
+    
+class EnumStr(Enum):
+    def __str__(self):
+        return self.value
+
+class Percentages(EnumLoop, EnumStr):
+    hidden = 'hidden'
+    last = 'last'
+    
+class CPUMode(EnumLoop, EnumStr):
+    all = 'all'
+    by_cluster = 'by_cluster'
+    by_core = 'by_core'
+    
+class Color(EnumStr):
+    red = 'red'
+    green = 'green'
+    blue = 'blue'
+    mixed = 'mixed'
 
 parser = argparse.ArgumentParser("./cubestat.py")
 parser.add_argument('--refresh_ms', '-i', type=int, default=500, help='Update frequency, milliseconds')
@@ -282,48 +306,42 @@ class Horizon:
                     self.show_network = not self.show_network
                     self.settings_changes = True
 
+    def reader_loop_linux(self):
+        begin_ts = time.time()
+        n = 0
+        d = args.refresh_ms / 1000.0
+        while True:
+            n += 1
+            expected_time = begin_ts + n * d
+            time.sleep(expected_time - time.time())
+            self.process_snapshot_linux()
 
+    def reader_loop_apple(self, powermetrics, firstline):
+        buf = bytearray()
 
-    def loop_linux(self):
-        def reader_loop_linux():
-            begin_ts = time.time()
-            n = 0
-            d = args.refresh_ms / 1000.0
-            while True:
-                n += 1
-                expected_time = begin_ts + n * d
-                time.sleep(expected_time - time.time())
-                self.process_snapshot_linux()
-        reader_thread = Thread(target=reader_loop_linux, daemon=True)
-        reader_thread.start()
-        self.render_loop()
+        buf.extend(firstline)
+        while True:
+            line = powermetrics.stdout.readline()
+            buf.extend(line)
+            # we check for </plist> rather than '0x00' because powermetrics injects 0x00 
+            # right before the measurement (in time), not right after. So, if we were to wait 
+            # for 0x00 we'll be delaying next sample by sampling period. 
+            if b'</plist>\n' == line:
+                self.process_snapshot_apple(plistlib.loads(bytes(buf).strip(b'\x00')))
+                buf.clear()
 
-
-
-    def loop_apple(self, powermetrics, firstline):
-        def reader_loop_apple():
-            buf = bytearray()
-            buf.extend(firstline)
-            while True:
-                line = powermetrics.stdout.readline()
-                buf.extend(line)
-                # we check for </plist> rather than '0x00' because powermetrics injects 0x00 
-                # right before the measurement (in time), not right after. So, if we were to wait 
-                # for 0x00 we'll be delaying next sample by sampling period. 
-                if b'</plist>\n' == line:
-                    self.process_snapshot_apple(plistlib.loads(bytes(buf).strip(b'\x00')))
-                    buf.clear()
-        reader_thread = Thread(target=reader_loop_apple, daemon=True)
+    def loop(self, reader, *args):
+        reader_thread = Thread(target=reader, daemon=True, args=args)
         reader_thread.start()
         self.render_loop()
 
 def start_apple(stdscr, powermetrics, firstline):
     h = Horizon(stdscr)
-    h.loop_apple(powermetrics, firstline)
+    h.loop(h.reader_loop_apple, powermetrics, firstline)
 
 def start_linux(stdscr):
     h = Horizon(stdscr)
-    h.loop_linux()
+    h.loop(h.reader_loop_linux)
 
 def main():
     if platform == "darwin":
