@@ -129,7 +129,6 @@ class Horizon:
         if self.has_nvidia:
             gpus = self.nvsmi.DeviceQuery('utilization.gpu')['gpu']
 
-
         with self.lock:
             cluster_title = f'Total CPU util %'
             if not cluster_title in self.cubes:
@@ -309,8 +308,6 @@ class Horizon:
                     if cell_index >= range:
                         cell_index = range - 1
                     chr, color_pair = cells[cell_index]
-                    # TODO: might throw here?
-                    #self.stdscr.addch(i * 2 + 1, col, chr, curses.color_pair(color_pair))
                     self.wc(i * 2 + 1, col, chr, curses.color_pair(color_pair))
                 self.snapshots_rendered += 1
         self.stdscr.refresh()

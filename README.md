@@ -51,22 +51,17 @@ options:
 
 Monitors:
 1. CPU utilization - configurable per core ('expanded'), cluster of cores: Efficiency/Performance ('cluster') or both. Is shown as percentage.
-2. GPU utilization. Is shown in percentage.
+2. GPU utilization per GPU. Is shown in percentage.
 3. ANE power consumption. According to `man powermetrics` it is an estimate, but seems working good enough as a proxy to ANE utilization. Is shown as percentage.
 4. Disk and network IO; Is shown in Kb/s.
+5. Memory usage in %
 
 We could add more data from powermetrics (e.g. frequency), but it was adding too much visual noise.
 
 Example: running [deep RL loop](https://github.com/okuvshynov/rlscout) (self play to generate data, model training, model evaluation) on a single MacBook Air M2:
 
-First chart we have playing games to generate data on CPU only (as there's no trained model yet).
-![Self-play RL horizon chart here](static/started_model_eval.png)
-
-Once we have enough data, we start training the model (on GPU):
-![Self-play + training](static/started_training.png)
-
-After we have first model snapshot, we start model evaluation, which runs model inference (on Neural Engine):
-![Self-play + training + eval](static/selfplay_only.png)
+We can see model training (on GPU), self-play (done on 4 performance CPU cores) and model evaluation, which runs inference on Neural Engine:
+![Self-play + training + eval](static/selfplay.png)
 
 Another example running [GPT inference on ggml](https://github.com/ggerganov/ggml): 
 ![GPT inference](static/ggml_gpt.png)
