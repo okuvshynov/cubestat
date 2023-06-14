@@ -89,7 +89,7 @@ class Horizon:
         self.show_network = args.network
         self.settings_changes = False
         self.has_nvidia = False
-        nvspec = find_spec('pynvml.smi')
+        nvspec = find_spec('pynvml')
         if nvspec is not None:
             from pynvml.smi import nvidia_smi
             self.has_nvidia = True
