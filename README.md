@@ -1,8 +1,10 @@
 # Horizon charts for Apple M1/M2 monitoring
 
+In progress: also working for linux with nVidia GPUs
+
 Command-line utility to monitor CPU/GPU/NeuralEngine utilization on Apple M1/M2 devices as horizon chart. Unfortunately, it requires sudo access as it calls `powermetrics` and parses its output.
 
-cubestat is particularly useful when connecting to another OS X device remotely over ssh. 
+cubestat is particularly useful when connecting to another device remotely over ssh. 
 
 Installation:
 ```

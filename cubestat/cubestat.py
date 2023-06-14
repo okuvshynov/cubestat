@@ -89,11 +89,16 @@ class Horizon:
         self.show_network = args.network
         self.settings_changes = False
         self.has_nvidia = False
-        nvspec = find_spec('pynvml')
-        if nvspec is not None:
-            from pynvml.smi import nvidia_smi
-            self.has_nvidia = True
-            self.nvsmi = nvidia_smi.getInstance()
+        try:
+            subprocess.check_output('nvidia-smi')
+            nvspec = find_spec('pynvml')
+            if nvspec is not None:
+                from pynvml.smi import nvidia_smi
+                self.nvsmi = nvidia_smi.getInstance()
+                self.has_nvidia = True
+        except Exception:
+            # TODO: add logging here
+            pass
 
 
     def _cells(self):
@@ -221,11 +226,10 @@ class Horizon:
 
             self.snapshots_observed += 1
 
-
     def wl(self, r, c, s, color=0):
         if r < 0 or r >= self.rows or c < 0:
             return
-        if c + len(s) >= self.cols:
+        if c + len(s) > self.cols:
             s = s[:self.cols - c]
         try:
             self.stdscr.addstr(r, c, s, color)
@@ -243,7 +247,14 @@ class Horizon:
         except:
             pass
 
-    #@profile
+    def wc(self, r, c, chr, color=0):
+        if r < 0 or r >= self.rows or c < 0 or c >= self.cols:
+            return
+        try:
+            self.stdscr.addch(r, c, chr, color)
+        except:
+            pass
+
     def render(self):
         with self.lock:
             if self.snapshots_observed >= args.count:
@@ -298,7 +309,9 @@ class Horizon:
                     if cell_index >= range:
                         cell_index = range - 1
                     chr, color_pair = cells[cell_index]
-                    self.stdscr.addch(i * 2 + 1, col, chr, curses.color_pair(color_pair))
+                    # TODO: might throw here?
+                    #self.stdscr.addch(i * 2 + 1, col, chr, curses.color_pair(color_pair))
+                    self.wc(i * 2 + 1, col, chr, curses.color_pair(color_pair))
                 self.snapshots_rendered += 1
         self.stdscr.refresh()
 
