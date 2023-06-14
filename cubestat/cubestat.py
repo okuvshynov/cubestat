@@ -12,6 +12,7 @@ import psutil
 import time
 from sys import platform
 from enum import Enum
+from importlib.util import find_spec
 
 class EnumLoop(Enum):
     def next(self):
@@ -87,6 +88,13 @@ class Horizon:
         self.show_disk = args.disk
         self.show_network = args.network
         self.settings_changes = False
+        self.has_nvidia = False
+        nvspec = find_spec('pynvml.smi')
+        if nvspec is not None:
+            from pynvml.smi import nvidia_smi
+            self.has_nvidia = True
+            self.nvsmi = nvidia_smi.getInstance()
+
 
     def _cells(self):
         chrs = [' ', '▁', '▂', '▃', '▄', '▅', '▆', '▇', '█']
@@ -112,6 +120,11 @@ class Horizon:
         nw_written_kb = nw_load.bytes_sent / 2 ** 10
         d = args.refresh_ms / 1000.0
 
+        gpus = []
+        if self.has_nvidia:
+            gpus = self.nvsmi.DeviceQuery('utilization.gpu')['gpu']
+
+
         with self.lock:
             cluster_title = f'Total CPU util %'
             if not cluster_title in self.cubes:
@@ -132,6 +145,12 @@ class Horizon:
             self.cubes['RAM used %'].append(ram_used)
             if initcolormap:
                 self.colormap['RAM used %'] = self.cpu_color
+
+            for i, v in enumerate(gpus):
+                title = f'GPU {i} util %'
+                self.cubes[title].append(v['utilization']['gpu_util'])
+                if initcolormap:
+                    self.colormap[title] = self.gpu_color
 
             if initcolormap:
                 self.colormap['disk read KB/s'] = self.io_color
