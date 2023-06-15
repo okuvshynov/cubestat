@@ -10,7 +10,6 @@ import time
 import sys
 
 from enum import Enum
-
 from math import floor
 from threading import Thread, Lock
 
@@ -234,8 +233,8 @@ class Horizon:
             n += 1
             expected_time = begin_ts + n * d
             time.sleep(expected_time - time.time())
-            snapshot, clusters = self.reader.read()
-            self.process_snapshot(snapshot, clusters)
+            snapshot, cpu_clusters = self.reader.read()
+            self.process_snapshot(snapshot, cpu_clusters)
 
     def reader_loop_apple(self, powermetrics, firstline):
         buf = bytearray()
@@ -248,8 +247,8 @@ class Horizon:
             # right before the measurement (in time), not right after. So, if we were to wait 
             # for 0x00 we'll be delaying next sample by sampling period. 
             if b'</plist>\n' == line:
-                snapshot, clusters = self.reader.read(plistlib.loads(bytes(buf).strip(b'\x00')))
-                self.process_snapshot(snapshot, clusters)
+                snapshot, cpu_clusters = self.reader.read(plistlib.loads(bytes(buf).strip(b'\x00')))
+                self.process_snapshot(snapshot, cpu_clusters)
                 buf.clear()
 
     def loop(self, reader, *args):
