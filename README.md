@@ -65,3 +65,6 @@ We can see model training (on GPU), self-play (done on 4 performance CPU cores) 
 
 Another example running [GPT inference on ggml](https://github.com/ggerganov/ggml): 
 ![GPT inference](static/ggml_gpt.png)
+
+Multi-gpu example - training [nano GPT](https://github.com/karpathy/nanoGPT) on 4 GPU instance:
+![nanoGPT](static/ggml_gpt.png)
