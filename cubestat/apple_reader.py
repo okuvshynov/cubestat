@@ -1,5 +1,6 @@
 import psutil
 
+# M1/M2
 class AppleReader:
     def __init__(self, interval_ms) -> None:
         self.interval_ms = interval_ms
@@ -35,4 +36,3 @@ class AppleReader:
         res['network']['network i KB/s'] = snapshot['network']['ibyte_rate'] / (2 ** 10)
         res['network']['network o KB/s'] = snapshot['network']['obyte_rate'] / (2 ** 10)
         return res.items(), cpu_clusters
-

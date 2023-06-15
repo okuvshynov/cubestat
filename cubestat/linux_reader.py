@@ -2,6 +2,7 @@ import psutil
 import subprocess
 from importlib.util import find_spec
 
+# psutil + nvsmi for nVidia GPU
 class LinuxReader:
     def __init__(self, interval_ms):
         self.has_nvidia = False

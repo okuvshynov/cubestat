@@ -49,14 +49,13 @@ parser.add_argument('--color', type=Color, default=Color.mixed, choices=list(Col
 parser.add_argument('--percentages', type=Percentages, default=Percentages.last, choices=list(Percentages), help='Show/hide numeric utilization percentage. Can be toggled by pressing p.')
 parser.add_argument('--disk', action="store_true", help="show disk read/write. Can be toggled by pressing d.")
 parser.add_argument('--network', action="store_true", help="show network io. Can be toggled by pressing n.")
-parser.add_argument('--count', type=int, default=2**63)
 
 args = parser.parse_args()
 
 # settings
 
 class Horizon:
-    def __init__(self, stdscr):
+    def __init__(self, stdscr, reader):
         stdscr.nodelay(False)
         stdscr.timeout(50)
         curses.curs_set(0)
@@ -71,7 +70,7 @@ class Horizon:
             Color.blue: [-1, 189, 103, 17],
         }
 
-        self.cells = self._cells()
+        self.cells = self.prepare_cells()
         self.stdscr = stdscr
 
         # all of the fields below are mutable and can be accessed from 2 threads
@@ -90,10 +89,11 @@ class Horizon:
         self.cpumode = args.cpu
         self.show_disk = args.disk
         self.show_network = args.network
-        self.settings_changes = False
+        self.settings_changed = False
+        self.reader = reader
 
 
-    def _cells(self):
+    def prepare_cells(self):
         chrs = [' ', '▁', '▂', '▃', '▄', '▅', '▆', '▇', '█']
         cells = {}
         colorpair = 1
@@ -115,24 +115,13 @@ class Horizon:
             self.cpu_clusters = cpu_clusters
             self.snapshots_observed += 1
 
-    def wl(self, r, c, s, color=0):
+    def write_string(self, r, c, s, color=0):
         if r < 0 or r >= self.rows or c < 0:
             return
         if c + len(s) > self.cols:
             s = s[:self.cols - c]
         try:
             self.stdscr.addstr(r, c, s, color)
-        except:
-            pass
-
-    def wr(self, r, c, s, color=0):
-        c = self.cols - c - 1
-        if r < 0 or r >= self.rows or c < 0:
-            return
-        if c < len(s):
-            s = s[-c:]
-        try:
-            self.stdscr.addstr(r, c - len(s) + 1, s, color)
         except:
             pass
 
@@ -146,9 +135,7 @@ class Horizon:
 
     def render(self):
         with self.lock:
-            if self.snapshots_observed >= args.count:
-                exit(0)
-            if self.snapshots_observed == self.snapshots_rendered and not self.settings_changes:
+            if self.snapshots_observed == self.snapshots_rendered and not self.settings_changed:
                 return
         self.stdscr.erase()
         self.rows, self.cols = self.stdscr.getmaxyx()
@@ -174,10 +161,9 @@ class Horizon:
                             continue
                         if self.cpumode == CPUMode.all and title not in self.cpu_clusters:
                             indent = '  '
-                    
                     titlestr = f'{indent}╔{spacing}{title}'
-                    self.wl(i * 2, 0, titlestr)
-                    self.wl(i * 2 + 1, 0, f'{indent}╚')
+                    self.write_string(i * 2, 0, titlestr)
+                    self.write_string(i * 2 + 1, 0, f'{indent}╚')
                     
                     index = max(0, len(series) - (self.cols - 2 * self.spacing_width - 2 - len(indent)))
                     data_slice = list(itertools.islice(series, index, None))
@@ -190,10 +176,12 @@ class Horizon:
                         strvalue =  f'last:{data_slice[-1]:3.0f}|{int(B)}Kb/s{spacing}╗' if self.percentage_mode == Percentages.last else f'{spacing}╗'
 
                     title_filling = self.filling * (self.cols - len(strvalue) - len(titlestr))
-                    self.wl(i * 2, len(titlestr), title_filling)
+                    self.write_string(i * 2, len(titlestr), title_filling)
 
-                    self.wr(i * 2, 0, strvalue)
-                    self.wr(i * 2 + 1, 0, f'{spacing}╝')
+                    self.write_string(i * 2, self.cols - len(strvalue), strvalue)
+
+                    border = f'{spacing}╝'
+                    self.write_string(i * 2 + 1, self.cols - len(border), border)
 
                     scaler = range / B
                     
@@ -224,19 +212,19 @@ class Horizon:
             if key == ord('p'):
                 with self.lock:
                     self.percentage_mode = self.percentage_mode.next()
-                    self.settings_changes = True
+                    self.settings_changed = True
             if key == ord('c'):
                 with self.lock:
                     self.cpumode = self.cpumode.next()
-                    self.settings_changes = True
+                    self.settings_changed = True
             if key == ord('d'):
                 with self.lock:
                     self.show_disk = not self.show_disk
-                    self.settings_changes = True
+                    self.settings_changed = True
             if key == ord('n'):
                 with self.lock:
                     self.show_network = not self.show_network
-                    self.settings_changes = True
+                    self.settings_changed = True
 
     def reader_loop_linux(self):
         begin_ts = time.time()
@@ -251,8 +239,8 @@ class Horizon:
 
     def reader_loop_apple(self, powermetrics, firstline):
         buf = bytearray()
-
         buf.extend(firstline)
+
         while True:
             line = powermetrics.stdout.readline()
             buf.extend(line)
@@ -270,19 +258,19 @@ class Horizon:
         self.render_loop()
 
 def start_apple(stdscr, powermetrics, firstline):
-    h = Horizon(stdscr)
-    h.reader = AppleReader(args.refresh_ms)
+    h = Horizon(stdscr, AppleReader(args.refresh_ms))
     h.loop(h.reader_loop_apple, powermetrics, firstline)
 
 def start_linux(stdscr):
-    h = Horizon(stdscr)
-    h.reader = LinuxReader(args.refresh_ms)
+    h = Horizon(stdscr, LinuxReader(args.refresh_ms))
     h.loop(h.reader_loop_linux)
 
 def main():
     if sys.platform == "darwin":
         cmd = ['sudo', 'powermetrics', '-f', 'plist', '-i', str(args.refresh_ms), '-s', 'cpu_power,gpu_power,ane_power,network,disk']
         powermetrics = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        # we are getting first line here to allow user to enter sudo credentials before 
+        # curses initialization.
         line = powermetrics.stdout.readline()
         curses.wrapper(start_apple, powermetrics, line)
     if sys.platform == "linux" or sys.platform == "linux2":
