@@ -43,9 +43,6 @@ options:
 
 Running on Apple devices will require sudo access, as `powermetrics` has such limitation. Running on Linux machines doesn't have this limitation.
 
-Another example running [GPT inference on ggml](https://github.com/ggerganov/ggml): 
-![GPT inference](static/ggml_gpt.png)
-
 Multi-gpu example - training [nano GPT](https://github.com/karpathy/nanoGPT) on 4 nVidia GPU instance:
 ![multigpu](static/multigpu.png)
 
