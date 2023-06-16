@@ -20,41 +20,25 @@ Despite many monitoring tools available for monitoring typical system counters a
 ```
 pip3 install cubestat
 
-usage: ./cubestat.py [-h]
-                     [--refresh_ms REFRESH_MS]
-                     [--buffer_size BUFFER_SIZE]
-                     [--cpu {all,by_cluster,by_core}]
-                     [--color {red,green,blue,mixed}]
-                     [--percentages {hidden,last}]
-                     [--disk] [--network]
+usage: cubestat [-h] [--refresh_ms REFRESH_MS] [--buffer_size BUFFER_SIZE]
+                [--cpu {all,by_cluster,by_core}] [--color {red,green,blue,mixed}]
+                [--percentages {hidden,last}] [--disk] [--network]
 
 options:
-  -h, --help            show this help message and
-                        exit
+  -h, --help            show this help message and exit
   --refresh_ms REFRESH_MS, -i REFRESH_MS
-                        Update frequency,
-                        milliseconds
+                        Update frequency, milliseconds
   --buffer_size BUFFER_SIZE
-                        How many datapoints to
-                        store. Having it larger
-                        than screen width is a
-                        good idea as terminal
-                        window can be resized
+                        How many datapoints to store. Having it larger than screen width is a good
+                        idea as terminal window can be resized
   --cpu {all,by_cluster,by_core}
-                        CPU mode - showing all
-                        cores, only cumulative by
-                        cluster or both. Can be
+                        CPU mode - showing all cores, only cumulative by cluster or both. Can be
                         toggled by pressing c.
   --color {red,green,blue,mixed}
   --percentages {hidden,last}
-                        Show/hide numeric
-                        utilization percentage.
-                        Can be toggled by pressing
-                        p.
-  --disk                show disk read/write. Can
-                        be toggled by pressing d.
-  --network             show network io. Can be
-                        toggled by pressing n.
+                        Show/hide numeric utilization percentage. Can be toggled by pressing p.
+  --disk                show disk read/write. Can be toggled by pressing d.
+  --network             show network io. Can be toggled by pressing n.
 ```
 
 Running on Apple devices will require sudo access, as `powermetrics` has such limitation. Running on Linux machines doesn't have this limitation.
