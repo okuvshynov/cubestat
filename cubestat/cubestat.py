@@ -8,13 +8,12 @@ import plistlib
 import subprocess
 import time
 import sys
+import psutil
 
+from importlib.util import find_spec
 from enum import Enum
 from math import floor
 from threading import Thread, Lock
-
-from apple_reader import AppleReader
-from linux_reader import LinuxReader
 
 class EnumLoop(Enum):
     def next(self):
@@ -50,6 +49,112 @@ parser.add_argument('--disk', action="store_true", help="show disk read/write. C
 parser.add_argument('--network', action="store_true", help="show network io. Can be toggled by pressing n.")
 
 args = parser.parse_args()
+
+# psutil + nvsmi for nVidia GPU
+class LinuxReader:
+    def __init__(self, interval_ms):
+        self.has_nvidia = False
+        self.first = True
+        self.interval_ms = interval_ms
+        try:
+            subprocess.check_output('nvidia-smi')
+            nvspec = find_spec('pynvml')
+            if nvspec is not None:
+                from pynvml.smi import nvidia_smi
+                self.nvsmi = nvidia_smi.getInstance()
+                self.has_nvidia = True
+        except Exception:
+            # TODO: add logging here
+            pass
+
+    def read(self):
+        res = {
+            'cpu': {},
+            'accelerators': {},
+            'ram': {'RAM used %': psutil.virtual_memory().percent},
+            'disk': {},
+            'network': {},
+        }
+
+        disk_load = psutil.disk_io_counters()
+        disk_read_kb = disk_load.read_bytes / 2 ** 10
+        disk_written_kb = disk_load.write_bytes / 2 ** 10
+        nw_load = psutil.net_io_counters()
+        nw_read_kb = nw_load.bytes_recv / 2 ** 10
+        nw_written_kb = nw_load.bytes_sent / 2 ** 10
+        d = self.interval_ms / 1000.0
+
+        cpu_clusters = []
+
+        cluster_title = 'Total CPU util %'
+        cpu_clusters.append(cluster_title)
+        total_load = 0.0
+        res['cpu'][cluster_title] = 0.0
+
+        cpu_load = psutil.cpu_percent(percpu=True)
+        for i, v in enumerate(cpu_load):
+            title = f'CPU {i} util %'
+            res['cpu'][title] = v
+            total_load += v
+        res['cpu'][cluster_title] = total_load / len(cpu_load)
+
+        if self.has_nvidia:
+            for i, v in enumerate(self.nvsmi.DeviceQuery('utilization.gpu')['gpu']):
+                title = f'GPU {i} util %'
+                res['accelerators'][title] = v['utilization']['gpu_util']
+
+        if self.first:
+            self.disk_read_last = disk_read_kb
+            self.disk_written_last = disk_written_kb
+            self.network_read_last = nw_read_kb
+            self.network_written_last = nw_written_kb
+            self.first = False
+
+        res['disk']['disk read KB/s'] = ((disk_read_kb - self.disk_read_last) / d)
+        res['disk']['disk write KB/s'] = ((disk_written_kb - self.disk_written_last) / d)
+        self.disk_read_last = disk_read_kb
+        self.disk_written_last = disk_written_kb
+
+        res['network']['network i KB/s'] = ((nw_read_kb - self.network_read_last) / d)
+        res['network']['network w KB/s'] = ((nw_written_kb - self.network_written_last) / d)
+        self.network_read_last = nw_read_kb
+        self.network_written_last = nw_written_kb
+        return res.items(), cpu_clusters
+
+class AppleReader:
+    def __init__(self, interval_ms) -> None:
+        self.interval_ms = interval_ms
+
+    def read(self, snapshot):
+        res = {
+            'cpu': {},
+            'accelerators': {},
+            'ram': {'RAM used %': psutil.virtual_memory().percent},
+            'disk': {},
+            'network': {},
+        }
+        cpu_clusters = []
+        for cluster in snapshot['processor']['clusters']:
+            idle_cluster, total_cluster = 0.0, 0.0
+            cluster_title = f'{cluster["name"]} total CPU util %'
+            cpu_clusters.append(cluster_title)
+            res['cpu'][cluster_title] = 0.0
+            for cpu in cluster['cpus']:
+                title = f'{cluster["name"]} CPU {cpu["cpu"]} util %'
+                res['cpu'][title] = 100.0 - 100.0 * cpu['idle_ratio']
+                idle_cluster += cpu['idle_ratio']
+                total_cluster += 1.0
+            res['cpu'][cluster_title] = 100.0 - 100.0 * idle_cluster / total_cluster
+
+        res['accelerators']['GPU util %'] = 100.0 - 100.0 * snapshot['gpu']['idle_ratio']
+        ane_scaling = 8.0 * self.interval_ms
+        res['accelerators']['ANE util %'] = 100.0 * snapshot['processor']['ane_energy'] / ane_scaling
+
+        res['disk']['disk read KB/s'] = snapshot['disk']['rbytes_per_s'] / (2 ** 10)
+        res['disk']['disk write KB/s'] = snapshot['disk']['wbytes_per_s'] / (2 ** 10)
+        res['network']['network i KB/s'] = snapshot['network']['ibyte_rate'] / (2 ** 10)
+        res['network']['network o KB/s'] = snapshot['network']['obyte_rate'] / (2 ** 10)
+        return res.items(), cpu_clusters
 
 # settings
 
