@@ -1,17 +1,25 @@
-# Horizon charts for Apple M1/M2 monitoring
+# system monitoring horizon charts for terminal
 
-In progress: also working for linux with nVidia GPUs
+Let's start with example: running [deep RL loop](https://github.com/okuvshynov/rlscout) on a single MacBook Air M2:
 
-Command-line utility to monitor CPU/GPU/NeuralEngine utilization on Apple M1/M2 devices as horizon chart. Unfortunately, it requires sudo access as it calls `powermetrics` and parses its output.
+We can see model training (on GPU), self-play (done on 4 performance CPU cores) and model evaluation, which runs inference on Neural Engine (ANE):
+![Self-play + training + eval](static/selfplay.png)
 
-cubestat is particularly useful when connecting to another device remotely over ssh. 
+cubestat is a command-line utility to monitor usual system telemetry originally created for Apple M1/M2 devices.
+At its current stage monitors:
+1. CPU utilization - configurable per core ('expanded'), cluster of cores: Efficiency/Performance ('cluster') or both. Is shown as percentage.
+2. GPU utilization per card/chip. Is shown in percentage. Works for Apple's M1/M2 SoC and nVidia GPUs.
+3. ANE (Apple's Neural Engine) power consumption. According to `man powermetrics` it is an estimate, but seems working good enough as a proxy to ANE utilization. Is shown as percentage.
+4. Disk and network IO; Is shown in Kb/s.
+5. Memory usage in %
 
-Installation:
+Despite many monitoring tools available for monitoring typical system counters as well as GPU/Accelerators, horizon charts have a unique information density properties which makes it possible to show a history of N measurements for M metrics on a single screen. Thus, this tool was created.
+
+## Installation and Usage:
+
 ```
 pip3 install cubestat
-```
 
-```
 usage: ./cubestat.py [-h]
                      [--refresh_ms REFRESH_MS]
                      [--buffer_size BUFFER_SIZE]
@@ -49,22 +57,15 @@ options:
                         toggled by pressing n.
 ```
 
-Monitors:
-1. CPU utilization - configurable per core ('expanded'), cluster of cores: Efficiency/Performance ('cluster') or both. Is shown as percentage.
-2. GPU utilization per GPU. Is shown in percentage.
-3. ANE power consumption. According to `man powermetrics` it is an estimate, but seems working good enough as a proxy to ANE utilization. Is shown as percentage.
-4. Disk and network IO; Is shown in Kb/s.
-5. Memory usage in %
-
-We could add more data from powermetrics (e.g. frequency), but it was adding too much visual noise.
-
-Example: running [deep RL loop](https://github.com/okuvshynov/rlscout) (self play to generate data, model training, model evaluation) on a single MacBook Air M2:
-
-We can see model training (on GPU), self-play (done on 4 performance CPU cores) and model evaluation, which runs inference on Neural Engine:
-![Self-play + training + eval](static/selfplay.png)
+Running on Apple devices will require sudo access, as `powermetrics` has such limitation. Running on Linux machines doesn't have this limitation.
 
 Another example running [GPT inference on ggml](https://github.com/ggerganov/ggml): 
 ![GPT inference](static/ggml_gpt.png)
 
-Multi-gpu example - training [nano GPT](https://github.com/karpathy/nanoGPT) on 4 GPU instance:
+Multi-gpu example - training [nano GPT](https://github.com/karpathy/nanoGPT) on 4 nVidia GPU instance:
 ![multigpu](static/multigpu.png)
+
+## Dependencies
+* Python 3.7+
+* psutil 5.9.5
+* pynvml for nVidia cars monitoring
