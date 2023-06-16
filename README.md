@@ -53,3 +53,11 @@ Multi-gpu example - training [nano GPT](https://github.com/karpathy/nanoGPT) on 
 * Python 3.7+
 * psutil 5.9.5
 * pynvml for nVidia cars monitoring
+
+## TODO
+* GPU aggregation
+* CPU by socket/NUMA/SMT
+* better IO scale
+* status line
+* better colors (especially for dark background)
+* multi-column layout for large instances (e.g. with 100+ cores)

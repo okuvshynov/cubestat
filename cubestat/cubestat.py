@@ -335,11 +335,11 @@ class Horizon:
         n = 0
         d = args.refresh_ms / 1000.0
         while True:
+            snapshot, cpu_clusters = self.reader.read()
+            self.process_snapshot(snapshot, cpu_clusters)
             n += 1
             expected_time = begin_ts + n * d
             time.sleep(expected_time - time.time())
-            snapshot, cpu_clusters = self.reader.read()
-            self.process_snapshot(snapshot, cpu_clusters)
 
     def reader_loop_apple(self, powermetrics, firstline):
         buf = bytearray()
