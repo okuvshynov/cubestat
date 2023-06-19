@@ -13,7 +13,7 @@ At its current stage monitors:
 4. Disk and network IO; Is shown in Kb/s.
 5. Memory usage in %
 
-Despite many monitoring tools available for monitoring typical system counters as well as GPU/Accelerators, horizon charts have a unique information density properties which makes it possible to show a history of N measurements for M metrics on a single screen. Thus, this tool was created.
+Despite many monitoring tools available for monitoring typical system counters as well as GPU/Accelerators, horizon charts have a unique information density properties which makes it possible to show a history of N measurements for M metrics on a single screen for significantly large N and M. Thus, this tool was created.
 
 ## Installation and Usage:
 
@@ -47,14 +47,18 @@ Multi-gpu example - training [nano GPT](https://github.com/karpathy/nanoGPT) on 
 ![multigpu](static/multigpu.png)
 
 ## Dependencies
-* Python 3.7+
+* Python 3.?+
 * psutil 5.9.5
-* pynvml for nVidia cars monitoring
+* pynvml for nVidia cards monitoring
 
 ## TODO
 * GPU aggregation
 * CPU by socket/NUMA/SMT
-* better IO scale
+* better IO scale (joint scale for all IO?)
 * status line
 * better colors (especially for dark background)
 * multi-column layout for large instances (e.g. with 100+ cores)
+* try on Windows and BSD
+* Google TPU load?
+* AMD GPU load?
+* Filter by process?

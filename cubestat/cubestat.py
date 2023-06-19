@@ -40,15 +40,26 @@ class Color(EnumStr):
     mixed = 'mixed'
 
 parser = argparse.ArgumentParser("cubestat")
-parser.add_argument('--refresh_ms', '-i', type=int, default=500, help='Update frequency, milliseconds')
+parser.add_argument('--refresh_ms', '-i', type=int, default=1000, help='Update frequency, milliseconds')
 parser.add_argument('--buffer_size', type=int, default=500, help='How many datapoints to store. Having it larger than screen width is a good idea as terminal window can be resized')
 parser.add_argument('--cpu', type=CPUMode, default=CPUMode.all, choices=list(CPUMode), help='CPU mode - showing all cores, only cumulative by cluster or both. Can be toggled by pressing c.')
 parser.add_argument('--color', type=Color, default=Color.mixed, choices=list(Color))
 parser.add_argument('--percentages', type=Percentages, default=Percentages.last, choices=list(Percentages), help='Show/hide numeric utilization percentage. Can be toggled by pressing p.')
-parser.add_argument('--disk', action="store_true", help="show disk read/write. Can be toggled by pressing d.")
-parser.add_argument('--network', action="store_true", help="show network io. Can be toggled by pressing n.")
+parser.add_argument('--disk', action="store_true", default=True, help="Show disk read/write. Can be toggled by pressing d.")
+parser.add_argument('--network', action="store_true", default=True, help="Show network io. Can be toggled by pressing n.")
+parser.add_argument('--no-disk', action="store_false", dest="disk", help="Hide disk read/write. Can be toggled by pressing d.")
+parser.add_argument('--no-network', action="store_false", dest="network", help="Hide network io. Can be toggled by pressing n.")
 
 args = parser.parse_args()
+
+def snapshot_base():
+    return {
+        'cpu': {},
+        'accelerators': {},
+        'ram': {'RAM used %': psutil.virtual_memory().percent},
+        'disk': {},
+        'network': {},
+    }
 
 # psutil + nvsmi for nVidia GPU
 class LinuxReader:
@@ -68,13 +79,7 @@ class LinuxReader:
             pass
 
     def read(self):
-        res = {
-            'cpu': {},
-            'accelerators': {},
-            'ram': {'RAM used %': psutil.virtual_memory().percent},
-            'disk': {},
-            'network': {},
-        }
+        res = snapshot_base()
 
         disk_load = psutil.disk_io_counters()
         disk_read_kb = disk_load.read_bytes / 2 ** 10
@@ -126,13 +131,8 @@ class AppleReader:
         self.interval_ms = interval_ms
 
     def read(self, snapshot):
-        res = {
-            'cpu': {},
-            'accelerators': {},
-            'ram': {'RAM used %': psutil.virtual_memory().percent},
-            'disk': {},
-            'network': {},
-        }
+        res = snapshot_base()
+
         cpu_clusters = []
         for cluster in snapshot['processor']['clusters']:
             idle_cluster, total_cluster = 0.0, 0.0
@@ -281,7 +281,6 @@ class Horizon:
 
                     title_filling = self.filling * (self.cols - len(strvalue) - len(titlestr))
                     self.write_string(i * 2, len(titlestr), title_filling)
-
                     self.write_string(i * 2, self.cols - len(strvalue), strvalue)
 
                     border = f'{spacing}╝'
