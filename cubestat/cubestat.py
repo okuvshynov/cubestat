@@ -170,8 +170,8 @@ class Horizon:
         self.filling = '.'
         self.colorschemes = {
             Color.green: [-1, 150, 107, 22],
-            Color.red: [-1, 224, 138, 52],
-            Color.blue: [-1, 189, 103, 17],
+            Color.red: [-1, 224, 181, 138],
+            Color.blue: [-1, 189, 146, 103],
         }
 
         self.cells = self.prepare_cells()
@@ -182,8 +182,8 @@ class Horizon:
         self.data = {k: collections.defaultdict(lambda: collections.deque(maxlen=args.buffer_size)) for k in ['cpu', 'accelerators', 'ram', 'disk', 'network']}
         self.colormap = {
             'cpu': Color.green if args.color == Color.mixed else args.color,
-            'accelerators': Color.red if args.color == Color.mixed else args.color,
             'ram': Color.green if args.color == Color.mixed else args.color,
+            'accelerators': Color.red if args.color == Color.mixed else args.color,
             'disk': Color.blue if args.color == Color.mixed else args.color,
             'network': Color.blue if args.color == Color.mixed else args.color,
         }

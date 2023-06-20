@@ -60,11 +60,11 @@ Multi-gpu example - training [nano GPT](https://github.com/karpathy/nanoGPT) on 
 ## TODO
 * GPU aggregation
 * CPU by socket/NUMA/SMT
-* better IO scale (joint scale for all IO?)
-* status line
+* status line (why though?)
 * better colors (especially for dark background)
 * multi-column layout for large instances (e.g. with 100+ cores)
 * try on Windows and BSD
 * Google TPU load?
 * AMD GPU load?
 * Filter by process?
+* joint scale for IO
