@@ -150,10 +150,10 @@ class AppleReader:
         ane_scaling = 8.0 * self.interval_ms
         res['accelerators']['ANE util %'] = 100.0 * snapshot['processor']['ane_energy'] / ane_scaling
 
-        res['disk']['disk read KB/s'] = snapshot['disk']['rbytes_per_s'] / (2 ** 10)
-        res['disk']['disk write KB/s'] = snapshot['disk']['wbytes_per_s'] / (2 ** 10)
-        res['network']['network i KB/s'] = snapshot['network']['ibyte_rate'] / (2 ** 10)
-        res['network']['network o KB/s'] = snapshot['network']['obyte_rate'] / (2 ** 10)
+        res['disk']['disk read'] = snapshot['disk']['rbytes_per_s']
+        res['disk']['disk write'] = snapshot['disk']['wbytes_per_s']
+        res['network']['network rx'] = snapshot['network']['ibyte_rate']
+        res['network']['network tx'] = snapshot['network']['obyte_rate']
         return res.items(), cpu_clusters
 
 # settings
@@ -282,7 +282,12 @@ class Horizon:
                     if group_name == 'disk' or group_name == 'network':
                         B = max(data_slice)
                         B = float(1 if B == 0 else 2 ** (int((B - 1)).bit_length()))
-                        strvalue =  f'last:{data_slice[-1]:3.0f}|{int(B)}Kb/s{spacing}╗' if self.percentage_mode == Percentages.last else f'{spacing}╗'
+                        if B > 1024 * 1024: # Mb/s
+                            strvalue =  f'last:{data_slice[-1] / (1024 * 1024) :3.0f}|{int(B / (1024 * 1024))}Mb/s{spacing}╗' if self.percentage_mode == Percentages.last else f'{spacing}╗'
+                        elif B > 1024: # Kb/s
+                            strvalue =  f'last:{data_slice[-1] / 1024:3.0f}|{int(B / 1024)}Kb/s{spacing}╗' if self.percentage_mode == Percentages.last else f'{spacing}╗'
+                        else:
+                            strvalue =  f'last:{data_slice[-1]:3.0f}|{int(B)}bytes/s{spacing}╗' if self.percentage_mode == Percentages.last else f'{spacing}╗'
 
                     title_filling = self.filling * (self.cols - len(strvalue) - len(titlestr))
                     self.write_string(i * 2, len(titlestr), title_filling)
