@@ -195,6 +195,7 @@ class Horizon:
         self.show_network = args.network
         self.settings_changed = False
         self.reader = reader
+        self.vertical_shift = 0
 
 
     def prepare_cells(self):
@@ -247,6 +248,7 @@ class Horizon:
 
         with self.lock:
             i = 0
+            skip = self.vertical_shift
             for group_name, group in self.data.items():
                 if group_name == 'disk' and not self.show_disk:
                     continue
@@ -256,6 +258,9 @@ class Horizon:
                 cells = self.cells[self.colormap[group_name]]
                 range = len(cells)
                 for title, series in group.items():
+                    if skip > 0:
+                        skip -= 1
+                        continue
                     indent = ''
 
                     if group_name == 'cpu':
@@ -307,6 +312,7 @@ class Horizon:
         self.stdscr.refresh()
 
     def render_loop(self):
+        self.stdscr.keypad(True)
         while True:
             self.render()
             key = self.stdscr.getch()
@@ -328,6 +334,16 @@ class Horizon:
                 with self.lock:
                     self.show_network = not self.show_network
                     self.settings_changed = True
+            if key == curses.KEY_UP:
+                with self.lock:
+                    if self.vertical_shift > 0:
+                        self.vertical_shift -= 1
+                        self.settings_changed = True
+            if key == curses.KEY_DOWN:
+                with self.lock:
+                    self.vertical_shift += 1
+                    self.settings_changed = True
+
 
     def reader_loop_linux(self):
         begin_ts = time.time()

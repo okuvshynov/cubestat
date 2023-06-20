@@ -20,28 +20,34 @@ Despite many monitoring tools available for monitoring typical system counters a
 ```
 pip3 install cubestat
 
-usage: cubestat [-h] [--refresh_ms REFRESH_MS] [--buffer_size BUFFER_SIZE]
-                [--cpu {all,by_cluster,by_core}] [--color {red,green,blue,mixed}]
-                [--percentages {hidden,last}] [--disk] [--network]
+usage: cubestat [-h] [--refresh_ms REFRESH_MS] [--buffer_size BUFFER_SIZE] [--cpu {all,by_cluster,by_core}] [--color {red,green,blue,mixed}] [--percentages {hidden,last}] [--disk] [--network] [--no-disk] [--no-network]
 
 options:
   -h, --help            show this help message and exit
   --refresh_ms REFRESH_MS, -i REFRESH_MS
                         Update frequency, milliseconds
   --buffer_size BUFFER_SIZE
-                        How many datapoints to store. Having it larger than screen width is a good
-                        idea as terminal window can be resized
+                        How many datapoints to store. Having it larger than screen width is a good idea as terminal window can be resized
   --cpu {all,by_cluster,by_core}
-                        CPU mode - showing all cores, only cumulative by cluster or both. Can be
-                        toggled by pressing c.
+                        CPU mode - showing all cores, only cumulative by cluster or both. Can be toggled by pressing c.
   --color {red,green,blue,mixed}
   --percentages {hidden,last}
                         Show/hide numeric utilization percentage. Can be toggled by pressing p.
-  --disk                show disk read/write. Can be toggled by pressing d.
-  --network             show network io. Can be toggled by pressing n.
+  --disk                Show disk read/write. Can be toggled by pressing d.
+  --network             Show network io. Can be toggled by pressing n.
+  --no-disk             Hide disk read/write. Can be toggled by pressing d.
+  --no-network          Hide network io. Can be toggled by pressing n.
 ```
 
-Running on Apple devices will require sudo access, as `powermetrics` has such limitation. Running on Linux machines doesn't have this limitation.
+Interactive commands:
+* q - quit
+* p - show/hide percentage for last data point
+* c - change cpu display mode (individual cores, aggregated by cluster or both)
+* d - show/hide disk reads/writes
+* n - show/hide network utilization
+* UP/DOWN - scroll the lines in case there are more cores.
+
+Running on Apple devices will require sudo access, as `powermetrics` has this limitation. Running on Linux doesn't require it.
 
 Multi-gpu example - training [nano GPT](https://github.com/karpathy/nanoGPT) on 4 nVidia GPU instance:
 ![multigpu](static/multigpu.png)
