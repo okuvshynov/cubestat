@@ -128,11 +128,18 @@ class LinuxReader:
         return res.items(), cpu_clusters
 
 class AppleReader:
+    # these scalers are based on running mock convnet from scripts/apple_loadgen.py
+    ane_scalers = {
+        'Mac14,2': 15.0, # M2 MacBook Air
+        'Macmini9,1': 13.0, # M1 Mac Mini
+    }
+
     def __init__(self, interval_ms) -> None:
         self.interval_ms = interval_ms
 
     def read(self, snapshot):
         res = snapshot_base()
+        hw_model = snapshot["hw_model"]
 
         cpu_clusters = []
         for cluster in snapshot['processor']['clusters']:
@@ -151,7 +158,7 @@ class AppleReader:
         
         # TODO: this is likely different for different models. Need to run some tests.
         # Scaler 15.0 is based on testing on M2
-        ane_scaling = 15.0 * self.interval_ms
+        ane_scaling = AppleReader.ane_scalers.get(hw_model, 15.0) * self.interval_ms
         res['accelerators']['ANE util %'] = 100.0 * snapshot['processor']['ane_energy'] / ane_scaling
 
         res['disk']['disk read'] = snapshot['disk']['rbytes_per_s']
