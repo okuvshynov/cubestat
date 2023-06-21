@@ -104,9 +104,9 @@ class LinuxReader:
         res['cpu'][cluster_title] = total_load / len(cpu_load)
 
         if self.has_nvidia:
-            for i, v in enumerate(self.nvsmi.DeviceQuery('utilization.gpu')['gpu']):
-                title = f'GPU {i} util %'
-                res['accelerators'][title] = v['utilization']['gpu_util']
+            for i, v in enumerate(self.nvsmi.DeviceQuery('utilization.gpu,memory.total,memory.used')['gpu']):
+                res['accelerators'][f'GPU {i} util %'] = v['utilization']['gpu_util']
+                res['accelerators'][f'GPU {i} memory used %'] = v['fb_memory_usage']['used'] / v['fb_memory_usage']['total']
 
         if self.first:
             self.disk_read_last = disk_read_kb
