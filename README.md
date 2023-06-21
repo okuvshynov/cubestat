@@ -58,6 +58,7 @@ Multi-gpu example - training [nano GPT](https://github.com/karpathy/nanoGPT) on 
 * pynvml for nVidia cards monitoring
 
 ## TODO
+* Apple Neural Engine correct scale.
 * GPU aggregation
 * CPU by socket/NUMA/SMT
 * status line (why though?)

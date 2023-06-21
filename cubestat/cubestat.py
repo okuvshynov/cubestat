@@ -9,6 +9,7 @@ import subprocess
 import time
 import sys
 import psutil
+import logging
 
 from importlib.util import find_spec
 from enum import Enum
@@ -61,7 +62,7 @@ def snapshot_base():
         'network': {},
     }
 
-# psutil + nvsmi for nVidia GPU
+# psutil + nvsmi for nVidia GPU if available
 class LinuxReader:
     def __init__(self, interval_ms):
         self.has_nvidia = False
@@ -91,7 +92,7 @@ class LinuxReader:
 
         cpu_clusters = []
 
-        cluster_title = 'Total CPU util %'
+        cluster_title = 'Total CPU Util, %'
         cpu_clusters.append(cluster_title)
         total_load = 0.0
         res['cpu'][cluster_title] = 0.0
@@ -147,6 +148,8 @@ class AppleReader:
             res['cpu'][cluster_title] = 100.0 - 100.0 * idle_cluster / total_cluster
 
         res['accelerators']['GPU util %'] = 100.0 - 100.0 * snapshot['gpu']['idle_ratio']
+        
+        # TODO: this is likely different for different models. Need to run some tests.
         ane_scaling = 8.0 * self.interval_ms
         res['accelerators']['ANE util %'] = 100.0 * snapshot['processor']['ane_energy'] / ane_scaling
 
