@@ -3,48 +3,33 @@ import coremltools as ct
 import numpy as np
 import time
 import torch
+from collections import OrderedDict
 
 log_batch_size = 5
 channels = 512
 n = 8
+layers = 30
 
+class Convs(nn.Module):
+    def __init__(self, channels, layers):
+        super(Convs, self).__init__()
+        self.blocks = nn.Sequential(OrderedDict(
+            (f'conv_{i}', nn.Conv2d(channels, channels, kernel_size=1)) for i in range(layers))
+        )
+
+    def forward(self, x):
+        return self.blocks(x)
+    
 class TestModel(nn.Module):
     def __init__(self):
         super(TestModel, self).__init__()
         self.action = nn.Sequential(
             nn.Conv2d(2, channels, kernel_size=1),
-            nn.Conv2d(channels, channels, kernel_size=1),
-            nn.Conv2d(channels, channels, kernel_size=1),
-            nn.Conv2d(channels, channels, kernel_size=1),
-            nn.Conv2d(channels, channels, kernel_size=1),
-            nn.Conv2d(channels, channels, kernel_size=1),
-            nn.Conv2d(channels, channels, kernel_size=1),
-            nn.Conv2d(channels, channels, kernel_size=1),
-            nn.Conv2d(channels, channels, kernel_size=1),
-            nn.Conv2d(channels, channels, kernel_size=1),
-            nn.Conv2d(channels, channels, kernel_size=1),
-            nn.Conv2d(channels, channels, kernel_size=1),
-            nn.Conv2d(channels, channels, kernel_size=1),
-            nn.Conv2d(channels, channels, kernel_size=1),
-            nn.Conv2d(channels, channels, kernel_size=1),
-            nn.Conv2d(channels, channels, kernel_size=1),
-            nn.Conv2d(channels, channels, kernel_size=1),
-            nn.Conv2d(channels, channels, kernel_size=1),
-            nn.Conv2d(channels, channels, kernel_size=1),
-            nn.Conv2d(channels, channels, kernel_size=1),
-            nn.Conv2d(channels, channels, kernel_size=1),
-            nn.Conv2d(channels, channels, kernel_size=1),
-            nn.Conv2d(channels, channels, kernel_size=1),
-            nn.Conv2d(channels, channels, kernel_size=1),
-            nn.Conv2d(channels, channels, kernel_size=1),
-            nn.Conv2d(channels, channels, kernel_size=1),
-            nn.Conv2d(channels, channels, kernel_size=1),
-            nn.Conv2d(channels, channels, kernel_size=1),
+            Convs(channels, layers),
             nn.Conv2d(channels, 2, kernel_size=1),
             nn.Flatten(),
-            nn.LogSoftmax(dim=1),
+            nn.LogSoftmax(dim=1)
         )
-
     def forward(self, x):
         return self.action(x)
 
@@ -63,6 +48,8 @@ def to_coreml(torch_model, batch_size, compute_units):
 
 run_for_nseconds = 30
 step_target = 0.05 * run_for_nseconds
+
+
 
 model = TestModel()
 batch_size = 2 ** log_batch_size

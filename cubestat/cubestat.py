@@ -150,7 +150,8 @@ class AppleReader:
         res['accelerators']['GPU util %'] = 100.0 - 100.0 * snapshot['gpu']['idle_ratio']
         
         # TODO: this is likely different for different models. Need to run some tests.
-        ane_scaling = 8.0 * self.interval_ms
+        # Scaler 15.0 is based on testing on M2
+        ane_scaling = 15.0 * self.interval_ms
         res['accelerators']['ANE util %'] = 100.0 * snapshot['processor']['ane_energy'] / ane_scaling
 
         res['disk']['disk read'] = snapshot['disk']['rbytes_per_s']

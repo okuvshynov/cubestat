@@ -52,6 +52,16 @@ Running on Apple devices will require sudo access, as `powermetrics` has this li
 Multi-gpu example - training [nano GPT](https://github.com/karpathy/nanoGPT) on 4 nVidia GPU instance:
 ![multigpu](static/multigpu.png)
 
+## Neural Engine utilization
+
+A few notes on 'what does this even represent?'. Utilization we report is essentially power consumption reported by powermetrics.
+To convert it to % we divide it by some 'maximum' value observed in experimentation. There are many drawbacks to this:
+* The concept of 'utilization' overall it pretty ambiguous, e.g. for a x86 CPU - when CPU is wasting cycles on a cache miss, is it 'utilized' or not? If CPU is doing scalar instructions on 1 execution port rather than vectorized instructions on several ports, is it 'utilized' or not?
+* It is unclear if power consumption is a decent proxy for utilization;
+* The upper bound must be different for different models (M1, M1 Max, M2, etc.). Need to identify the model and do tests for them.
+* It is unclear if my tests are actually hitting upperbound. The highest I could achieve was multiple layers of convolutions with no non-linearities between them (which makes model pretty useless)
+
+
 ## Dependencies
 * Python 3.?+
 * psutil 5.9.5
