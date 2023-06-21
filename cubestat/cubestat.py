@@ -55,8 +55,8 @@ args = parser.parse_args()
 def snapshot_base():
     return {
         'cpu': {},
-        'accelerators': {},
         'ram': {'RAM used %': psutil.virtual_memory().percent},
+        'accelerators': {},
         'disk': {},
         'network': {},
     }
@@ -106,7 +106,7 @@ class LinuxReader:
         if self.has_nvidia:
             for i, v in enumerate(self.nvsmi.DeviceQuery('utilization.gpu,memory.total,memory.used')['gpu']):
                 res['accelerators'][f'GPU {i} util %'] = v['utilization']['gpu_util']
-                res['accelerators'][f'GPU {i} memory used %'] = v['fb_memory_usage']['used'] / v['fb_memory_usage']['total']
+                res['accelerators'][f'GPU {i} memory used %'] = 100.0 * v['fb_memory_usage']['used'] / v['fb_memory_usage']['total']
 
         if self.first:
             self.disk_read_last = disk_read_kb
