@@ -207,6 +207,7 @@ class Horizon:
         self.settings_changed = False
         self.reader = reader
         self.vertical_shift = 0
+        self.horizontal_shift = 0
 
 
     def prepare_cells(self):
@@ -230,6 +231,8 @@ class Horizon:
         with self.lock:
             self.cpu_clusters = cpu_clusters
             self.snapshots_observed += 1
+            if self.horizontal_shift > 0:
+                self.horizontal_shift += 1
 
     def write_string(self, r, c, s, color=0):
         if r < 0 or r >= self.rows or c < 0:
@@ -284,9 +287,12 @@ class Horizon:
                     titlestr = f'{indent}╔{spacing}{title}'
                     self.write_string(i * 2, 0, titlestr)
                     self.write_string(i * 2 + 1, 0, f'{indent}╚')
+
+                    length = len(series) - self.horizontal_shift if self.horizontal_shift > 0 else len(series)
                     
-                    index = max(0, len(series) - (self.cols - 2 * self.spacing_width - 2 - len(indent)))
-                    data_slice = list(itertools.islice(series, index, None))
+                    width = self.cols - 2 * self.spacing_width - 2 - len(indent)
+                    index = max(0, length - width)
+                    data_slice = list(itertools.islice(series, index, min(index + width, length)))
 
                     B = 100.0
                     strvalue = f'last:{data_slice[-1]:3.0f}%{spacing}╗' if self.percentage_mode == Percentages.last else f'{spacing}╗'
@@ -359,6 +365,21 @@ class Horizon:
                 with self.lock:
                     self.vertical_shift += 1
                     self.settings_changed = True
+            if key == curses.KEY_LEFT:
+                with self.lock:
+                    if self.horizontal_shift + 1 < self.snapshots_observed:
+                        self.horizontal_shift += 1
+                        self.settings_changed = True
+            if key == curses.KEY_RIGHT:
+                with self.lock:
+                    if self.horizontal_shift > 0:
+                        self.horizontal_shift -= 1
+                        self.settings_changed = True
+            if key == ord('0'):
+                with self.lock:
+                    if self.horizontal_shift > 0:
+                        self.horizontal_shift = 0
+                        self.settings_changed = True
 
 
     def reader_loop_linux(self):

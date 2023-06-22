@@ -45,7 +45,9 @@ Interactive commands:
 * c - change cpu display mode (individual cores, aggregated by cluster or both)
 * d - show/hide disk reads/writes
 * n - show/hide network utilization
-* UP/DOWN - scroll the lines in case there are more cores.
+* UP/DOWN - scroll the lines in case there are more cores;
+* LEFT/RIGHT - scroll left/right. Autorefresh is paused when user scrolled to non-latest position. To resume autorefresh either scroll back to the right or press '0';
+* 0 - reset horizontal scroll, continue autorefresh.
 
 Running on Apple devices will require sudo access, as `powermetrics` has this limitation. Running on Linux doesn't require it.
 
