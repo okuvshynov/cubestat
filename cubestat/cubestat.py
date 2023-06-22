@@ -129,13 +129,13 @@ class LinuxReader:
 
 class AppleReader:
     # these scalers are based on running mock convnet from scripts/apple_loadgen.py
-    ane_scalers = {
-        'Mac14,2': 15.0, # M2 MacBook Air
-        'Macmini9,1': 13.0, # M1 Mac Mini
+    ane_power_scalers_mw = {
+        'Mac14,2': 15000.0, # M2 MacBook Air
+        'Macmini9,1': 13000.0, # M1 Mac Mini
     }
 
-    def __init__(self, interval_ms) -> None:
-        self.interval_ms = interval_ms
+    def __init__(self) -> None:
+        pass
 
     def read(self, snapshot):
         res = snapshot_base()
@@ -157,8 +157,8 @@ class AppleReader:
         res['accelerators']['GPU util %'] = 100.0 - 100.0 * snapshot['gpu']['idle_ratio']
         
         # TODO: this is likely different for different models. Need to run some tests.
-        # Scaler 15.0 is based on testing on M2
-        ane_scaling = AppleReader.ane_scalers.get(hw_model, 15.0) * self.interval_ms
+        # Scaler 15000.0 is based on testing on M2
+        ane_scaling = AppleReader.ane_power_scalers_mw.get(hw_model, 15000.0)
         res['accelerators']['ANE util %'] = 100.0 * snapshot['processor']['ane_energy'] / ane_scaling
 
         res['disk']['disk read'] = snapshot['disk']['rbytes_per_s']
@@ -393,7 +393,7 @@ class Horizon:
         self.render_loop()
 
 def start_apple(stdscr, powermetrics, firstline):
-    h = Horizon(stdscr, AppleReader(args.refresh_ms))
+    h = Horizon(stdscr, AppleReader())
     h.loop(h.reader_loop_apple, powermetrics, firstline)
 
 def start_linux(stdscr):
