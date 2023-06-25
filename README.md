@@ -89,6 +89,8 @@ In the terminal, configure 256 colors and start cubestat:
 # cubestat
 ```
 
+Example notebook: [colab example](https://colab.research.google.com/drive/1EUOXGJ-WUYfrKjy0oC_H2ZkVRgiSWGcC#scrollTo=0sm8bcE1QgbW)
+
 ![colab cubestat](static/colab_cubestat.png)
 
 
