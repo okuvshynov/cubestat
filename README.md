@@ -2,19 +2,17 @@
 
 cubestat is a command-line utility to monitor system metrics in horizon chart format. It was originally created for Apple M1/M2 devices, but now works on Linux with nVidia GPU as well, including Google Colab environment.
 
-Let's start with example: running [deep RL loop](https://github.com/okuvshynov/rlscout) on a single MacBook Air M2:
-
-We can see model training (on GPU), self-play (done on 4 performance CPU cores) and model evaluation, which runs inference on Neural Engine (ANE):
+Let's start with example: running [deep RL loop](https://github.com/okuvshynov/rlscout) on a single MacBook Air M2. We can see model training (on GPU), self-play (done on 4 performance CPU cores) and model evaluation, which runs inference on Neural Engine (ANE):
 ![Self-play + training + eval](static/selfplay.png)
 
-At its current stage monitors:
+Currently cubestat reports:
 1. CPU utilization - configurable per core ('expanded'), cluster of cores: Efficiency/Performance ('cluster') or both. Is shown as percentage.
-2. GPU utilization per card/chip. Is shown in percentage. Works for Apple's M1/M2 SoC and nVidia GPUs.
+2. GPU utilization per card/chip. Is shown in percentage. Works for Apple's M1/M2 SoC and nVidia GPUs. For nVidia GPU shows memory usage as well.
 3. ANE (Apple's Neural Engine) power consumption. According to `man powermetrics` it is an estimate, but seems working good enough as a proxy to ANE utilization. Is shown as percentage.
 4. Disk and network IO; Is shown in Kb/s.
 5. Memory usage in %
 
-Despite many monitoring tools available for monitoring typical system counters as well as GPU/Accelerators, horizon charts have a unique information density properties which make it possible to show a history of N measurements for M metrics on a single screen for significantly large N and M. Thus, this tool was created.
+Despite many monitoring tools available for monitoring system counters, horizon charts have nice information density properties which make it possible to show a history of N measurements for M metrics on a single screen for significantly large N and M. Thus, this tool was created.
 
 ## Installation and Usage:
 
@@ -43,7 +41,7 @@ options:
 Interactive commands:
 * q - quit
 * p - show/hide percentage for last data point
-* c - change cpu display mode (individual cores, aggregated by cluster or both)
+* c - change cpu display mode (individual cores, aggregated or both)
 * d - show/hide disk reads/writes
 * n - show/hide network utilization
 * UP/DOWN - scroll the lines in case there are more cores;
@@ -67,7 +65,6 @@ To convert it to % we divide it by some 'maximum' value observed in experimentat
 ## Running on Google Colab 
 
 We can run cubestat on Google Colab instances to monitor GPU/CPU/IO usage.
-
 
 First cell:
 ```
@@ -96,7 +93,7 @@ Example notebook: [colab example](https://colab.research.google.com/drive/1EUOXG
 
 ## Dependencies
 * Python 3.?+
-* psutil 5.9.5
+* psutil 5.9.5+
 * pynvml for nVidia cards monitoring
 
 ## TODO
