@@ -5,7 +5,8 @@ Let's start with example: running [deep RL loop](https://github.com/okuvshynov/r
 We can see model training (on GPU), self-play (done on 4 performance CPU cores) and model evaluation, which runs inference on Neural Engine (ANE):
 ![Self-play + training + eval](static/selfplay.png)
 
-cubestat is a command-line utility to monitor usual system telemetry originally created for Apple M1/M2 devices.
+cubestat is a command-line utility to monitor usual system telemetry originally created for Apple M1/M2 devices, but now works on Linux with nVidia GPU as well, including Google Colab environment.
+
 At its current stage monitors:
 1. CPU utilization - configurable per core ('expanded'), cluster of cores: Efficiency/Performance ('cluster') or both. Is shown as percentage.
 2. GPU utilization per card/chip. Is shown in percentage. Works for Apple's M1/M2 SoC and nVidia GPUs.
@@ -62,6 +63,33 @@ To convert it to % we divide it by some 'maximum' value observed in experimentat
 * It is unclear if power consumption is a decent proxy for utilization;
 * The upper bound must be different for different models (M1, M1 Max, M2, etc.). Need to identify the model and do tests for them.
 * It is unclear if my tests are actually hitting upperbound. The highest I could achieve was multiple layers of convolutions with no non-linearities between them (which makes model pretty useless)
+
+## Running on Google Colab 
+
+We can run cubestat on Google Colab instances to monitor GPU/CPU/IO usage.
+
+
+First cell:
+```
+!pip install cubestat
+!pip install colab-xterm
+%load_ext colabxterm
+# export TERM=xterm-256color <---- RUN THIS IN TERMINAL
+# cubestat                   <---- RUN THIS IN TERMINAL
+```
+
+Start xterm:
+```
+%xterm
+```
+
+In the terminal, configure 256 colors and start cubestat:
+```
+# export TERM=xterm-256color
+# cubestat
+```
+
+![colab cubestat](static/colab_cubestat.png)
 
 
 ## Dependencies
