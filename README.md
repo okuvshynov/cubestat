@@ -13,7 +13,7 @@ At its current stage monitors:
 4. Disk and network IO; Is shown in Kb/s.
 5. Memory usage in %
 
-Despite many monitoring tools available for monitoring typical system counters as well as GPU/Accelerators, horizon charts have a unique information density properties which makes it possible to show a history of N measurements for M metrics on a single screen for significantly large N and M. Thus, this tool was created.
+Despite many monitoring tools available for monitoring typical system counters as well as GPU/Accelerators, horizon charts have a unique information density properties which make it possible to show a history of N measurements for M metrics on a single screen for significantly large N and M. Thus, this tool was created.
 
 ## Installation and Usage:
 
@@ -81,3 +81,7 @@ To convert it to % we divide it by some 'maximum' value observed in experimentat
 * AMD GPU load?
 * Filter by process?
 * joint scale for IO
+* logging 
+* showing time? 
+* storing history?
+* io by interface/disk 

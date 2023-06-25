@@ -9,7 +9,6 @@ import subprocess
 import time
 import sys
 import psutil
-import logging
 
 from importlib.util import find_spec
 from enum import Enum
@@ -83,11 +82,7 @@ class LinuxReader:
         res = snapshot_base()
 
         disk_load = psutil.disk_io_counters()
-        disk_read_kb = disk_load.read_bytes / 2 ** 10
-        disk_written_kb = disk_load.write_bytes / 2 ** 10
         nw_load = psutil.net_io_counters()
-        nw_read_kb = nw_load.bytes_recv / 2 ** 10
-        nw_written_kb = nw_load.bytes_sent / 2 ** 10
         d = self.interval_ms / 1000.0
 
         cpu_clusters = []
@@ -110,21 +105,21 @@ class LinuxReader:
                 res['accelerators'][f'GPU {i} memory used %'] = 100.0 * v['fb_memory_usage']['used'] / v['fb_memory_usage']['total']
 
         if self.first:
-            self.disk_read_last = disk_read_kb
-            self.disk_written_last = disk_written_kb
-            self.network_read_last = nw_read_kb
-            self.network_written_last = nw_written_kb
+            self.disk_read_last = disk_load.read_bytes
+            self.disk_written_last = disk_load.write_bytes
+            self.network_read_last = nw_load.bytes_recv
+            self.network_written_last = nw_load.bytes_sent
             self.first = False
 
-        res['disk']['disk read KB/s'] = ((disk_read_kb - self.disk_read_last) / d)
-        res['disk']['disk write KB/s'] = ((disk_written_kb - self.disk_written_last) / d)
-        self.disk_read_last = disk_read_kb
-        self.disk_written_last = disk_written_kb
+        res['disk']['disk read'] = ((disk_load.read_bytes - self.disk_read_last) / d)
+        res['disk']['disk write'] = ((disk_load.write_bytes - self.disk_written_last) / d)
+        self.disk_read_last = disk_load.read_bytes
+        self.disk_written_last = disk_load.write_bytes
 
-        res['network']['network i KB/s'] = ((nw_read_kb - self.network_read_last) / d)
-        res['network']['network w KB/s'] = ((nw_written_kb - self.network_written_last) / d)
-        self.network_read_last = nw_read_kb
-        self.network_written_last = nw_written_kb
+        res['network']['network rx'] = ((nw_load.bytes_recv - self.network_read_last) / d)
+        res['network']['network tx'] = ((nw_load.bytes_sent - self.network_written_last) / d)
+        self.network_read_last = nw_load.bytes_recv
+        self.network_written_last = nw_load.bytes_sent
         return res.items(), cpu_clusters
 
 class AppleReader:
