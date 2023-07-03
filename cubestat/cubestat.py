@@ -267,9 +267,6 @@ class Horizon:
                 cells = self.cells[self.colormap[group_name]]
                 range = len(cells)
                 for title, series in group.items():
-                    if skip > 0:
-                        skip -= 1
-                        continue
                     indent = ''
 
                     if group_name == 'cpu':
@@ -279,6 +276,9 @@ class Horizon:
                             continue
                         if self.cpumode == CPUMode.all and title not in self.cpu_clusters:
                             indent = '  '
+                    if skip > 0:
+                        skip -= 1
+                        continue
                     titlestr = f'{indent}╔{spacing}{title}'
                     self.write_string(i * 2, 0, titlestr)
                     self.write_string(i * 2 + 1, 0, f'{indent}╚')
