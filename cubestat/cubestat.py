@@ -46,8 +46,10 @@ parser.add_argument('--cpu', type=CPUMode, default=CPUMode.all, choices=list(CPU
 parser.add_argument('--color', type=Color, default=Color.mixed, choices=list(Color))
 parser.add_argument('--percentages', type=Percentages, default=Percentages.last, choices=list(Percentages), help='Show/hide numeric utilization percentage. Can be toggled by pressing p.')
 parser.add_argument('--disk', action="store_true", default=True, help="Show disk read/write. Can be toggled by pressing d.")
+parser.add_argument('--swap', action="store_true", default=True, help="Show swap in/out. Can be toggled by pressing s.")
 parser.add_argument('--network', action="store_true", default=True, help="Show network io. Can be toggled by pressing n.")
 parser.add_argument('--no-disk', action="store_false", dest="disk", help="Hide disk read/write. Can be toggled by pressing d.")
+parser.add_argument('--no-swap', action="store_false", default=True, help="Show swap in/out. Can be toggled by pressing s.")
 parser.add_argument('--no-network', action="store_false", dest="network", help="Hide network io. Can be toggled by pressing n.")
 
 args = parser.parse_args()
@@ -59,6 +61,8 @@ def snapshot_base():
         'accelerators': {},
         'disk': {},
         'network': {},
+        'swap': {},
+        'swap_rates': {},
     }
 
 # psutil + nvsmi for nVidia GPU if available
@@ -104,11 +108,15 @@ class LinuxReader:
                 res['accelerators'][f'GPU {i} util %'] = v['utilization']['gpu_util']
                 res['accelerators'][f'GPU {i} memory used %'] = 100.0 * v['fb_memory_usage']['used'] / v['fb_memory_usage']['total']
 
+        swap = psutil.swap_memory()
+
         if self.first:
             self.disk_read_last = disk_load.read_bytes
             self.disk_written_last = disk_load.write_bytes
             self.network_read_last = nw_load.bytes_recv
             self.network_written_last = nw_load.bytes_sent
+            self.swap_in_last = swap.sin
+            self.swap_out_last = swap.sout
             self.first = False
 
         res['disk']['disk read'] = ((disk_load.read_bytes - self.disk_read_last) / d)
@@ -120,6 +128,12 @@ class LinuxReader:
         res['network']['network tx'] = ((nw_load.bytes_sent - self.network_written_last) / d)
         self.network_read_last = nw_load.bytes_recv
         self.network_written_last = nw_load.bytes_sent
+
+        res['swap_rates']['swap in'] = ((swap.sin - self.swap_in_last) / d)
+        res['swap_rates']['swap out'] = ((swap.sout - self.swap_out_last) / d)
+        res['swap']['swap used %'] = swap.percent
+        self.swap_in_last = swap.sin
+        self.swap_out_last = swap.sout
         return res.items(), cpu_clusters
 
 class AppleReader:
@@ -162,8 +176,6 @@ class AppleReader:
         res['network']['network tx'] = snapshot['network']['obyte_rate']
         return res.items(), cpu_clusters
 
-# settings
-
 class Horizon:
     def __init__(self, stdscr, reader):
         stdscr.nodelay(False)
@@ -185,19 +197,22 @@ class Horizon:
 
         # all of the fields below are mutable and can be accessed from 2 threads
         self.lock = Lock()
-        self.data = {k: collections.defaultdict(lambda: collections.deque(maxlen=args.buffer_size)) for k in ['cpu', 'accelerators', 'ram', 'disk', 'network']}
+        self.data = {k: collections.defaultdict(lambda: collections.deque(maxlen=args.buffer_size)) for k in ['cpu', 'accelerators', 'ram', 'disk', 'network', 'swap', 'swap_rates']}
         self.colormap = {
             'cpu': Color.green if args.color == Color.mixed else args.color,
             'ram': Color.green if args.color == Color.mixed else args.color,
             'accelerators': Color.red if args.color == Color.mixed else args.color,
             'disk': Color.blue if args.color == Color.mixed else args.color,
             'network': Color.blue if args.color == Color.mixed else args.color,
+            'swap': Color.blue if args.color == Color.mixed else args.color,
+            'swap_rates': Color.blue if args.color == Color.mixed else args.color,
         }
         self.snapshots_observed = 0
         self.snapshots_rendered = 0
         self.percentage_mode = args.percentages
         self.cpumode = args.cpu
         self.show_disk = args.disk
+        self.show_swap = args.swap
         self.show_network = args.network
         self.settings_changed = False
         self.reader = reader
@@ -263,6 +278,8 @@ class Horizon:
                     continue
                 if group_name == 'network' and not self.show_network:
                     continue
+                if (group_name == 'swap' or group_name == 'swap_rates') and not self.show_swap:
+                    continue
 
                 cells = self.cells[self.colormap[group_name]]
                 range = len(cells)
@@ -291,7 +308,7 @@ class Horizon:
 
                     B = 100.0
                     strvalue = f'last:{data_slice[-1]:3.0f}%{spacing}╗' if self.percentage_mode == Percentages.last else f'{spacing}╗'
-                    if group_name == 'disk' or group_name == 'network':
+                    if group_name == 'disk' or group_name == 'network' or group_name == 'swap_rates':
                         B = max(data_slice)
                         B = float(1 if B == 0 else 2 ** (int((B - 1)).bit_length()))
                         if B > 1024 * 1024: # Mb/s
@@ -342,6 +359,10 @@ class Horizon:
             if key == ord('c'):
                 with self.lock:
                     self.cpumode = self.cpumode.next()
+                    self.settings_changed = True
+            if key == ord('s'):
+                with self.lock:
+                    self.show_swap = not self.show_swap
                     self.settings_changed = True
             if key == ord('d'):
                 with self.lock:
