@@ -54,16 +54,35 @@ parser.add_argument('--no-network', action="store_false", dest="network", help="
 
 args = parser.parse_args()
 
-def snapshot_base():
-    return {
-        'cpu': {},
-        'ram': {'RAM used %': psutil.virtual_memory().percent},
-        'accelerators': {},
-        'disk': {},
-        'network': {},
-        'swap': {},
-        'swap_rates': {},
-    }
+class MemReader:
+    def __init__(self, interval_ms):
+        self.first = True
+        self.interval_ms = interval_ms
+
+    def read(self):
+        d = self.interval_ms / 1000.0
+        res = {
+            'cpu': {},
+            'ram': {'RAM used %': psutil.virtual_memory().percent},
+            'accelerators': {},
+            'disk': {},
+            'network': {},
+            'swap': {},
+            'swap_rates': {},
+        }
+        swap = psutil.swap_memory()
+        if self.first:
+            self.swap_in_last = swap.sin
+            self.swap_out_last = swap.sout
+            self.first = False
+
+        res['swap_rates']['swap in'] = ((swap.sin - self.swap_in_last) / d)
+        res['swap_rates']['swap out'] = ((swap.sout - self.swap_out_last) / d)
+        res['swap']['swap used %'] = swap.percent
+        self.swap_in_last = swap.sin
+        self.swap_out_last = swap.sout
+        return res
+    
 
 # psutil + nvsmi for nVidia GPU if available
 class LinuxReader:
@@ -71,6 +90,7 @@ class LinuxReader:
         self.has_nvidia = False
         self.first = True
         self.interval_ms = interval_ms
+        self.mem_reader = MemReader(interval_ms)
         try:
             subprocess.check_output('nvidia-smi')
             nvspec = find_spec('pynvml')
@@ -83,7 +103,7 @@ class LinuxReader:
             pass
 
     def read(self):
-        res = snapshot_base()
+        res = self.mem_reader.read()
 
         disk_load = psutil.disk_io_counters()
         nw_load = psutil.net_io_counters()
@@ -129,11 +149,6 @@ class LinuxReader:
         self.network_read_last = nw_load.bytes_recv
         self.network_written_last = nw_load.bytes_sent
 
-        res['swap_rates']['swap in'] = ((swap.sin - self.swap_in_last) / d)
-        res['swap_rates']['swap out'] = ((swap.sout - self.swap_out_last) / d)
-        res['swap']['swap used %'] = swap.percent
-        self.swap_in_last = swap.sin
-        self.swap_out_last = swap.sout
         return res.items(), cpu_clusters
 
 class AppleReader:
@@ -143,11 +158,11 @@ class AppleReader:
         'Macmini9,1': 13000.0, # M1 Mac Mini
     }
 
-    def __init__(self) -> None:
-        pass
+    def __init__(self, interval_ms) -> None:
+        self.mem_reader = MemReader(interval_ms)
 
     def read(self, snapshot):
-        res = snapshot_base()
+        res = self.mem_reader.read()
         hw_model = snapshot["hw_model"]
 
         cpu_clusters = []
@@ -430,7 +445,7 @@ class Horizon:
         self.render_loop()
 
 def start_apple(stdscr, powermetrics, firstline):
-    h = Horizon(stdscr, AppleReader())
+    h = Horizon(stdscr, AppleReader(args.refresh_ms))
     h.loop(h.reader_loop_apple, powermetrics, firstline)
 
 def start_linux(stdscr):
