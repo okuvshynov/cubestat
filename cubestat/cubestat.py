@@ -92,7 +92,7 @@ class LinuxReader:
 
     def read_swap(self):
         try:
-            swap_stats = subprocess.run(["free", "-m"], capture_output=True, text=True)
+            swap_stats = subprocess.run(["free", "-b"], capture_output=True, text=True)
             lines = swap_stats.stdout.splitlines()
             for l in lines:
                 if l.startswith("Swap:"):
