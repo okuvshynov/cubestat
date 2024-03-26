@@ -460,7 +460,9 @@ class Horizon:
             self.process_snapshot(snapshot, cpu_clusters)
             n += 1
             expected_time = begin_ts + n * d
-            time.sleep(expected_time - time.time())
+            current_time = time.time()
+            if expected_time > current_time:
+                time.sleep(expected_time - current_time)
 
     def reader_loop_apple(self, powermetrics, firstline):
         buf = bytearray()
