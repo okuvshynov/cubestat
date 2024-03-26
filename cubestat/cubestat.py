@@ -90,8 +90,22 @@ class LinuxReader:
             # TODO: add logging here
             pass
 
+    def read_swap(self):
+        try:
+            swap_stats = subprocess.run(["free", "-m"], capture_output=True, text=True)
+            lines = swap_stats.stdout.splitlines()
+            for l in lines:
+                if l.startswith("Swap:"):
+                    parts = l.split()
+            return float(parts[2])
+        except:
+            return None
+
     def read(self):
         res = self.mem_reader.read()
+        swap_used = self.read_swap()
+        if swap_used is not None:
+            res['swap']['swap used'] = swap_used
 
         disk_load = psutil.disk_io_counters()
         nw_load = psutil.net_io_counters()
@@ -146,9 +160,7 @@ class AppleReader:
         self.mem_reader = MemReader(interval_ms)
 
     def parse_memstr(self, size_str):
-        #print(size_str)
         match = re.match(r"(\d+(\.\d+)?)([KMG]?)", size_str)
-        #print(match)
         if not match:
             raise ValueError("Invalid memory size format")
         number, _, unit = match.groups()
