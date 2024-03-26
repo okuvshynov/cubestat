@@ -48,7 +48,9 @@ Interactive commands:
 * LEFT/RIGHT - scroll left/right. Autorefresh is paused when user scrolled to non-latest position. To resume autorefresh either scroll back to the right or press '0';
 * 0 - reset horizontal scroll, continue autorefresh.
 
-Running on Apple devices will require sudo access, as `powermetrics` has this limitation. Running on Linux doesn't require it.
+Running on Apple devices will require sudo access, as `powermetrics` has this limitation. If you are comfortable doing that, you can update /etc/sudoers to not require password to run powermetrics.
+
+Running on Linux doesn't require it.
 
 Multi-gpu example - training [nano GPT](https://github.com/karpathy/nanoGPT) on 4 nVidia GPU instance:
 ![multigpu](static/multigpu.png)
