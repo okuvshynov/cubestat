@@ -97,7 +97,7 @@ class LinuxReader:
             for l in lines:
                 if l.startswith("Swap:"):
                     parts = l.split()
-            return float(parts[2])
+                return float(parts[2])
         except:
             return None
 
@@ -175,7 +175,6 @@ class AppleReader:
         else:
             return number
 
-
     def read_swap(self):
         try:
             swap_stats = subprocess.run(["sysctl", "vm.swapusage"], capture_output=True, text=True)
@@ -184,10 +183,8 @@ class AppleReader:
         except:
             return None
 
-
     def read(self, snapshot):
         res = self.mem_reader.read()
-
         swap_used = self.read_swap()
         if swap_used is not None:
             res['swap']['swap used'] = swap_used
@@ -209,7 +206,7 @@ class AppleReader:
 
         res['accelerators']['GPU util %'] = 100.0 - 100.0 * snapshot['gpu']['idle_ratio']
         
-        # TODO: this is likely different for different models. Need to run some tests.
+        # TODO: this is different for different models. Need to run some tests.
         # Scaler 15000.0 is based on testing on M2
         ane_scaling = AppleReader.ane_power_scalers_mw.get(hw_model, 15000.0)
         res['accelerators']['ANE util %'] = 100.0 * snapshot['processor']['ane_energy'] / ane_scaling
@@ -261,7 +258,6 @@ class Horizon:
         self.reader = reader
         self.vertical_shift = 0
         self.horizontal_shift = 0
-
 
     def prepare_cells(self):
         chrs = [' ', '▁', '▂', '▃', '▄', '▅', '▆', '▇', '█']
