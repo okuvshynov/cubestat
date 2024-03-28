@@ -65,10 +65,10 @@ class MemReader:
         res = {
             'cpu': {},
             'ram': {'RAM used %': psutil.virtual_memory().percent},
+            'swap': {},
             'accelerators': {},
             'disk': {},
             'network': {},
-            'swap': {},
         }
         return res
 
@@ -238,14 +238,14 @@ class Horizon:
 
         # all of the fields below are mutable and can be accessed from 2 threads
         self.lock = Lock()
-        self.data = {k: collections.defaultdict(lambda: collections.deque(maxlen=args.buffer_size)) for k in ['cpu', 'accelerators', 'ram', 'disk', 'network', 'swap']}
+        self.data = {k: collections.defaultdict(lambda: collections.deque(maxlen=args.buffer_size)) for k in ['cpu', 'accelerators', 'ram', 'swap', 'disk', 'network']}
         self.colormap = {
             'cpu': Color.green if args.color == Color.mixed else args.color,
             'ram': Color.green if args.color == Color.mixed else args.color,
             'accelerators': Color.red if args.color == Color.mixed else args.color,
             'disk': Color.blue if args.color == Color.mixed else args.color,
             'network': Color.blue if args.color == Color.mixed else args.color,
-            'swap': Color.blue if args.color == Color.mixed else args.color,
+            'swap': Color.green if args.color == Color.mixed else args.color,
         }
         self.snapshots_observed = 0
         self.snapshots_rendered = 0
