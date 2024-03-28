@@ -305,6 +305,15 @@ class Horizon:
         except:
             pass
 
+    # buckets is a list of factor/label, e.g. [(1024*1024, 'Mb'), (1024, 'Kb'), (1, 'b')]
+    def format_measurement(self, spacing, curr, mx, buckets):
+        if self.percentage_mode != Percentages.last:
+            return f'{spacing}╗'
+        for lim, unit in buckets[:-1]:
+            if mx > lim:
+                return f'last:{curr / lim :3.0f}|{int(mx / lim)}{unit}{spacing}╗'
+        return f'last:{curr :3.0f}|{int(mx)}{buckets[-1][1]}{spacing}╗'
+
     def render(self):
         with self.lock:
             if self.snapshots_observed == self.snapshots_rendered and not self.settings_changed:
@@ -321,7 +330,7 @@ class Horizon:
                     continue
                 if group_name == 'network' and not self.show_network:
                     continue
-                if (group_name == 'swap') and not self.show_swap:
+                if group_name == 'swap' and not self.show_swap:
                     continue
 
                 cells = self.cells[self.colormap[group_name]]
@@ -351,26 +360,17 @@ class Horizon:
 
                     B = 100.0
                     strvalue = f'last:{data_slice[-1]:3.0f}%{spacing}╗' if self.percentage_mode == Percentages.last else f'{spacing}╗'
+                    
                     if group_name == 'disk' or group_name == 'network':
                         B = max(data_slice)
                         B = float(1 if B == 0 else 2 ** (int((B - 1)).bit_length()))
-                        if B > 1024 * 1024: # Mb/s
-                            strvalue =  f'last:{data_slice[-1] / (1024 * 1024) :3.0f}|{int(B / (1024 * 1024))}Mb/s{spacing}╗' if self.percentage_mode == Percentages.last else f'{spacing}╗'
-                        elif B > 1024: # Kb/s
-                            strvalue =  f'last:{data_slice[-1] / 1024:3.0f}|{int(B / 1024)}Kb/s{spacing}╗' if self.percentage_mode == Percentages.last else f'{spacing}╗'
-                        else:
-                            strvalue =  f'last:{data_slice[-1]:3.0f}|{int(B)}bytes/s{spacing}╗' if self.percentage_mode == Percentages.last else f'{spacing}╗'
-
+                        strvalue = self.format_measurement(spacing, data_slice[-1], B, [(1024 * 1024, 'Mb/s'), (1024, 'Kb/s'), (1, 'bytes/s')])
 
                     if group_name == 'swap':
                         B = max(data_slice)
                         B = float(1 if B == 0 else 2 ** (int((B - 1)).bit_length()))
-                        if B > 1024 * 1024: # Mb
-                            strvalue =  f'last:{data_slice[-1] / (1024 * 1024) :3.0f}|{int(B / (1024 * 1024))}Mb{spacing}╗' if self.percentage_mode == Percentages.last else f'{spacing}╗'
-                        elif B > 1024: # Kb/s
-                            strvalue =  f'last:{data_slice[-1] / 1024:3.0f}|{int(B / 1024)}Kb{spacing}╗' if self.percentage_mode == Percentages.last else f'{spacing}╗'
-                        else:
-                            strvalue =  f'last:{data_slice[-1]:3.0f}|{int(B)}bytes{spacing}╗' if self.percentage_mode == Percentages.last else f'{spacing}╗'
+                        strvalue = self.format_measurement(spacing, data_slice[-1], B, [(1024 * 1024, 'Mb'), (1024, 'Kb'), (1, 'bytes')])
+
                     title_filling = self.filling * (self.cols - len(strvalue) - len(titlestr))
                     self.write_string(i * 2, len(titlestr), title_filling)
                     self.write_string(i * 2, self.cols - len(strvalue), strvalue)
@@ -472,7 +472,7 @@ class Horizon:
             line = powermetrics.stdout.readline()
             buf.extend(line)
             # we check for </plist> rather than '0x00' because powermetrics injects 0x00 
-            # right before the measurement (in time), not right after. So, if we were to wait 
+            # right before the measurement event, not right after. So, if we were to wait 
             # for 0x00 we'll be delaying next sample by sampling period. 
             if b'</plist>\n' == line:
                 snapshot, cpu_clusters = self.reader.read(plistlib.loads(bytes(buf).strip(b'\x00')))
