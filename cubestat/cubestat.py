@@ -98,7 +98,7 @@ class LinuxReader:
             for l in lines:
                 if l.startswith("Swap:"):
                     parts = l.split()
-                return float(parts[2])
+                    return float(parts[2])
         except:
             return None
 
