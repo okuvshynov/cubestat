@@ -1,8 +1,8 @@
 import subprocess
 import plistlib
 
-from readers.mem_reader import MemReader
-from readers.swapusage_reader import SwapUsageReader
+from cubestat.readers.mem_reader import MemReader
+from cubestat.readers.swapusage_reader import SwapUsageReader
 
 # reading from powermetrics
 class AppleReader:

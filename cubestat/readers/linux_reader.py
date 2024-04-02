@@ -1,9 +1,9 @@
 import psutil
 import time
 
-from readers.mem_reader import MemReader
-from readers.nv_reader import NVReader
-from readers.free_swap_reader import FreeSwapReader
+from cubestat.readers.mem_reader import MemReader
+from cubestat.readers.nv_reader import NVReader
+from cubestat.readers.free_swap_reader import FreeSwapReader
 
 class LinuxReader:
     def __init__(self, interval_ms):
