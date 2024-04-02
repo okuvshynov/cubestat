@@ -6,15 +6,18 @@ import curses
 import itertools
 import plistlib
 import psutil
-import re
 import subprocess
 import sys
 import time
 
-from importlib.util import find_spec
 from enum import Enum
 from math import floor
 from threading import Thread, Lock
+
+from readers.mem_reader import MemReader
+from readers.nv_reader import NVReader
+from readers.free_swap_reader import FreeSwapReader
+from readers.swapusage_reader import SwapUsageReader
 
 class EnumLoop(Enum):
     def next(self):
@@ -56,62 +59,23 @@ parser.add_argument('--no-network', action="store_false", dest="network", help="
 
 args = parser.parse_args()
 
-class MemReader:
-    def __init__(self, interval_ms):
-        self.first = True
-        self.interval_ms = interval_ms
-
-    def read(self):
-        d = self.interval_ms / 1000.0
-        res = {
-            'cpu': {},
-            'ram': {'RAM used %': psutil.virtual_memory().percent},
-            'swap': {},
-            'accelerators': {},
-            'disk': {},
-            'network': {},
-        }
-        return res
-
-# psutil + nvsmi for nVidia GPU if available
 class LinuxReader:
     def __init__(self, interval_ms):
-        self.has_nvidia = False
         self.first = True
         self.interval_ms = interval_ms
         self.mem_reader = MemReader(interval_ms)
-        try:
-            subprocess.check_output('nvidia-smi')
-            nvspec = find_spec('pynvml')
-            if nvspec is not None:
-                from pynvml.smi import nvidia_smi
-                self.nvsmi = nvidia_smi.getInstance()
-                self.has_nvidia = True
-        except Exception:
-            # TODO: add logging here
-            pass
-
-    def read_swap(self):
-        try:
-            swap_stats = subprocess.run(["free", "-b"], capture_output=True, text=True)
-            lines = swap_stats.stdout.splitlines()
-            for l in lines:
-                if l.startswith("Swap:"):
-                    parts = l.split()
-                    return float(parts[2])
-        except:
-            return None
+        self.nv = NVReader()
+        self.swap_reader = FreeSwapReader()
 
     def read(self):
         res = self.mem_reader.read()
-        swap_used = self.read_swap()
-        if swap_used is not None:
-            res['swap']['swap used'] = swap_used
+        res['swap'] = self.swap_reader.read()
 
         disk_load = psutil.disk_io_counters()
         nw_load = psutil.net_io_counters()
         d = self.interval_ms / 1000.0
 
+        # TODO: numa nodes here?
         cpu_clusters = []
 
         cluster_title = 'Total CPU Util, %'
@@ -126,10 +90,7 @@ class LinuxReader:
             total_load += v
         res['cpu'][cluster_title] = total_load / len(cpu_load)
 
-        if self.has_nvidia:
-            for i, v in enumerate(self.nvsmi.DeviceQuery('utilization.gpu,memory.total,memory.used')['gpu']):
-                res['accelerators'][f'GPU {i} util %'] = v['utilization']['gpu_util']
-                res['accelerators'][f'GPU {i} memory used %'] = 100.0 * v['fb_memory_usage']['used'] / v['fb_memory_usage']['total']
+        res['accelerators'] = self.nv.read()
 
         if self.first:
             self.disk_read_last = disk_load.read_bytes
@@ -152,6 +113,7 @@ class LinuxReader:
 
 class AppleReader:
     # these scalers are based on running mock convnet from scripts/apple_loadgen.py
+    # TODO: this is different for different models. Need to run tests on different models.
     ane_power_scalers_mw = {
         'Mac14,2': 15000.0, # M2 MacBook Air
         'Macmini9,1': 13000.0, # M1 Mac Mini
@@ -159,36 +121,11 @@ class AppleReader:
 
     def __init__(self, interval_ms) -> None:
         self.mem_reader = MemReader(interval_ms)
-
-    def parse_memstr(self, size_str):
-        match = re.match(r"(\d+(\.\d+)?)([KMG]?)", size_str)
-        if not match:
-            raise ValueError("Invalid memory size format")
-        number, _, unit = match.groups()
-        number = float(number)
-
-        if unit == "G":
-            return number * 1024 * 1024 * 1024
-        elif unit == "M":
-            return number * 1024 * 1024
-        elif unit == "K":
-            return number * 1024
-        else:
-            return number
-
-    def read_swap(self):
-        try:
-            swap_stats = subprocess.run(["sysctl", "vm.swapusage"], capture_output=True, text=True)
-            tokens = swap_stats.stdout.strip().split(' ')
-            return self.parse_memstr(tokens[7])
-        except:
-            return None
+        self.swap_reader = SwapUsageReader()
 
     def read(self, snapshot):
         res = self.mem_reader.read()
-        swap_used = self.read_swap()
-        if swap_used is not None:
-            res['swap']['swap used'] = swap_used
+        res['swap'] = self.swap_reader.read()
 
         hw_model = snapshot["hw_model"]
 
@@ -207,8 +144,6 @@ class AppleReader:
 
         res['accelerators']['GPU util %'] = 100.0 - 100.0 * snapshot['gpu']['idle_ratio']
         
-        # TODO: this is different for different models. Need to run some tests.
-        # Scaler 15000.0 is based on testing on M2
         ane_scaling = AppleReader.ane_power_scalers_mw.get(hw_model, 15000.0)
         res['accelerators']['ANE util %'] = 100.0 * snapshot['processor']['ane_energy'] / ane_scaling
 
