@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='cubestat',
-    version='0.2.4',
+    version='0.2.5',
     author='Oleksandr Kuvshynov',
     author_email='okuvshynov@gmail.com',
     description='Horizon chart in terminal for system monitoring',

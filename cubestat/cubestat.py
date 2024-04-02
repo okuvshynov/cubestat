@@ -10,8 +10,8 @@ from enum import Enum
 from math import floor
 from threading import Thread, Lock
 
-from readers.linux_reader import LinuxReader
-from readers.macos_reader import AppleReader
+from cubestat.readers.linux_reader import LinuxReader
+from cubestat.readers.macos_reader import AppleReader
 
 class EnumLoop(Enum):
     def next(self):
