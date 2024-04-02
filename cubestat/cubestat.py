@@ -4,8 +4,7 @@ import argparse
 import collections
 import curses
 import itertools
-import plistlib
-import psutil
+
 import subprocess
 import sys
 import time
@@ -14,10 +13,8 @@ from enum import Enum
 from math import floor
 from threading import Thread, Lock
 
-from readers.mem_reader import MemReader
-from readers.nv_reader import NVReader
-from readers.free_swap_reader import FreeSwapReader
-from readers.swapusage_reader import SwapUsageReader
+from readers.linux_reader import LinuxReader
+from readers.macos_reader import AppleReader
 
 class EnumLoop(Enum):
     def next(self):
@@ -58,100 +55,6 @@ parser.add_argument('--no-swap', action="store_false", default=True, help="Hide 
 parser.add_argument('--no-network', action="store_false", dest="network", help="Hide network io. Can be toggled by pressing n.")
 
 args = parser.parse_args()
-
-class LinuxReader:
-    def __init__(self, interval_ms):
-        self.first = True
-        self.interval_ms = interval_ms
-        self.mem_reader = MemReader(interval_ms)
-        self.nv = NVReader()
-        self.swap_reader = FreeSwapReader()
-
-    def read(self):
-        res = self.mem_reader.read()
-        res['swap'] = self.swap_reader.read()
-
-        disk_load = psutil.disk_io_counters()
-        nw_load = psutil.net_io_counters()
-        d = self.interval_ms / 1000.0
-
-        # TODO: numa nodes here?
-        cpu_clusters = []
-
-        cluster_title = 'Total CPU Util, %'
-        cpu_clusters.append(cluster_title)
-        total_load = 0.0
-        res['cpu'][cluster_title] = 0.0
-
-        cpu_load = psutil.cpu_percent(percpu=True)
-        for i, v in enumerate(cpu_load):
-            title = f'CPU {i} util %'
-            res['cpu'][title] = v
-            total_load += v
-        res['cpu'][cluster_title] = total_load / len(cpu_load)
-
-        res['accelerators'] = self.nv.read()
-
-        if self.first:
-            self.disk_read_last = disk_load.read_bytes
-            self.disk_written_last = disk_load.write_bytes
-            self.network_read_last = nw_load.bytes_recv
-            self.network_written_last = nw_load.bytes_sent
-            self.first = False
-
-        res['disk']['disk read'] = ((disk_load.read_bytes - self.disk_read_last) / d)
-        res['disk']['disk write'] = ((disk_load.write_bytes - self.disk_written_last) / d)
-        self.disk_read_last = disk_load.read_bytes
-        self.disk_written_last = disk_load.write_bytes
-
-        res['network']['network rx'] = ((nw_load.bytes_recv - self.network_read_last) / d)
-        res['network']['network tx'] = ((nw_load.bytes_sent - self.network_written_last) / d)
-        self.network_read_last = nw_load.bytes_recv
-        self.network_written_last = nw_load.bytes_sent
-
-        return res.items(), cpu_clusters
-
-class AppleReader:
-    # these scalers are based on running mock convnet from scripts/apple_loadgen.py
-    # TODO: this is different for different models. Need to run tests on different models.
-    ane_power_scalers_mw = {
-        'Mac14,2': 15000.0, # M2 MacBook Air
-        'Macmini9,1': 13000.0, # M1 Mac Mini
-    }
-
-    def __init__(self, interval_ms) -> None:
-        self.mem_reader = MemReader(interval_ms)
-        self.swap_reader = SwapUsageReader()
-
-    def read(self, snapshot):
-        res = self.mem_reader.read()
-        res['swap'] = self.swap_reader.read()
-
-        hw_model = snapshot["hw_model"]
-
-        cpu_clusters = []
-        for cluster in snapshot['processor']['clusters']:
-            idle_cluster, total_cluster = 0.0, 0.0
-            cluster_title = f'{cluster["name"]} total CPU util %'
-            cpu_clusters.append(cluster_title)
-            res['cpu'][cluster_title] = 0.0
-            for cpu in cluster['cpus']:
-                title = f'{cluster["name"]} CPU {cpu["cpu"]} util %'
-                res['cpu'][title] = 100.0 - 100.0 * cpu['idle_ratio']
-                idle_cluster += cpu['idle_ratio']
-                total_cluster += 1.0
-            res['cpu'][cluster_title] = 100.0 - 100.0 * idle_cluster / total_cluster
-
-        res['accelerators']['GPU util %'] = 100.0 - 100.0 * snapshot['gpu']['idle_ratio']
-        
-        ane_scaling = AppleReader.ane_power_scalers_mw.get(hw_model, 15000.0)
-        res['accelerators']['ANE util %'] = 100.0 * snapshot['processor']['ane_energy'] / ane_scaling
-
-        res['disk']['disk read'] = snapshot['disk']['rbytes_per_s']
-        res['disk']['disk write'] = snapshot['disk']['wbytes_per_s']
-        res['network']['network rx'] = snapshot['network']['ibyte_rate']
-        res['network']['network tx'] = snapshot['network']['obyte_rate']
-        return res.items(), cpu_clusters
 
 class Horizon:
     def __init__(self, stdscr, reader):
@@ -383,58 +286,21 @@ class Horizon:
                         self.horizontal_shift = 0
                         self.settings_changed = True
 
-
-    def reader_loop_linux(self):
-        begin_ts = time.time()
-        n = 0
-        d = args.refresh_ms / 1000.0
-        while True:
-            snapshot, cpu_clusters = self.reader.read()
-            self.process_snapshot(snapshot, cpu_clusters)
-            n += 1
-            expected_time = begin_ts + n * d
-            current_time = time.time()
-            if expected_time > current_time:
-                time.sleep(expected_time - current_time)
-
-    def reader_loop_apple(self, powermetrics, firstline):
-        buf = bytearray()
-        buf.extend(firstline)
-
-        while True:
-            line = powermetrics.stdout.readline()
-            buf.extend(line)
-            # we check for </plist> rather than '0x00' because powermetrics injects 0x00 
-            # right before the measurement event, not right after. So, if we were to wait 
-            # for 0x00 we'll be delaying next sample by sampling period. 
-            if b'</plist>\n' == line:
-                snapshot, cpu_clusters = self.reader.read(plistlib.loads(bytes(buf).strip(b'\x00')))
-                self.process_snapshot(snapshot, cpu_clusters)
-                buf.clear()
-
-    def loop(self, reader, *args):
-        reader_thread = Thread(target=reader, daemon=True, args=args)
+    def loop(self):
+        reader_thread = Thread(target=self.reader.loop, daemon=True, args=[self.process_snapshot])
         reader_thread.start()
         self.render_loop()
 
-def start_apple(stdscr, powermetrics, firstline):
-    h = Horizon(stdscr, AppleReader(args.refresh_ms))
-    h.loop(h.reader_loop_apple, powermetrics, firstline)
-
-def start_linux(stdscr):
-    h = Horizon(stdscr, LinuxReader(args.refresh_ms))
-    h.loop(h.reader_loop_linux)
+def start(stdscr, reader):
+    h = Horizon(stdscr, reader)
+    h.loop()
 
 def main():
     if sys.platform == "darwin":
-        cmd = ['sudo', 'powermetrics', '-f', 'plist', '-i', str(args.refresh_ms), '-s', 'cpu_power,gpu_power,ane_power,network,disk']
-        powermetrics = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        # we are getting first line here to allow user to enter sudo credentials before 
-        # curses initialization.
-        line = powermetrics.stdout.readline()
-        curses.wrapper(start_apple, powermetrics, line)
+        curses.wrapper(start, AppleReader(args.refresh_ms))
     if sys.platform == "linux" or sys.platform == "linux2":
-        curses.wrapper(start_linux)
+        curses.wrapper(start, LinuxReader(args.refresh_ms))
+    # TODO: write something about platform not supported
 
 if __name__ == '__main__':
     main()
