@@ -4,17 +4,14 @@ import argparse
 import collections
 import curses
 import itertools
-import plistlib
-import psutil
-import re
-import subprocess
 import sys
-import time
 
-from importlib.util import find_spec
 from enum import Enum
 from math import floor
 from threading import Thread, Lock
+
+from readers.linux_reader import LinuxReader
+from readers.macos_reader import AppleReader
 
 class EnumLoop(Enum):
     def next(self):
@@ -56,168 +53,6 @@ parser.add_argument('--no-network', action="store_false", dest="network", help="
 
 args = parser.parse_args()
 
-class MemReader:
-    def __init__(self, interval_ms):
-        self.first = True
-        self.interval_ms = interval_ms
-
-    def read(self):
-        d = self.interval_ms / 1000.0
-        res = {
-            'cpu': {},
-            'ram': {'RAM used %': psutil.virtual_memory().percent},
-            'swap': {},
-            'accelerators': {},
-            'disk': {},
-            'network': {},
-        }
-        return res
-
-# psutil + nvsmi for nVidia GPU if available
-class LinuxReader:
-    def __init__(self, interval_ms):
-        self.has_nvidia = False
-        self.first = True
-        self.interval_ms = interval_ms
-        self.mem_reader = MemReader(interval_ms)
-        try:
-            subprocess.check_output('nvidia-smi')
-            nvspec = find_spec('pynvml')
-            if nvspec is not None:
-                from pynvml.smi import nvidia_smi
-                self.nvsmi = nvidia_smi.getInstance()
-                self.has_nvidia = True
-        except Exception:
-            # TODO: add logging here
-            pass
-
-    def read_swap(self):
-        try:
-            swap_stats = subprocess.run(["free", "-b"], capture_output=True, text=True)
-            lines = swap_stats.stdout.splitlines()
-            for l in lines:
-                if l.startswith("Swap:"):
-                    parts = l.split()
-                    return float(parts[2])
-        except:
-            return None
-
-    def read(self):
-        res = self.mem_reader.read()
-        swap_used = self.read_swap()
-        if swap_used is not None:
-            res['swap']['swap used'] = swap_used
-
-        disk_load = psutil.disk_io_counters()
-        nw_load = psutil.net_io_counters()
-        d = self.interval_ms / 1000.0
-
-        cpu_clusters = []
-
-        cluster_title = 'Total CPU Util, %'
-        cpu_clusters.append(cluster_title)
-        total_load = 0.0
-        res['cpu'][cluster_title] = 0.0
-
-        cpu_load = psutil.cpu_percent(percpu=True)
-        for i, v in enumerate(cpu_load):
-            title = f'CPU {i} util %'
-            res['cpu'][title] = v
-            total_load += v
-        res['cpu'][cluster_title] = total_load / len(cpu_load)
-
-        if self.has_nvidia:
-            for i, v in enumerate(self.nvsmi.DeviceQuery('utilization.gpu,memory.total,memory.used')['gpu']):
-                res['accelerators'][f'GPU {i} util %'] = v['utilization']['gpu_util']
-                res['accelerators'][f'GPU {i} memory used %'] = 100.0 * v['fb_memory_usage']['used'] / v['fb_memory_usage']['total']
-
-        if self.first:
-            self.disk_read_last = disk_load.read_bytes
-            self.disk_written_last = disk_load.write_bytes
-            self.network_read_last = nw_load.bytes_recv
-            self.network_written_last = nw_load.bytes_sent
-            self.first = False
-
-        res['disk']['disk read'] = ((disk_load.read_bytes - self.disk_read_last) / d)
-        res['disk']['disk write'] = ((disk_load.write_bytes - self.disk_written_last) / d)
-        self.disk_read_last = disk_load.read_bytes
-        self.disk_written_last = disk_load.write_bytes
-
-        res['network']['network rx'] = ((nw_load.bytes_recv - self.network_read_last) / d)
-        res['network']['network tx'] = ((nw_load.bytes_sent - self.network_written_last) / d)
-        self.network_read_last = nw_load.bytes_recv
-        self.network_written_last = nw_load.bytes_sent
-
-        return res.items(), cpu_clusters
-
-class AppleReader:
-    # these scalers are based on running mock convnet from scripts/apple_loadgen.py
-    ane_power_scalers_mw = {
-        'Mac14,2': 15000.0, # M2 MacBook Air
-        'Macmini9,1': 13000.0, # M1 Mac Mini
-    }
-
-    def __init__(self, interval_ms) -> None:
-        self.mem_reader = MemReader(interval_ms)
-
-    def parse_memstr(self, size_str):
-        match = re.match(r"(\d+(\.\d+)?)([KMG]?)", size_str)
-        if not match:
-            raise ValueError("Invalid memory size format")
-        number, _, unit = match.groups()
-        number = float(number)
-
-        if unit == "G":
-            return number * 1024 * 1024 * 1024
-        elif unit == "M":
-            return number * 1024 * 1024
-        elif unit == "K":
-            return number * 1024
-        else:
-            return number
-
-    def read_swap(self):
-        try:
-            swap_stats = subprocess.run(["sysctl", "vm.swapusage"], capture_output=True, text=True)
-            tokens = swap_stats.stdout.strip().split(' ')
-            return self.parse_memstr(tokens[7])
-        except:
-            return None
-
-    def read(self, snapshot):
-        res = self.mem_reader.read()
-        swap_used = self.read_swap()
-        if swap_used is not None:
-            res['swap']['swap used'] = swap_used
-
-        hw_model = snapshot["hw_model"]
-
-        cpu_clusters = []
-        for cluster in snapshot['processor']['clusters']:
-            idle_cluster, total_cluster = 0.0, 0.0
-            cluster_title = f'{cluster["name"]} total CPU util %'
-            cpu_clusters.append(cluster_title)
-            res['cpu'][cluster_title] = 0.0
-            for cpu in cluster['cpus']:
-                title = f'{cluster["name"]} CPU {cpu["cpu"]} util %'
-                res['cpu'][title] = 100.0 - 100.0 * cpu['idle_ratio']
-                idle_cluster += cpu['idle_ratio']
-                total_cluster += 1.0
-            res['cpu'][cluster_title] = 100.0 - 100.0 * idle_cluster / total_cluster
-
-        res['accelerators']['GPU util %'] = 100.0 - 100.0 * snapshot['gpu']['idle_ratio']
-        
-        # TODO: this is different for different models. Need to run some tests.
-        # Scaler 15000.0 is based on testing on M2
-        ane_scaling = AppleReader.ane_power_scalers_mw.get(hw_model, 15000.0)
-        res['accelerators']['ANE util %'] = 100.0 * snapshot['processor']['ane_energy'] / ane_scaling
-
-        res['disk']['disk read'] = snapshot['disk']['rbytes_per_s']
-        res['disk']['disk write'] = snapshot['disk']['wbytes_per_s']
-        res['network']['network rx'] = snapshot['network']['ibyte_rate']
-        res['network']['network tx'] = snapshot['network']['obyte_rate']
-        return res.items(), cpu_clusters
-
 class Horizon:
     def __init__(self, stdscr, reader):
         stdscr.nodelay(False)
@@ -228,12 +63,6 @@ class Horizon:
 
         self.spacing_width = 1
         self.filling = '.'
-        self.colorschemes = {
-            Color.green: [-1, 150, 107, 22],
-            Color.red: [-1, 224, 181, 138],
-            Color.blue: [-1, 189, 146, 103],
-            Color.pink: [-1, 223, 180, 137],
-        }
 
         self.cells = self.prepare_cells()
         self.stdscr = stdscr
@@ -263,9 +92,15 @@ class Horizon:
 
     def prepare_cells(self):
         chrs = [' ', '▁', '▂', '▃', '▄', '▅', '▆', '▇', '█']
+        colorschemes = {
+            Color.green: [-1, 150, 107, 22],
+            Color.red: [-1, 224, 181, 138],
+            Color.blue: [-1, 189, 146, 103],
+            Color.pink: [-1, 223, 180, 137],
+        }
         cells = {}
         colorpair = 1
-        for name, colors in self.colorschemes.items():
+        for name, colors in colorschemes.items():
             cells[name] = []
             for fg, bg in zip(colors[1:], colors[:-1]):
                 curses.init_pair(colorpair, fg, bg)
@@ -285,22 +120,24 @@ class Horizon:
             if self.horizontal_shift > 0:
                 self.horizontal_shift += 1
 
-    def write_string(self, r, c, s, color=0):
-        if r < 0 or r >= self.rows or c < 0:
+    def write_string(self, row, col, s, color=0):
+        if row < 0 or row >= self.rows or col < 0:
             return
-        if c + len(s) > self.cols:
-            s = s[:self.cols - c]
+        if col + len(s) > self.cols:
+            s = s[:self.cols - col]
         try:
-            self.stdscr.addstr(r, c, s, color)
+            self.stdscr.addstr(row, col, s, color)
         except:
+            # TODO: log something
             pass
 
-    def wc(self, r, c, chr, color=0):
-        if r < 0 or r >= self.rows or c < 0 or c >= self.cols:
+    def write_char(self, row, col, chr, color=0):
+        if row < 0 or row >= self.rows or col < 0 or col >= self.cols:
             return
         try:
-            self.stdscr.addch(r, c, chr, color)
+            self.stdscr.addch(row, col, chr, color)
         except:
+            # TODO: log something
             pass
 
     # buckets is a list of factor/label, e.g. [(1024*1024, 'Mb'), (1024, 'Kb'), (1, 'b')]
@@ -319,6 +156,10 @@ class Horizon:
         self.stdscr.erase()
         self.rows, self.cols = self.stdscr.getmaxyx()
         spacing = ' ' * self.spacing_width
+
+        # Each chart takes two lines, with format roughly
+        # ╔ GPU util %........................................................................last:  4% ╗
+        # ╚ ▁▁▁  ▁    ▁▆▅▄ ▁▁▁      ▂ ▇▃▃▂█▃▇▁▃▂▁▁▂▁▁▃▃▂▁▂▄▄▁▂▆▁▃▁▂▃▁▁▁▂▂▂▂▂▂▁▁▃▂▂▁▂▁▃▄▃ ▁▁▃▁▄▂▃▂▂▂▃▃▅▅ ╝
 
         with self.lock:
             i = 0
@@ -346,16 +187,24 @@ class Horizon:
                     if skip > 0:
                         skip -= 1
                         continue
+
+                    # render title and left border, for example
+                    #
+                    # ╔ GPU util %
+                    # ╚
                     titlestr = f'{indent}╔{spacing}{title}'
                     self.write_string(i * 2, 0, titlestr)
                     self.write_string(i * 2 + 1, 0, f'{indent}╚')
 
+                    # data slice size
                     length = len(series) - self.horizontal_shift if self.horizontal_shift > 0 else len(series)
                     
+                    # chart area width
                     width = self.cols - 2 * self.spacing_width - 2 - len(indent)
                     index = max(0, length - width)
                     data_slice = list(itertools.islice(series, index, min(index + width, length)))
 
+                    # for percentage-like measurements
                     B = 100.0
                     strvalue = f'last:{data_slice[-1]:3.0f}%{spacing}╗' if self.percentage_mode == Percentages.last else f'{spacing}╗'
                     
@@ -369,17 +218,27 @@ class Horizon:
                         B = float(1 if B == 0 else 2 ** (int((B - 1)).bit_length()))
                         strvalue = self.format_measurement(spacing, data_slice[-1], B, [(1024 * 1024, 'Mb'), (1024, 'Kb'), (1, 'bytes')])
 
+                    # render the rest of title row
+                    #
+                    # ╔ GPU util %........................................................................last:  4% ╗
+                    # ╚
                     title_filling = self.filling * (self.cols - len(strvalue) - len(titlestr))
                     self.write_string(i * 2, len(titlestr), title_filling)
                     self.write_string(i * 2, self.cols - len(strvalue), strvalue)
 
+                    # render the right border
+                    #
+                    # ╔ GPU util %........................................................................last:  4% ╗
+                    # ╚                                                                                             ╝
                     border = f'{spacing}╝'
                     self.write_string(i * 2 + 1, self.cols - len(border), border)
 
+                    # Render the chart itself
+                    #
+                    # ╔ GPU util %........................................................................last:  4% ╗
+                    # ╚ ▁▁▁  ▁    ▁▆▅▄ ▁▁▁      ▂ ▇▃▃▂█▃▇▁▃▂▁▁▂▁▁▃▃▂▁▂▄▄▁▂▆▁▃▁▂▃▁▁▁▂▂▂▂▂▂▁▁▃▂▂▁▂▁▃▄▃ ▁▁▃▁▄▂▃▂▂▂▃▃▅▅ ╝
                     scaler = range / B
-                    
                     col = self.cols - (len(data_slice) + self.spacing_width) - 2
-
                     for v in data_slice:
                         col += 1
                         cell_index = floor(v * scaler)
@@ -388,7 +247,7 @@ class Horizon:
                         if cell_index >= range:
                             cell_index = range - 1
                         chr, color_pair = cells[cell_index]
-                        self.wc(i * 2 + 1, col, chr, curses.color_pair(color_pair))
+                        self.write_char(i * 2 + 1, col, chr, curses.color_pair(color_pair))
 
                     i += 1
 
@@ -448,58 +307,18 @@ class Horizon:
                         self.horizontal_shift = 0
                         self.settings_changed = True
 
-
-    def reader_loop_linux(self):
-        begin_ts = time.time()
-        n = 0
-        d = args.refresh_ms / 1000.0
-        while True:
-            snapshot, cpu_clusters = self.reader.read()
-            self.process_snapshot(snapshot, cpu_clusters)
-            n += 1
-            expected_time = begin_ts + n * d
-            current_time = time.time()
-            if expected_time > current_time:
-                time.sleep(expected_time - current_time)
-
-    def reader_loop_apple(self, powermetrics, firstline):
-        buf = bytearray()
-        buf.extend(firstline)
-
-        while True:
-            line = powermetrics.stdout.readline()
-            buf.extend(line)
-            # we check for </plist> rather than '0x00' because powermetrics injects 0x00 
-            # right before the measurement event, not right after. So, if we were to wait 
-            # for 0x00 we'll be delaying next sample by sampling period. 
-            if b'</plist>\n' == line:
-                snapshot, cpu_clusters = self.reader.read(plistlib.loads(bytes(buf).strip(b'\x00')))
-                self.process_snapshot(snapshot, cpu_clusters)
-                buf.clear()
-
-    def loop(self, reader, *args):
-        reader_thread = Thread(target=reader, daemon=True, args=args)
+    def loop(self):
+        reader_thread = Thread(target=self.reader.loop, daemon=True, args=[self.process_snapshot])
         reader_thread.start()
         self.render_loop()
 
-def start_apple(stdscr, powermetrics, firstline):
-    h = Horizon(stdscr, AppleReader(args.refresh_ms))
-    h.loop(h.reader_loop_apple, powermetrics, firstline)
-
-def start_linux(stdscr):
-    h = Horizon(stdscr, LinuxReader(args.refresh_ms))
-    h.loop(h.reader_loop_linux)
-
-def main():
-    if sys.platform == "darwin":
-        cmd = ['sudo', 'powermetrics', '-f', 'plist', '-i', str(args.refresh_ms), '-s', 'cpu_power,gpu_power,ane_power,network,disk']
-        powermetrics = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        # we are getting first line here to allow user to enter sudo credentials before 
-        # curses initialization.
-        line = powermetrics.stdout.readline()
-        curses.wrapper(start_apple, powermetrics, line)
-    if sys.platform == "linux" or sys.platform == "linux2":
-        curses.wrapper(start_linux)
+def start(stdscr, reader):
+    h = Horizon(stdscr, reader)
+    h.loop()
 
 if __name__ == '__main__':
-    main()
+    if sys.platform == "darwin":
+        curses.wrapper(start, AppleReader(args.refresh_ms))
+    if sys.platform == "linux" or sys.platform == "linux2":
+        curses.wrapper(start, LinuxReader(args.refresh_ms))
+    # TODO: write something about platform not supported
