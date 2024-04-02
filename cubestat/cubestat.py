@@ -4,10 +4,7 @@ import argparse
 import collections
 import curses
 import itertools
-
-import subprocess
 import sys
-import time
 
 from enum import Enum
 from math import floor
@@ -66,12 +63,6 @@ class Horizon:
 
         self.spacing_width = 1
         self.filling = '.'
-        self.colorschemes = {
-            Color.green: [-1, 150, 107, 22],
-            Color.red: [-1, 224, 181, 138],
-            Color.blue: [-1, 189, 146, 103],
-            Color.pink: [-1, 223, 180, 137],
-        }
 
         self.cells = self.prepare_cells()
         self.stdscr = stdscr
@@ -101,9 +92,15 @@ class Horizon:
 
     def prepare_cells(self):
         chrs = [' ', '▁', '▂', '▃', '▄', '▅', '▆', '▇', '█']
+        colorschemes = {
+            Color.green: [-1, 150, 107, 22],
+            Color.red: [-1, 224, 181, 138],
+            Color.blue: [-1, 189, 146, 103],
+            Color.pink: [-1, 223, 180, 137],
+        }
         cells = {}
         colorpair = 1
-        for name, colors in self.colorschemes.items():
+        for name, colors in colorschemes.items():
             cells[name] = []
             for fg, bg in zip(colors[1:], colors[:-1]):
                 curses.init_pair(colorpair, fg, bg)
@@ -123,22 +120,24 @@ class Horizon:
             if self.horizontal_shift > 0:
                 self.horizontal_shift += 1
 
-    def write_string(self, r, c, s, color=0):
-        if r < 0 or r >= self.rows or c < 0:
+    def write_string(self, row, col, s, color=0):
+        if row < 0 or row >= self.rows or col < 0:
             return
-        if c + len(s) > self.cols:
-            s = s[:self.cols - c]
+        if col + len(s) > self.cols:
+            s = s[:self.cols - col]
         try:
-            self.stdscr.addstr(r, c, s, color)
+            self.stdscr.addstr(row, col, s, color)
         except:
+            # TODO: log something
             pass
 
-    def wc(self, r, c, chr, color=0):
-        if r < 0 or r >= self.rows or c < 0 or c >= self.cols:
+    def write_char(self, row, col, chr, color=0):
+        if row < 0 or row >= self.rows or col < 0 or col >= self.cols:
             return
         try:
-            self.stdscr.addch(r, c, chr, color)
+            self.stdscr.addch(row, col, chr, color)
         except:
+            # TODO: log something
             pass
 
     # buckets is a list of factor/label, e.g. [(1024*1024, 'Mb'), (1024, 'Kb'), (1, 'b')]
@@ -157,6 +156,10 @@ class Horizon:
         self.stdscr.erase()
         self.rows, self.cols = self.stdscr.getmaxyx()
         spacing = ' ' * self.spacing_width
+
+        # Each chart takes two lines, with format roughly
+        # ╔ GPU util %........................................................................last:  4% ╗
+        # ╚ ▁▁▁  ▁    ▁▆▅▄ ▁▁▁      ▂ ▇▃▃▂█▃▇▁▃▂▁▁▂▁▁▃▃▂▁▂▄▄▁▂▆▁▃▁▂▃▁▁▁▂▂▂▂▂▂▁▁▃▂▂▁▂▁▃▄▃ ▁▁▃▁▄▂▃▂▂▂▃▃▅▅ ╝
 
         with self.lock:
             i = 0
@@ -184,16 +187,24 @@ class Horizon:
                     if skip > 0:
                         skip -= 1
                         continue
+
+                    # render title and left border, for example
+                    #
+                    # ╔ GPU util %
+                    # ╚
                     titlestr = f'{indent}╔{spacing}{title}'
                     self.write_string(i * 2, 0, titlestr)
                     self.write_string(i * 2 + 1, 0, f'{indent}╚')
 
+                    # data slice size
                     length = len(series) - self.horizontal_shift if self.horizontal_shift > 0 else len(series)
                     
+                    # chart area width
                     width = self.cols - 2 * self.spacing_width - 2 - len(indent)
                     index = max(0, length - width)
                     data_slice = list(itertools.islice(series, index, min(index + width, length)))
 
+                    # for percentage-like measurements
                     B = 100.0
                     strvalue = f'last:{data_slice[-1]:3.0f}%{spacing}╗' if self.percentage_mode == Percentages.last else f'{spacing}╗'
                     
@@ -207,17 +218,27 @@ class Horizon:
                         B = float(1 if B == 0 else 2 ** (int((B - 1)).bit_length()))
                         strvalue = self.format_measurement(spacing, data_slice[-1], B, [(1024 * 1024, 'Mb'), (1024, 'Kb'), (1, 'bytes')])
 
+                    # render the rest of title row
+                    #
+                    # ╔ GPU util %........................................................................last:  4% ╗
+                    # ╚
                     title_filling = self.filling * (self.cols - len(strvalue) - len(titlestr))
                     self.write_string(i * 2, len(titlestr), title_filling)
                     self.write_string(i * 2, self.cols - len(strvalue), strvalue)
 
+                    # render the right border
+                    #
+                    # ╔ GPU util %........................................................................last:  4% ╗
+                    # ╚                                                                                             ╝
                     border = f'{spacing}╝'
                     self.write_string(i * 2 + 1, self.cols - len(border), border)
 
+                    # Render the chart itself
+                    #
+                    # ╔ GPU util %........................................................................last:  4% ╗
+                    # ╚ ▁▁▁  ▁    ▁▆▅▄ ▁▁▁      ▂ ▇▃▃▂█▃▇▁▃▂▁▁▂▁▁▃▃▂▁▂▄▄▁▂▆▁▃▁▂▃▁▁▁▂▂▂▂▂▂▁▁▃▂▂▁▂▁▃▄▃ ▁▁▃▁▄▂▃▂▂▂▃▃▅▅ ╝
                     scaler = range / B
-                    
                     col = self.cols - (len(data_slice) + self.spacing_width) - 2
-
                     for v in data_slice:
                         col += 1
                         cell_index = floor(v * scaler)
@@ -226,7 +247,7 @@ class Horizon:
                         if cell_index >= range:
                             cell_index = range - 1
                         chr, color_pair = cells[cell_index]
-                        self.wc(i * 2 + 1, col, chr, curses.color_pair(color_pair))
+                        self.write_char(i * 2 + 1, col, chr, curses.color_pair(color_pair))
 
                     i += 1
 
@@ -295,12 +316,9 @@ def start(stdscr, reader):
     h = Horizon(stdscr, reader)
     h.loop()
 
-def main():
+if __name__ == '__main__':
     if sys.platform == "darwin":
         curses.wrapper(start, AppleReader(args.refresh_ms))
     if sys.platform == "linux" or sys.platform == "linux2":
         curses.wrapper(start, LinuxReader(args.refresh_ms))
     # TODO: write something about platform not supported
-
-if __name__ == '__main__':
-    main()
