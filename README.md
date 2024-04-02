@@ -25,24 +25,33 @@ Despite many monitoring tools available for monitoring system counters, horizon 
 ## Installation and Usage:
 
 ```
-pip install cubestat
+% pip install cubestat
 
-usage: cubestat [-h] [--refresh_ms REFRESH_MS] [--buffer_size BUFFER_SIZE] [--cpu {all,by_cluster,by_core}] [--color {red,green,blue,mixed}] [--percentages {hidden,last}] [--disk] [--network] [--no-disk] [--no-network]
+% cubestat --help
+usage: cubestat [-h] [--refresh_ms REFRESH_MS] [--buffer_size BUFFER_SIZE]
+                [--cpu {all,by_cluster,by_core}] [--color {red,green,blue,pink,mixed}]
+                [--percentages {hidden,last}] [--disk] [--swap] [--network] [--no-disk]
+                [--no-swap] [--no-network]
 
 options:
   -h, --help            show this help message and exit
   --refresh_ms REFRESH_MS, -i REFRESH_MS
                         Update frequency, milliseconds
   --buffer_size BUFFER_SIZE
-                        How many datapoints to store. Having it larger than screen width is a good idea as terminal window can be resized
+                        How many datapoints to store. Having it larger than screen width is a
+                        good idea as terminal window can be resized
   --cpu {all,by_cluster,by_core}
-                        CPU mode - showing all cores, only cumulative by cluster or both. Can be toggled by pressing c.
-  --color {red,green,blue,mixed}
+                        CPU mode - showing all cores, only cumulative by cluster or both. Can
+                        be toggled by pressing c.
+  --color {red,green,blue,pink,mixed}
   --percentages {hidden,last}
-                        Show/hide numeric utilization percentage. Can be toggled by pressing p.
+                        Show/hide numeric utilization percentage. Can be toggled by pressing
+                        p.
   --disk                Show disk read/write. Can be toggled by pressing d.
+  --swap                Show swap . Can be toggled by pressing s.
   --network             Show network io. Can be toggled by pressing n.
   --no-disk             Hide disk read/write. Can be toggled by pressing d.
+  --no-swap             Hide swap. Can be toggled by pressing s.
   --no-network          Hide network io. Can be toggled by pressing n.
 ```
 
@@ -60,7 +69,7 @@ Running on Apple devices will require sudo access, as `powermetrics` has this li
 
 Running on Linux doesn't require sudo.
 
-Multi-gpu example - training [nano GPT](https://github.com/karpathy/nanoGPT) on 4 GPU instance:
+Multi-gpu example - training [nano GPT](https://github.com/karpathy/nanoGPT) on 4 GPU instance (old colors and layout) :
 ![multigpu](static/multigpu.png)
 
 ## Apple Neural Engine utilization
