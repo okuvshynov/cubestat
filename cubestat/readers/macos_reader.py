@@ -42,10 +42,10 @@ class AppleReader:
                 total_cluster += 1.0
             res['cpu'][cluster_title] = 100.0 - 100.0 * idle_cluster / total_cluster
 
-        res['accelerators']['GPU util %'] = 100.0 - 100.0 * snapshot['gpu']['idle_ratio']
+        res['gpu']['GPU util %'] = 100.0 - 100.0 * snapshot['gpu']['idle_ratio']
         
         ane_scaling = AppleReader.ane_power_scalers_mw.get(hw_model, 15000.0)
-        res['accelerators']['ANE util %'] = 100.0 * snapshot['processor']['ane_energy'] / ane_scaling
+        res['ane']['ANE util %'] = 100.0 * snapshot['processor']['ane_energy'] / ane_scaling
 
         res['disk']['disk read'] = snapshot['disk']['rbytes_per_s']
         res['disk']['disk write'] = snapshot['disk']['wbytes_per_s']

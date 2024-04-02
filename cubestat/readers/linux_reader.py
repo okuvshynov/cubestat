@@ -36,7 +36,7 @@ class LinuxReader:
             total_load += v
         res['cpu'][cluster_title] = total_load / len(cpu_load)
 
-        res['accelerators'] = self.nv.read()
+        res['gpu'] = self.nv.read()
 
         if self.first:
             self.disk_read_last = disk_load.read_bytes

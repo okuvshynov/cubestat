@@ -13,7 +13,8 @@ class MemReader:
             'cpu': {},
             'ram': {'RAM used %': psutil.virtual_memory().percent},
             'swap': {},
-            'accelerators': {},
+            'gpu': {},
+            'ane': {},
             'disk': {},
             'network': {},
         }

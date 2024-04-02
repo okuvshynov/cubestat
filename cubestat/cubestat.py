@@ -30,6 +30,11 @@ class CPUMode(EnumLoop, EnumStr):
     all = 'all'
     by_cluster = 'by_cluster'
     by_core = 'by_core'
+
+class GPUMode(EnumLoop, EnumStr):
+    collapsed = 'collapsed'
+    load_only = 'load_only'
+    load_and_vram = 'load_and_vram'
     
 class Color(EnumStr):
     red = 'red'
@@ -42,6 +47,7 @@ parser = argparse.ArgumentParser("cubestat")
 parser.add_argument('--refresh_ms', '-i', type=int, default=1000, help='Update frequency, milliseconds')
 parser.add_argument('--buffer_size', type=int, default=500, help='How many datapoints to store. Having it larger than screen width is a good idea as terminal window can be resized')
 parser.add_argument('--cpu', type=CPUMode, default=CPUMode.all, choices=list(CPUMode), help='CPU mode - showing all cores, only cumulative by cluster or both. Can be toggled by pressing c.')
+parser.add_argument('--gpu', type=GPUMode, default=GPUMode.load_only, choices=list(GPUMode), help='GPU mode - hidden, showing all GPUs load, or showing load and vram usage. Can be toggled by pressing g.')
 parser.add_argument('--color', type=Color, default=Color.mixed, choices=list(Color))
 parser.add_argument('--percentages', type=Percentages, default=Percentages.last, choices=list(Percentages), help='Show/hide numeric utilization percentage. Can be toggled by pressing p.')
 parser.add_argument('--disk', action="store_true", default=True, help="Show disk read/write. Can be toggled by pressing d.")
@@ -69,11 +75,12 @@ class Horizon:
 
         # all of the fields below are mutable and can be accessed from 2 threads
         self.lock = Lock()
-        self.data = {k: collections.defaultdict(lambda: collections.deque(maxlen=args.buffer_size)) for k in ['cpu', 'ram', 'swap', 'accelerators',  'disk', 'network']}
+        self.data = {k: collections.defaultdict(lambda: collections.deque(maxlen=args.buffer_size)) for k in ['cpu', 'ram', 'swap', 'gpu', 'ane', 'disk', 'network']}
         self.colormap = {
             'cpu': Color.green if args.color == Color.mixed else args.color,
             'ram': Color.pink if args.color == Color.mixed else args.color,
-            'accelerators': Color.red if args.color == Color.mixed else args.color,
+            'gpu': Color.red if args.color == Color.mixed else args.color,
+            'ane': Color.red if args.color == Color.mixed else args.color,
             'disk': Color.blue if args.color == Color.mixed else args.color,
             'network': Color.blue if args.color == Color.mixed else args.color,
             'swap': Color.pink if args.color == Color.mixed else args.color,
@@ -85,6 +92,7 @@ class Horizon:
         self.show_disk = args.disk
         self.show_swap = args.swap
         self.show_network = args.network
+        self.gpumode = args.gpu
         self.settings_changed = False
         self.reader = reader
         self.vertical_shift = 0
@@ -164,6 +172,7 @@ class Horizon:
         with self.lock:
             i = 0
             skip = self.vertical_shift
+            is_multigpu = len(self.data['gpu']) > 1
             for group_name, group in self.data.items():
                 if group_name == 'disk' and not self.show_disk:
                     continue
@@ -184,6 +193,15 @@ class Horizon:
                             continue
                         if self.cpumode == CPUMode.all and title not in self.cpu_clusters:
                             indent = '  '
+
+                    if group_name == 'gpu':
+                        if is_multigpu and self.gpumode == GPUMode.collapsed and "Total GPU" not in title:
+                            continue
+                        if self.gpumode == GPUMode.load_only and "vram" in title:
+                            continue
+                        if is_multigpu and "Total GPU" not in title:
+                            indent = '  '
+                    
                     if skip > 0:
                         skip -= 1
                         continue
@@ -269,6 +287,10 @@ class Horizon:
             if key == ord('c'):
                 with self.lock:
                     self.cpumode = self.cpumode.next()
+                    self.settings_changed = True
+            if key == ord('g'):
+                with self.lock:
+                    self.gpumode = self.gpumode.next()
                     self.settings_changed = True
             if key == ord('s'):
                 with self.lock:
