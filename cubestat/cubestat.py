@@ -316,9 +316,12 @@ def start(stdscr, reader):
     h = Horizon(stdscr, reader)
     h.loop()
 
-if __name__ == '__main__':
+def main():
     if sys.platform == "darwin":
         curses.wrapper(start, AppleReader(args.refresh_ms))
     if sys.platform == "linux" or sys.platform == "linux2":
         curses.wrapper(start, LinuxReader(args.refresh_ms))
     # TODO: write something about platform not supported
+
+if __name__ == '__main__':
+    main()
