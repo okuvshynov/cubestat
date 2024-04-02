@@ -80,6 +80,7 @@ First cell:
 ```
 !pip install cubestat
 !pip install colab-xterm
+!pip install pynvml
 %load_ext colabxterm
 # export TERM=xterm-256color <---- RUN THIS IN TERMINAL
 # cubestat                   <---- RUN THIS IN TERMINAL
