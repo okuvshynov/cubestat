@@ -69,8 +69,12 @@ Running on Apple devices will require sudo access, as `powermetrics` has this li
 
 Running on Linux doesn't require sudo.
 
-Multi-gpu example - training [nano GPT](https://github.com/karpathy/nanoGPT) on 4 GPU instance (old colors and layout) :
-![multigpu](static/multigpu.png)
+## Multi-gpu example 
+
+
+https://github.com/okuvshynov/cubestat/assets/661042/c5e0750d-9bbd-4636-a1ea-71cc75ebbadb
+
+We see a workload with uneven distribution between 4 GPUs installed. By pressing 'g' we can toggle the view mode to either show aggregate load, per GPU load or per GPU load and VRAM usage.
 
 ## Apple Neural Engine utilization
 
