@@ -2,22 +2,30 @@
 
 cubestat is a command-line utility to monitor system metrics in horizon chart format. It was originally created for Apple M1/M2 devices, but now works on Linux with nVidia GPU as well, including Google Colab environment.
 
-Let's start with example: running [deep RL loop](https://github.com/okuvshynov/rlscout) on a single MacBook Air M2. We can see model training (on GPU), self-play (done on 4 performance CPU cores) and model evaluation, which runs inference on Neural Engine (ANE):
-![Self-play + training + eval](static/selfplay.png)
+Let's start with an example:
+
+In the clip below we see Mixtral-8x7b inference on MacBook Air with FF layers offloaded to SSD. 
+We can notice somewhat low GPU util (not good), 2Gb/s+ of data read from disk (as we have to fetch the weights), but plenty of free RAM (And we are actually able to serve almost 100Gb model on 24Gb machine with fp16 precision).
+We can also see the disk writes before the inference started - that was model preprocessing which was writing the weights to disk individually.
+
+
+https://github.com/okuvshynov/cubestat/assets/661042/8e1e405e-ca61-4ffb-bedb-e04eb33f8bc2
+
 
 Currently cubestat reports:
 1. CPU utilization - configurable per core ('expanded'), cluster of cores: Efficiency/Performance ('cluster') or both. Is shown as percentage.
 2. GPU utilization per card/chip. Is shown in percentage. Works for Apple's M1/M2 SoC and nVidia GPUs. For nVidia GPU shows memory usage as well.
 3. ANE (Apple's Neural Engine) power consumption. According to `man powermetrics` it is an estimate, but seems working good enough as a proxy to ANE utilization. Is shown as percentage.
-4. Disk and network IO; Is shown in Kb/s.
+4. Disk and network IO; Is shown as rate (Kb/s, Mb/s, Gb/s).
 5. Memory usage in %
+6. Swap usage. Is shown as absolute value (Kb, Mb, Gb)
 
 Despite many monitoring tools available for monitoring system counters, horizon charts have nice information density properties which make it possible to show a history of N measurements for M metrics on a single screen for significantly large N and M. Thus, this tool was created.
 
 ## Installation and Usage:
 
 ```
-pip3 install cubestat
+pip install cubestat
 
 usage: cubestat [-h] [--refresh_ms REFRESH_MS] [--buffer_size BUFFER_SIZE] [--cpu {all,by_cluster,by_core}] [--color {red,green,blue,mixed}] [--percentages {hidden,last}] [--disk] [--network] [--no-disk] [--no-network]
 
@@ -50,9 +58,9 @@ Interactive commands:
 
 Running on Apple devices will require sudo access, as `powermetrics` has this limitation. If you are comfortable doing that, you can update /etc/sudoers to not require password to run powermetrics.
 
-Running on Linux doesn't require it.
+Running on Linux doesn't require sudo.
 
-Multi-gpu example - training [nano GPT](https://github.com/karpathy/nanoGPT) on 4 nVidia GPU instance:
+Multi-gpu example - training [nano GPT](https://github.com/karpathy/nanoGPT) on 4 GPU instance:
 ![multigpu](static/multigpu.png)
 
 ## Apple Neural Engine utilization
@@ -96,7 +104,7 @@ Example notebook: [colab example](https://colab.research.google.com/drive/1EUOXG
 ## Dependencies
 * Python 3.?+
 * psutil 5.9.5+
-* pynvml for nVidia cards monitoring
+* [optional] pynvml for nVidia cards monitoring
 
 ## TODO
 * Apple Neural Engine correct scale.
