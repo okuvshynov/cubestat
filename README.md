@@ -5,48 +5,45 @@ cubestat is a command-line utility to monitor system metrics in horizon chart fo
 Let's start with an example:
 
 In the clip below we see Mixtral-8x7b inference on MacBook Air with FF layers offloaded to SSD. 
-We can notice somewhat low GPU util (not good), 2Gb/s+ of data read from disk (as we have to fetch the weights), but plenty of free RAM (And we are actually able to serve almost 100Gb model on 24Gb machine with fp16 precision).
+We can notice somewhat low GPU util, 2Gb/s+ of data read from disk, as we have to fetch the weights, but plenty of free RAM (And we are actually able to serve almost 100Gb model on 24Gb machine with fp16 precision).
 We can also see the disk writes before the inference started - that was model preprocessing which was writing the weights to disk individually.
-
 
 https://github.com/okuvshynov/cubestat/assets/661042/8e1e405e-ca61-4ffb-bedb-e04eb33f8bc2
 
-
 Currently cubestat reports:
-1. CPU utilization - configurable per core ('expanded'), cluster of cores: Efficiency/Performance ('cluster') or both. Is shown as percentage.
-2. GPU utilization per card/chip. Is shown in percentage. Works for Apple's M1/M2 SoC and nVidia GPUs. For nVidia GPU shows memory usage as well.
-3. ANE (Apple's Neural Engine) power consumption. According to `man powermetrics` it is an estimate, but seems working good enough as a proxy to ANE utilization. Is shown as percentage.
+1. CPU utilization - configurable per core ('by_core'), cluster of cores on Apple M1+: Efficiency/Performance ('by_cluster') or all. Is shown as percentage.
+2. GPU utilization per card/chip. Is shown in percentage. Works for Apple's M1/M2 SoC and nVidia GPUs. For nVidia GPU shows memory usage as well. In case of multi-GPU can show individual GPUs or aggregated average.
+3. ANE (Neural Engine) power consumption. According to `man powermetrics` it is an estimate, but seems working good enough as a proxy to ANE utilization. Is shown as percentage.
 4. Disk and network IO; Is shown as rate (Kb/s, Mb/s, Gb/s).
 5. Memory usage in %
 6. Swap usage. Is shown as absolute value (Kb, Mb, Gb)
 
-Despite many monitoring tools available for monitoring system counters, horizon charts have nice information density properties which make it possible to show a history of N measurements for M metrics on a single screen for significantly large N and M. Thus, this tool was created.
+Despite many monitoring tools available for system counters, horizon charts have nice information density properties which make it possible to show a history of N measurements for M metrics on a single screen for significantly large N and M. Thus, this tool was created.
 
 ## Installation and Usage:
 
 ```
 % pip install cubestat
 
-% cubestat --help
-usage: cubestat [-h] [--refresh_ms REFRESH_MS] [--buffer_size BUFFER_SIZE]
-                [--cpu {all,by_cluster,by_core}] [--color {red,green,blue,pink,mixed}]
-                [--percentages {hidden,last}] [--disk] [--swap] [--network] [--no-disk]
-                [--no-swap] [--no-network]
+% cubestat [-h] [--refresh_ms REFRESH_MS] [--buffer_size BUFFER_SIZE] [--cpu {all,by_cluster,by_core}]
+                [--gpu {collapsed,load_only,load_and_vram}] [--color {red,green,blue,pink,mixed}]
+                [--percentages {hidden,last}] [--disk] [--swap] [--network] [--no-disk] [--no-swap] [--no-network]
 
 options:
   -h, --help            show this help message and exit
   --refresh_ms REFRESH_MS, -i REFRESH_MS
                         Update frequency, milliseconds
   --buffer_size BUFFER_SIZE
-                        How many datapoints to store. Having it larger than screen width is a
-                        good idea as terminal window can be resized
+                        How many datapoints to store. Having it larger than screen width is a good idea as terminal window
+                        can be resized
   --cpu {all,by_cluster,by_core}
-                        CPU mode - showing all cores, only cumulative by cluster or both. Can
-                        be toggled by pressing c.
+                        CPU mode - showing all cores, only cumulative by cluster or both. Can be toggled by pressing c.
+  --gpu {collapsed,load_only,load_and_vram}
+                        GPU mode - hidden, showing all GPUs load, or showing load and vram usage. Can be toggled by pressing
+                        g.
   --color {red,green,blue,pink,mixed}
   --percentages {hidden,last}
-                        Show/hide numeric utilization percentage. Can be toggled by pressing
-                        p.
+                        Show/hide numeric utilization percentage. Can be toggled by pressing p.
   --disk                Show disk read/write. Can be toggled by pressing d.
   --swap                Show swap . Can be toggled by pressing s.
   --network             Show network io. Can be toggled by pressing n.
@@ -57,20 +54,21 @@ options:
 
 Interactive commands:
 * q - quit
-* p - show/hide percentage for last data point
+* p - show/hide values for last data point
 * c - change cpu display mode (individual cores, aggregated or both)
+* g - change gpu display mode (individual gpus, aggregated and vram usage)
 * d - show/hide disk reads/writes
 * n - show/hide network utilization
+* s - show/hide swap
 * UP/DOWN - scroll the lines in case there are more cores;
 * LEFT/RIGHT - scroll left/right. Autorefresh is paused when user scrolled to non-latest position. To resume autorefresh either scroll back to the right or press '0';
 * 0 - reset horizontal scroll, continue autorefresh.
 
-Running on Apple devices will require sudo access, as `powermetrics` has this limitation. If you are comfortable doing that, you can update /etc/sudoers to not require password to run powermetrics.
+Running on Apple devices will require sudo access, as `powermetrics` has this requirement. If you are comfortable doing that, you can update /etc/sudoers to not require password to run powermetrics.
 
 Running on Linux doesn't require sudo.
 
 ## Multi-gpu example 
-
 
 https://github.com/okuvshynov/cubestat/assets/661042/c5e0750d-9bbd-4636-a1ea-71cc75ebbadb
 
@@ -121,18 +119,9 @@ Example notebook: [colab example](https://colab.research.google.com/drive/1EUOXG
 * [optional] pynvml for nVidia cards monitoring
 
 ## TODO
-* Apple Neural Engine correct scale.
-* GPU aggregation
-* CPU by socket/NUMA/SMT
-* status line (why though?)
-* better colors (especially for dark background)
+* colors for dark background
 * multi-column layout for large instances (e.g. with 100+ cores)
-* try on Windows and BSD
-* Google TPU load?
-* AMD GPU load?
-* Filter by process?
 * joint scale for IO
-* logging 
-* showing time? 
-* storing history?
-* io by interface/disk 
+* showing time
+* storing history
+* show help
