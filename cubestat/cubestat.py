@@ -4,6 +4,7 @@ import argparse
 import collections
 import curses
 import itertools
+import os
 import sys
 
 from enum import Enum
@@ -43,10 +44,13 @@ class Color(EnumStr):
     pink = 'pink'
     mixed = 'mixed'
 
+def auto_cpu_mode():
+     return CPUMode.all if os.cpu_count() < 40 else CPUMode.by_cluster
+
 parser = argparse.ArgumentParser("cubestat")
 parser.add_argument('--refresh_ms', '-i', type=int, default=1000, help='Update frequency, milliseconds')
 parser.add_argument('--buffer_size', type=int, default=500, help='How many datapoints to store. Having it larger than screen width is a good idea as terminal window can be resized')
-parser.add_argument('--cpu', type=CPUMode, default=CPUMode.all, choices=list(CPUMode), help='CPU mode - showing all cores, only cumulative by cluster or both. Can be toggled by pressing c.')
+parser.add_argument('--cpu', type=CPUMode, default=auto_cpu_mode(), choices=list(CPUMode), help='CPU mode - showing all cores, only cumulative by cluster or both. Can be toggled by pressing c.')
 parser.add_argument('--gpu', type=GPUMode, default=GPUMode.load_only, choices=list(GPUMode), help='GPU mode - hidden, showing all GPUs load, or showing load and vram usage. Can be toggled by pressing g.')
 parser.add_argument('--color', type=Color, default=Color.mixed, choices=list(Color))
 parser.add_argument('--percentages', type=Percentages, default=Percentages.last, choices=list(Percentages), help='Show/hide numeric utilization percentage. Can be toggled by pressing p.')
