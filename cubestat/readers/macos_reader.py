@@ -9,7 +9,7 @@ class AppleReader:
     # these scalers are based on running mock convnet from scripts/apple_loadgen.py
     # TODO: this is different for different models. Need to run tests on different models.
     ane_power_scalers_mw = {
-        'Mac14,2': 15000.0, # M2 MacBook Air
+        'Mac14,2': 15500.0, # M2 MacBook Air
         'Macmini9,1': 13000.0, # M1 Mac Mini
     }
 
