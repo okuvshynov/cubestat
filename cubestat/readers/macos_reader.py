@@ -6,14 +6,27 @@ from cubestat.readers.swapusage_reader import SwapUsageReader
 
 # reading from powermetrics
 class AppleReader:
-    # these scalers are based on running mock convnet from scripts/apple_loadgen.py
-    # TODO: this is different for different models. Need to run tests on different models.
-    ane_power_scalers_mw = {
-        'Mac14,2': 15500.0, # M2 MacBook Air
-        'Macmini9,1': 13000.0, # M1 Mac Mini
+    # This is pretty much a guess based on tests on a few models I had available.
+    # Need anything M3 + Ultra models to test.
+    # Based on TOPS numbers Apple published, all models seem to have some ANE 
+    # except Ultra having 2x.
+    ane_power_scalers = {
+        "M1": 13000.0,
+        "M2": 15500.0,
+        "M3": 15500.0,
     }
 
     def __init__(self, interval_ms) -> None:
+        # identity the model to get ANE power scaler
+        brand_str = subprocess.check_output(['sysctl', '-n', 'machdep.cpu.brand_string'], text=True)
+        self.ane_scaler = 15500 # default to M2
+        for k, v in self.ane_power_scalers.items():
+            if k in brand_str:
+                self.ane_scaler = v
+                if 'Ultra' in brand_str:
+                    self.ane_scaler *= 2
+                break
+        
         cmd = ['sudo', 'powermetrics', '-f', 'plist', '-i', str(interval_ms), '-s', 'cpu_power,gpu_power,ane_power,network,disk']
         self.powermetrics = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         # we are getting first line here to allow user to enter sudo credentials before 
@@ -26,8 +39,6 @@ class AppleReader:
     def read(self, snapshot):
         res = self.mem_reader.read()
         res['swap'] = self.swap_reader.read()
-
-        hw_model = snapshot["hw_model"]
 
         cpu_clusters = []
         for cluster in snapshot['processor']['clusters']:
@@ -44,8 +55,7 @@ class AppleReader:
 
         res['gpu']['GPU util %'] = 100.0 - 100.0 * snapshot['gpu']['idle_ratio']
         
-        ane_scaling = AppleReader.ane_power_scalers_mw.get(hw_model, 15000.0)
-        res['ane']['ANE util %'] = 100.0 * snapshot['processor']['ane_energy'] / ane_scaling
+        res['ane']['ANE util %'] = 100.0 * snapshot['processor']['ane_energy'] / self.ane_scaler
 
         res['disk']['disk read'] = snapshot['disk']['rbytes_per_s']
         res['disk']['disk write'] = snapshot['disk']['wbytes_per_s']
