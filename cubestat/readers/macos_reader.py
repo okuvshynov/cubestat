@@ -43,7 +43,8 @@ class AppleReader:
         cpu_clusters = []
         for cluster in snapshot['processor']['clusters']:
             idle_cluster, total_cluster = 0.0, 0.0
-            cluster_title = f'{cluster["name"]} total CPU util %'
+            n_cpus = len(cluster['cpus'])
+            cluster_title = f'[{n_cpus}] {cluster["name"]} total CPU util %'
             cpu_clusters.append(cluster_title)
             res['cpu'][cluster_title] = 0.0
             for cpu in cluster['cpus']:

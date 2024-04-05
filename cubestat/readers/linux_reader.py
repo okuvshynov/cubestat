@@ -23,13 +23,13 @@ class LinuxReader:
 
         # TODO: numa nodes here?
         cpu_clusters = []
+        cpu_load = psutil.cpu_percent(percpu=True)
 
-        cluster_title = 'Total CPU Util, %'
+        cluster_title = f'[{len(cpu_load)}] Total CPU Util, %'
         cpu_clusters.append(cluster_title)
         total_load = 0.0
         res['cpu'][cluster_title] = 0.0
 
-        cpu_load = psutil.cpu_percent(percpu=True)
         for i, v in enumerate(cpu_load):
             title = f'CPU {i} util %'
             res['cpu'][title] = v

@@ -26,7 +26,7 @@ class NVReader:
                 res[f'GPU {i} vram used %'] = 100.0 * v['fb_memory_usage']['used'] / v['fb_memory_usage']['total']
         if len(res) > 1:
             combined = {}
-            combined[f'Total GPU util %'] = total / len(res)
+            combined[f'[{len(res)}] Total GPU util %'] = total / len(res)
             for k, v in res.items():
                 combined[k] = v
             return combined
