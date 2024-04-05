@@ -20,13 +20,15 @@ class NVReader:
         res = {}
         total = 0
         if self.has_nvidia:
+            n_gpus = 0
             for i, v in enumerate(self.nvsmi.DeviceQuery('utilization.gpu,memory.total,memory.used')['gpu']):
                 res[f'GPU {i} util %'] = v['utilization']['gpu_util']
                 total += v['utilization']['gpu_util']
                 res[f'GPU {i} vram used %'] = 100.0 * v['fb_memory_usage']['used'] / v['fb_memory_usage']['total']
-        if len(res) > 1:
+                n_gpus += 1
+        if n_gpus > 1:
             combined = {}
-            combined[f'[{len(res)}] Total GPU util %'] = total / len(res)
+            combined[f'[{n_gpus}] Total GPU util %'] = total / n_gpus
             for k, v in res.items():
                 combined[k] = v
             return combined
