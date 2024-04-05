@@ -119,9 +119,9 @@ Example notebook: [colab example](https://colab.research.google.com/drive/1EUOXG
 * [optional] pynvml for nVidia cards monitoring
 
 ## TODO
-* colors for dark background
+* better colors for dark background
 * multi-column layout for large instances (e.g. with 100+ cores)
 * joint scale for IO
 * showing time
-* storing history
 * show help
+* storing history
