@@ -233,12 +233,12 @@ class Horizon:
                     if group_name == 'disk' or group_name == 'network':
                         B = max(data_slice)
                         B = float(1 if B == 0 else 2 ** (int((B - 1)).bit_length()))
-                        strvalue = self.format_measurement(spacing, data_slice[-1], B, [(1024 * 1024, 'Mb/s'), (1024, 'Kb/s'), (1, 'bytes/s')])
+                        strvalue = self.format_measurement(spacing, data_slice[-1], B, [(1024 * 1024, 'MB/s'), (1024, 'KB/s'), (1, 'Bytes/s')])
 
                     if group_name == 'swap':
                         B = max(data_slice)
                         B = float(1 if B == 0 else 2 ** (int((B - 1)).bit_length()))
-                        strvalue = self.format_measurement(spacing, data_slice[-1], B, [(1024 * 1024, 'Mb'), (1024, 'Kb'), (1, 'bytes')])
+                        strvalue = self.format_measurement(spacing, data_slice[-1], B, [(1024 * 1024, 'MB'), (1024, 'KB'), (1, 'Bytes')])
 
                     # render the rest of title row
                     #
