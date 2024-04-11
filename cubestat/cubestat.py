@@ -48,7 +48,12 @@ class Color(EnumStr):
     green = 'green'
     blue = 'blue'
     pink = 'pink'
+    olive = 'olive'
+    navy = 'navy'
+    blue_dark = 'blue_dark'
+    purple = 'purple'
     mixed = 'mixed'
+    dark = 'dark'
 
 def auto_cpu_mode():
      return CPUMode.all if os.cpu_count() < 40 else CPUMode.by_cluster
@@ -87,16 +92,33 @@ class Horizon:
         # all of the fields below are mutable and can be accessed from 2 threads
         self.lock = Lock()
         self.data = {k: collections.defaultdict(lambda: collections.deque(maxlen=args.buffer_size)) for k in ['cpu', 'ram', 'swap', 'gpu', 'ane', 'disk', 'network', 'power']}
-        self.colormap = {
-            'cpu': Color.green if args.color == Color.mixed else args.color,
-            'ram': Color.pink if args.color == Color.mixed else args.color,
-            'gpu': Color.red if args.color == Color.mixed else args.color,
-            'ane': Color.red if args.color == Color.mixed else args.color,
-            'disk': Color.blue if args.color == Color.mixed else args.color,
-            'network': Color.blue if args.color == Color.mixed else args.color,
-            'swap': Color.pink if args.color == Color.mixed else args.color,
-            'power': Color.red if args.color == Color.mixed else args.color,
+        dark_colormap = {
+            'cpu': Color.purple,
+            'ram': Color.navy,
+            'gpu': Color.blue_dark,
+            'ane': Color.blue_dark,
+            'disk': Color.olive,
+            'network': Color.olive,
+            'swap': Color.navy,
+            'power': Color.blue_dark,
         }
+        light_colormap = {
+            'cpu': Color.green,
+            'ram': Color.pink,
+            'gpu': Color.red,
+            'ane': Color.red,
+            'disk': Color.blue,
+            'network': Color.blue,
+            'swap': Color.pink,
+            'power': Color.red,
+        }
+
+        if args.color == Color.mixed:
+            self.colormap = light_colormap
+        elif args.color == Color.dark:
+            self.colormap = dark_colormap
+        else:
+            self.colormap = {k: args.color for k, _ in light_colormap.items()}
         self.snapshots_observed = 0
         self.snapshots_rendered = 0
         self.legend_mode = args.legend
@@ -118,6 +140,10 @@ class Horizon:
             Color.red: [-1, 224, 181, 138],
             Color.blue: [-1, 189, 146, 103],
             Color.pink: [-1, 223, 180, 137],
+            Color.olive: [-1, 58, 101, 144],
+            Color.navy: [-1, 18, 61, 105],
+            Color.blue_dark: [-1, 23, 66, 109],
+            Color.purple: [-1, 53, 96, 138]
         }
         cells = {}
         colorpair = 1
