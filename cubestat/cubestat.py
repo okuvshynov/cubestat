@@ -6,6 +6,7 @@ import curses
 import itertools
 import os
 import sys
+import math
 
 from enum import Enum
 from math import floor
@@ -23,14 +24,19 @@ class EnumStr(Enum):
     def __str__(self):
         return self.value
 
-class Percentages(EnumLoop, EnumStr):
-    hidden = 'hidden'
+class Legend(EnumLoop, EnumStr):
+    hidden = 'off'
     last = 'last'
     
 class CPUMode(EnumLoop, EnumStr):
     all = 'all'
     by_cluster = 'by_cluster'
     by_core = 'by_core'
+
+class PowerMode(EnumLoop, EnumStr):
+    combined = 'combined'
+    all = 'all'
+    off = 'off'
 
 class GPUMode(EnumLoop, EnumStr):
     collapsed = 'collapsed'
@@ -52,8 +58,9 @@ parser.add_argument('--refresh_ms', '-i', type=int, default=1000, help='Update f
 parser.add_argument('--buffer_size', type=int, default=500, help='How many datapoints to store. Having it larger than screen width is a good idea as terminal window can be resized')
 parser.add_argument('--cpu', type=CPUMode, default=auto_cpu_mode(), choices=list(CPUMode), help='CPU mode - showing all cores, only cumulative by cluster or both. Can be toggled by pressing c.')
 parser.add_argument('--gpu', type=GPUMode, default=GPUMode.load_only, choices=list(GPUMode), help='GPU mode - hidden, showing all GPUs load, or showing load and vram usage. Can be toggled by pressing g.')
+parser.add_argument('--power', type=PowerMode, default=PowerMode.combined, choices=list(PowerMode), help='Power mode - off, showing breakdown CPU/GPU/ANE load, or showing combined usage. Can be toggled by pressing p.')
 parser.add_argument('--color', type=Color, default=Color.mixed, choices=list(Color))
-parser.add_argument('--percentages', type=Percentages, default=Percentages.last, choices=list(Percentages), help='Show/hide numeric utilization percentage. Can be toggled by pressing p.')
+parser.add_argument('--legend', type=Legend, default=Legend.last, choices=list(Legend), help='Show/hide numeric utilization percentage. Can be toggled by pressing l.')
 parser.add_argument('--disk', action="store_true", default=True, help="Show disk read/write. Can be toggled by pressing d.")
 parser.add_argument('--swap', action="store_true", default=True, help="Show swap . Can be toggled by pressing s.")
 parser.add_argument('--network', action="store_true", default=True, help="Show network io. Can be toggled by pressing n.")
@@ -79,7 +86,7 @@ class Horizon:
 
         # all of the fields below are mutable and can be accessed from 2 threads
         self.lock = Lock()
-        self.data = {k: collections.defaultdict(lambda: collections.deque(maxlen=args.buffer_size)) for k in ['cpu', 'ram', 'swap', 'gpu', 'ane', 'disk', 'network']}
+        self.data = {k: collections.defaultdict(lambda: collections.deque(maxlen=args.buffer_size)) for k in ['cpu', 'ram', 'swap', 'gpu', 'ane', 'disk', 'network', 'power']}
         self.colormap = {
             'cpu': Color.green if args.color == Color.mixed else args.color,
             'ram': Color.pink if args.color == Color.mixed else args.color,
@@ -88,14 +95,16 @@ class Horizon:
             'disk': Color.blue if args.color == Color.mixed else args.color,
             'network': Color.blue if args.color == Color.mixed else args.color,
             'swap': Color.pink if args.color == Color.mixed else args.color,
+            'power': Color.red if args.color == Color.mixed else args.color,
         }
         self.snapshots_observed = 0
         self.snapshots_rendered = 0
-        self.percentage_mode = args.percentages
+        self.legend_mode = args.legend
         self.cpumode = args.cpu
         self.show_disk = args.disk
         self.show_swap = args.swap
         self.show_network = args.network
+        self.power_mode = args.power
         self.gpumode = args.gpu
         self.settings_changed = False
         self.reader = reader
@@ -154,7 +163,7 @@ class Horizon:
 
     # buckets is a list of factor/label, e.g. [(1024*1024, 'Mb'), (1024, 'Kb'), (1, 'b')]
     def format_measurement(self, spacing, curr, mx, buckets):
-        if self.percentage_mode != Percentages.last:
+        if self.legend_mode != Legend.last:
             return f'{spacing}╗'
         for lim, unit in buckets[:-1]:
             if mx > lim:
@@ -205,6 +214,14 @@ class Horizon:
                             continue
                         if is_multigpu and "Total GPU" not in title:
                             indent = '  '
+
+                    if group_name == 'power':
+                        if self.power_mode == PowerMode.off:
+                            continue
+                        if self.power_mode == PowerMode.combined and 'total' not in title:
+                            continue
+                        if 'total' not in title:
+                            indent = '  '
                     
                     if skip > 0:
                         skip -= 1
@@ -228,7 +245,7 @@ class Horizon:
 
                     # for percentage-like measurements
                     B = 100.0
-                    strvalue = f'last:{data_slice[-1]:3.0f}%{spacing}╗' if self.percentage_mode == Percentages.last else f'{spacing}╗'
+                    strvalue = f'last:{data_slice[-1]:3.0f}%{spacing}╗' if self.legend_mode == Legend.last else f'{spacing}╗'
                     
                     if group_name == 'disk' or group_name == 'network':
                         B = max(data_slice)
@@ -239,6 +256,11 @@ class Horizon:
                         B = max(data_slice)
                         B = float(1 if B == 0 else 2 ** (int((B - 1)).bit_length()))
                         strvalue = self.format_measurement(spacing, data_slice[-1], B, [(1024 * 1024, 'MB'), (1024, 'KB'), (1, 'Bytes')])
+
+                    if group_name == 'power':
+                        B = max(data_slice)
+                        B = float(1 if B <= 0 else 10 ** math.ceil(math.log10(B)))
+                        strvalue = self.format_measurement(spacing, data_slice[-1], B, [(1000 * 1000, 'kW'), (1000, 'W'), (1, 'mW')])
 
                     # render the rest of title row
                     #
@@ -284,13 +306,17 @@ class Horizon:
             key = self.stdscr.getch()
             if key == ord('q') or key == ord('Q'):
                 exit(0)
-            if key == ord('p'):
+            if key == ord('l'):
                 with self.lock:
-                    self.percentage_mode = self.percentage_mode.next()
+                    self.legend_mode = self.legend_mode.next()
                     self.settings_changed = True
             if key == ord('c'):
                 with self.lock:
                     self.cpumode = self.cpumode.next()
+                    self.settings_changed = True
+            if key == ord('p'):
+                with self.lock:
+                    self.power_mode = self.power_mode.next()
                     self.settings_changed = True
             if key == ord('g'):
                 with self.lock:

@@ -17,13 +17,13 @@ class AppleReader:
     }
 
     def __init__(self, interval_ms) -> None:
-        # identity the model to get ANE power scaler
+        # identity the model to get ANE scaler
         brand_str = subprocess.check_output(['sysctl', '-n', 'machdep.cpu.brand_string'], text=True)
         self.ane_scaler = 15500 # default to M2
         for k, v in self.ane_power_scalers.items():
             if k in brand_str:
                 self.ane_scaler = v
-                if 'Ultra' in brand_str:
+                if 'ultra' in brand_str.lower():
                     self.ane_scaler *= 2
                 break
         
@@ -56,7 +56,12 @@ class AppleReader:
 
         res['gpu']['GPU util %'] = 100.0 - 100.0 * snapshot['gpu']['idle_ratio']
         
-        res['ane']['ANE util %'] = 100.0 * snapshot['processor']['ane_energy'] / self.ane_scaler
+        res['ane']['ANE util %'] = 100.0 * snapshot['processor']['ane_power'] / self.ane_scaler
+
+        res['power']['total power'] = snapshot['processor']['combined_power']
+        res['power']['ANE power'] = snapshot['processor']['ane_power']
+        res['power']['CPU power'] = snapshot['processor']['cpu_power']
+        res['power']['GPU power'] = snapshot['processor']['gpu_power']
 
         res['disk']['disk read'] = snapshot['disk']['rbytes_per_s']
         res['disk']['disk write'] = snapshot['disk']['wbytes_per_s']

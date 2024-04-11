@@ -17,5 +17,6 @@ class MemReader:
             'ane': {},
             'disk': {},
             'network': {},
+            'power': {},
         }
         return res
