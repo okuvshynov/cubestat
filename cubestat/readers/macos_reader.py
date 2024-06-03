@@ -8,7 +8,7 @@ from cubestat.readers.swapusage_reader import SwapUsageReader
 class AppleReader:
     # This is pretty much a guess based on tests on a few models I had available.
     # Need anything M3 + Ultra models to test.
-    # Based on TOPS numbers Apple published, all models seem to have some ANE 
+    # Based on TOPS numbers Apple published, all models seem to have same ANE 
     # except Ultra having 2x.
     ane_power_scalers = {
         "M1": 13000.0,
@@ -59,12 +59,12 @@ class AppleReader:
         res['ane']['ANE util %'] = 100.0 * snapshot['processor']['ane_power'] / self.ane_scaler
 
         res['power']['total power'] = snapshot['processor']['combined_power']
-        res['power']['ANE power'] = snapshot['processor']['ane_power']
-        res['power']['CPU power'] = snapshot['processor']['cpu_power']
-        res['power']['GPU power'] = snapshot['processor']['gpu_power']
+        res['power']['ANE power']   = snapshot['processor']['ane_power']
+        res['power']['CPU power']   = snapshot['processor']['cpu_power']
+        res['power']['GPU power']   = snapshot['processor']['gpu_power']
 
-        res['disk']['disk read'] = snapshot['disk']['rbytes_per_s']
-        res['disk']['disk write'] = snapshot['disk']['wbytes_per_s']
+        res['disk']['disk read']     = snapshot['disk']['rbytes_per_s']
+        res['disk']['disk write']    = snapshot['disk']['wbytes_per_s']
         res['network']['network rx'] = snapshot['network']['ibyte_rate']
         res['network']['network tx'] = snapshot['network']['obyte_rate']
         return res.items(), cpu_clusters
