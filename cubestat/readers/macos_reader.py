@@ -3,6 +3,7 @@ import plistlib
 
 from cubestat.readers.mem_reader import MemReader
 from cubestat.readers.swap import SwapMacOSReader
+from cubestat.readers.cpu import CPUMacOSReader
 
 def get_ane_scaler() -> float:
     # This is pretty much a guess based on tests on a few models I had available.
@@ -29,7 +30,7 @@ def get_ane_scaler() -> float:
 class AppleReader:
     def __init__(self, interval_ms) -> None:
         self.ane_scaler = get_ane_scaler()
-        
+
         cmd = ['sudo', 'powermetrics', '-f', 'plist', '-i', str(interval_ms), '-s', 'cpu_power,gpu_power,ane_power,network,disk']
         self.powermetrics = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         # we are getting first line here to allow user to enter sudo credentials before 
@@ -38,33 +39,22 @@ class AppleReader:
 
         self.mem_reader = MemReader(interval_ms)
         self.swap_reader = SwapMacOSReader()
+        self.cpu_reader = CPUMacOSReader()
 
     def read(self, snapshot):
         res = self.mem_reader.read()
         res['swap'] = self.swap_reader.read()
 
-        cpu_clusters = []
-        for cluster in snapshot['processor']['clusters']:
-            idle_cluster, total_cluster = 0.0, 0.0
-            n_cpus = len(cluster['cpus'])
-            cluster_title = f'[{n_cpus}] {cluster["name"]} total CPU util %'
-            cpu_clusters.append(cluster_title)
-            res['cpu'][cluster_title] = 0.0
-            for cpu in cluster['cpus']:
-                title = f'{cluster["name"]} CPU {cpu["cpu"]} util %'
-                res['cpu'][title] = 100.0 - 100.0 * cpu['idle_ratio']
-                idle_cluster += cpu['idle_ratio']
-                total_cluster += 1.0
-            res['cpu'][cluster_title] = 100.0 - 100.0 * idle_cluster / total_cluster
+        res['cpu'], cpu_clusters = self.cpu_reader.read(snapshot=snapshot)
 
         res['gpu']['GPU util %'] = 100.0 - 100.0 * snapshot['gpu']['idle_ratio']
         
         res['ane']['ANE util %'] = 100.0 * snapshot['processor']['ane_power'] / self.ane_scaler
 
-        res['power']['total power'] = snapshot['processor']['combined_power']
-        res['power']['ANE power']   = snapshot['processor']['ane_power']
-        res['power']['CPU power']   = snapshot['processor']['cpu_power']
-        res['power']['GPU power']   = snapshot['processor']['gpu_power']
+        res['power']['total power']  = snapshot['processor']['combined_power']
+        res['power']['ANE power']    = snapshot['processor']['ane_power']
+        res['power']['CPU power']    = snapshot['processor']['cpu_power']
+        res['power']['GPU power']    = snapshot['processor']['gpu_power']
 
         res['disk']['disk read']     = snapshot['disk']['rbytes_per_s']
         res['disk']['disk write']    = snapshot['disk']['wbytes_per_s']

@@ -45,14 +45,14 @@ class LinuxReader:
             self.network_written_last = nw_load.bytes_sent
             self.first = False
 
-        res['disk']['disk read'] = ((disk_load.read_bytes - self.disk_read_last) / d)
+        res['disk']['disk read']  = ((disk_load.read_bytes - self.disk_read_last) / d)
         res['disk']['disk write'] = ((disk_load.write_bytes - self.disk_written_last) / d)
-        self.disk_read_last = disk_load.read_bytes
+        self.disk_read_last    = disk_load.read_bytes
         self.disk_written_last = disk_load.write_bytes
 
         res['network']['network rx'] = ((nw_load.bytes_recv - self.network_read_last) / d)
         res['network']['network tx'] = ((nw_load.bytes_sent - self.network_written_last) / d)
-        self.network_read_last = nw_load.bytes_recv
+        self.network_read_last    = nw_load.bytes_recv
         self.network_written_last = nw_load.bytes_sent
 
         return res.items(), cpu_clusters
