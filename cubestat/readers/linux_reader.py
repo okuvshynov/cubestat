@@ -3,7 +3,7 @@ import time
 
 from cubestat.readers.mem_reader import MemReader
 from cubestat.readers.nv_reader import NVReader
-from cubestat.readers.free_swap_reader import FreeSwapReader
+from cubestat.readers.swap import SwapLinuxReader
 
 class LinuxReader:
     def __init__(self, interval_ms):
@@ -11,7 +11,7 @@ class LinuxReader:
         self.interval_ms = interval_ms
         self.mem_reader = MemReader(interval_ms)
         self.nv = NVReader()
-        self.swap_reader = FreeSwapReader()
+        self.swap_reader = SwapLinuxReader()
 
     def read(self):
         res = self.mem_reader.read()

@@ -8,7 +8,6 @@ class MemReader:
 
     # TODO: make this return only memory
     def read(self):
-        d = self.interval_ms / 1000.0
         res = {
             'cpu': {},
             'ram': {'RAM used %': psutil.virtual_memory().percent},

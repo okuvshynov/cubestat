@@ -2,10 +2,9 @@ import subprocess
 import plistlib
 
 from cubestat.readers.mem_reader import MemReader
-from cubestat.readers.swapusage_reader import SwapUsageReader
+from cubestat.readers.swap import SwapMacOSReader
 
-# reading from powermetrics
-class AppleReader:
+def get_ane_scaler() -> float:
     # This is pretty much a guess based on tests on a few models I had available.
     # Need anything M3 + Ultra models to test.
     # Based on TOPS numbers Apple published, all models seem to have same ANE 
@@ -15,17 +14,21 @@ class AppleReader:
         "M2": 15500.0,
         "M3": 15500.0,
     }
+    # identity the model to get ANE scaler
+    brand_str = subprocess.check_output(['sysctl', '-n', 'machdep.cpu.brand_string'], text=True)
+    ane_scaler = 15500 # default to M2
+    for k, v in ane_power_scalers.items():
+        if k in brand_str:
+            ane_scaler = v
+            if 'ultra' in brand_str.lower():
+                ane_scaler *= 2
+            break
+    return ane_scaler
 
+# reading from powermetrics
+class AppleReader:
     def __init__(self, interval_ms) -> None:
-        # identity the model to get ANE scaler
-        brand_str = subprocess.check_output(['sysctl', '-n', 'machdep.cpu.brand_string'], text=True)
-        self.ane_scaler = 15500 # default to M2
-        for k, v in self.ane_power_scalers.items():
-            if k in brand_str:
-                self.ane_scaler = v
-                if 'ultra' in brand_str.lower():
-                    self.ane_scaler *= 2
-                break
+        self.ane_scaler = get_ane_scaler()
         
         cmd = ['sudo', 'powermetrics', '-f', 'plist', '-i', str(interval_ms), '-s', 'cpu_power,gpu_power,ane_power,network,disk']
         self.powermetrics = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -34,7 +37,7 @@ class AppleReader:
         self.firstline = self.powermetrics.stdout.readline()
 
         self.mem_reader = MemReader(interval_ms)
-        self.swap_reader = SwapUsageReader()
+        self.swap_reader = SwapMacOSReader()
 
     def read(self, snapshot):
         res = self.mem_reader.read()
