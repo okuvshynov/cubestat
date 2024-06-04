@@ -4,6 +4,8 @@ import time
 from cubestat.readers.mem_reader import MemReader
 from cubestat.readers.nv_reader import NVReader
 from cubestat.readers.swap import SwapLinuxReader
+from cubestat.readers.cpu import CPULinuxReader
+
 
 class LinuxReader:
     def __init__(self, interval_ms):
@@ -12,6 +14,7 @@ class LinuxReader:
         self.mem_reader = MemReader(interval_ms)
         self.nv = NVReader()
         self.swap_reader = SwapLinuxReader()
+        self.cpu_reader  = CPULinuxReader()
 
     def read(self):
         res = self.mem_reader.read()
@@ -21,20 +24,7 @@ class LinuxReader:
         nw_load = psutil.net_io_counters()
         d = self.interval_ms / 1000.0
 
-        # TODO: numa nodes here?
-        cpu_clusters = []
-        cpu_load = psutil.cpu_percent(percpu=True)
-
-        cluster_title = f'[{len(cpu_load)}] Total CPU Util, %'
-        cpu_clusters.append(cluster_title)
-        total_load = 0.0
-        res['cpu'][cluster_title] = 0.0
-
-        for i, v in enumerate(cpu_load):
-            title = f'CPU {i} util %'
-            res['cpu'][title] = v
-            total_load += v
-        res['cpu'][cluster_title] = total_load / len(cpu_load)
+        res['cpu'], cpu_clusters = self.cpu_reader.read()
 
         res['gpu'] = self.nv.read()
 
