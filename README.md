@@ -123,7 +123,6 @@ Example notebook: [colab example](https://colab.research.google.com/drive/1EUOXG
 
 ![colab cubestat](static/colab_cubestat.png)
 
-
 ## Dependencies
 * Python 3.?+
 * psutil 5.9.5+
