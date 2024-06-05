@@ -287,7 +287,7 @@ class Horizon:
                     i += 1
                 self.snapshots_rendered += 1
             if self.timeline_mode != TimelineMode.none:
-                tl = plot_timeline(self.cols - 2, args.refresh_ms, self.filling, self.timeline_interval)
+                tl = plot_timeline(self.cols - 2, args.refresh_ms, self.filling, self.timeline_interval, self.horizontal_shift)
                 self.write_string(i * 2, 0, "╚" + tl + "╝")             
         self.stdscr.refresh()
 
