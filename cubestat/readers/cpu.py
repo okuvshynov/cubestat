@@ -21,7 +21,6 @@ class CPUMacOSReader:
             res[cluster_title] = 100.0 - 100.0 * idle_cluster / total_cluster
 
         return res, cpu_clusters
-    
 
 class CPULinuxReader:
     def __init__(self) -> None:

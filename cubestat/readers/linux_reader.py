@@ -36,9 +36,7 @@ class LinuxReader:
         nw_load = psutil.net_io_counters()
 
         res['cpu'], cpu_clusters = self.cpu_reader.read()
-
         res['gpu'] = self.nv.read()
-
         res['disk']['disk read']  = self.rate_reader.next('disk read', disk_load.read_bytes)
         res['disk']['disk write']  = self.rate_reader.next('disk write', disk_load.write_bytes)
         res['network']['network rx'] = self.rate_reader.next('network rx', nw_load.bytes_sent)

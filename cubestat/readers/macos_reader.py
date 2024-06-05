@@ -26,7 +26,6 @@ def get_ane_scaler() -> float:
             break
     return ane_scaler
 
-# reading from powermetrics
 class AppleReader:
     def __init__(self, interval_ms) -> None:
         self.ane_scaler = get_ane_scaler()
@@ -48,7 +47,6 @@ class AppleReader:
         res['cpu'], cpu_clusters = self.cpu_reader.read(snapshot=snapshot)
 
         res['gpu']['GPU util %'] = 100.0 - 100.0 * snapshot['gpu']['idle_ratio']
-        
         res['ane']['ANE util %'] = 100.0 * snapshot['processor']['ane_power'] / self.ane_scaler
 
         res['power']['total power']  = snapshot['processor']['combined_power']

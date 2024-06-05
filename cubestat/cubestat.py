@@ -8,21 +8,14 @@ import os
 import sys
 import math
 
-from enum import Enum
 from math import floor
 from threading import Thread, Lock
 
 from cubestat.readers.linux_reader import LinuxReader
 from cubestat.readers.macos_reader import AppleReader
 
-class EnumLoop(Enum):
-    def next(self):
-        values = list(self.__class__)
-        return values[(values.index(self) + 1) % len(values)]
-    
-class EnumStr(Enum):
-    def __str__(self):
-        return self.value
+from cubestat.common import EnumLoop, EnumStr
+from cubestat.colors import Color, dark_colormap, light_colormap, colors_ansi256
 
 class Legend(EnumLoop, EnumStr):
     hidden = 'off'
@@ -42,18 +35,6 @@ class GPUMode(EnumLoop, EnumStr):
     collapsed = 'collapsed'
     load_only = 'load_only'
     load_and_vram = 'load_and_vram'
-    
-class Color(EnumStr):
-    red = 'red'
-    green = 'green'
-    blue = 'blue'
-    pink = 'pink'
-    olive = 'olive'
-    navy = 'navy'
-    blue_dark = 'blue_dark'
-    purple = 'purple'
-    mixed = 'mixed'
-    dark = 'dark'
 
 def auto_cpu_mode():
      return CPUMode.all if os.cpu_count() < 40 else CPUMode.by_cluster
@@ -89,29 +70,8 @@ class Horizon:
         self.cells = self.prepare_cells()
         self.stdscr = stdscr
 
-        # all of the fields below are mutable and can be accessed from 2 threads
         self.lock = Lock()
         self.data = {k: collections.defaultdict(lambda: collections.deque(maxlen=args.buffer_size)) for k in ['cpu', 'ram', 'swap', 'gpu', 'ane', 'disk', 'network', 'power']}
-        dark_colormap = {
-            'cpu': Color.purple,
-            'ram': Color.navy,
-            'gpu': Color.blue_dark,
-            'ane': Color.blue_dark,
-            'disk': Color.olive,
-            'network': Color.olive,
-            'swap': Color.navy,
-            'power': Color.blue_dark,
-        }
-        light_colormap = {
-            'cpu': Color.green,
-            'ram': Color.pink,
-            'gpu': Color.red,
-            'ane': Color.red,
-            'disk': Color.blue,
-            'network': Color.blue,
-            'swap': Color.pink,
-            'power': Color.red,
-        }
 
         if args.color == Color.mixed:
             self.colormap = light_colormap
@@ -135,19 +95,10 @@ class Horizon:
 
     def prepare_cells(self):
         chrs = [' ', '▁', '▂', '▃', '▄', '▅', '▆', '▇', '█']
-        colorschemes = {
-            Color.green: [-1, 150, 107, 22],
-            Color.red: [-1, 224, 181, 138],
-            Color.blue: [-1, 189, 146, 103],
-            Color.pink: [-1, 223, 180, 137],
-            Color.olive: [-1, 58, 101, 144],
-            Color.navy: [-1, 18, 61, 105],
-            Color.blue_dark: [-1, 23, 66, 109],
-            Color.purple: [-1, 53, 96, 138]
-        }
+
         cells = {}
         colorpair = 1
-        for name, colors in colorschemes.items():
+        for name, colors in colors_ansi256.items():
             cells[name] = []
             for fg, bg in zip(colors[1:], colors[:-1]):
                 curses.init_pair(colorpair, fg, bg)
