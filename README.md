@@ -134,7 +134,6 @@ Example notebook: [colab example](https://colab.research.google.com/drive/1EUOXG
 * memory usage -- different view?  
 * multi-column layout for large instances (e.g. with 100+ cores)
 * joint scale for IO
-* showing time
 * show help
 * storing history
 * all of https://github.com/okuvshynov/cubestat/issues

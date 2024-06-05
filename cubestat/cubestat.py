@@ -152,8 +152,8 @@ class Horizon:
             return f'{spacing}╗'
         for lim, unit in buckets[:-1]:
             if mx > lim:
-                return f'last:{curr / lim :3.0f}|{int(mx / lim)}{unit}{spacing}╗'
-        return f'last:{curr :3.0f}|{int(mx)}{buckets[-1][1]}{spacing}╗'
+                return f'{curr / lim :3.0f}|{int(mx / lim)}{unit}{spacing}╗'
+        return f'{curr :3.0f}|{int(mx)}{buckets[-1][1]}{spacing}╗'
 
     def render(self):
         with self.lock:
@@ -164,7 +164,7 @@ class Horizon:
         spacing = ' ' * self.spacing_width
 
         # Each chart takes two lines, with format roughly
-        # ╔ GPU util %........................................................................last:  4% ╗
+        # ╔ GPU util %............................................................................:  4% ╗
         # ╚ ▁▁▁  ▁    ▁▆▅▄ ▁▁▁      ▂ ▇▃▃▂█▃▇▁▃▂▁▁▂▁▁▃▃▂▁▂▄▄▁▂▆▁▃▁▂▃▁▁▁▂▂▂▂▂▂▁▁▃▂▂▁▂▁▃▄▃ ▁▁▃▁▄▂▃▂▂▂▃▃▅▅ ╝
 
         base_fill = ['.'] * self.cols
@@ -235,7 +235,7 @@ class Horizon:
 
                     # for percentage-like measurements
                     B = 100.0
-                    strvalue = f'last:{data_slice[-1]:3.0f}%{spacing}╗' if self.legend_mode == Legend.last else f'{spacing}╗'
+                    strvalue = f'{data_slice[-1]:3.0f}%{spacing}╗' if self.legend_mode == Legend.last else f'{spacing}╗'
                     
                     if group_name == 'disk' or group_name == 'network':
                         B = max(data_slice)
@@ -254,7 +254,7 @@ class Horizon:
 
                     # render the rest of title row
                     #
-                    # ╔ GPU util %........................................................................last:  4% ╗
+                    # ╔ GPU util %............................................................................:  4% ╗
                     # ╚
                     #title_filling = self.filling * (self.cols - len(strvalue) - )
                     title_filling = base_line[len(titlestr):-len(strvalue)]
@@ -263,14 +263,14 @@ class Horizon:
 
                     # render the right border
                     #
-                    # ╔ GPU util %........................................................................last:  4% ╗
+                    # ╔ GPU util %............................................................................:  4% ╗
                     # ╚                                                                                             ╝
                     border = f'{spacing}╝'
                     self.write_string(i * 2 + 1, self.cols - len(border), border)
 
                     # Render the chart itself
                     #
-                    # ╔ GPU util %........................................................................last:  4% ╗
+                    # ╔ GPU util %............................................................................:  4% ╗
                     # ╚ ▁▁▁  ▁    ▁▆▅▄ ▁▁▁      ▂ ▇▃▃▂█▃▇▁▃▂▁▁▂▁▁▃▃▂▁▂▄▄▁▂▆▁▃▁▂▃▁▁▁▂▂▂▂▂▂▁▁▃▂▂▁▂▁▃▄▃ ▁▁▃▁▄▂▃▂▂▂▃▃▅▅ ╝
                     scaler = len(cells) / B
                     col = self.cols - (len(data_slice) + self.spacing_width) - 2
