@@ -3,10 +3,7 @@ def plot_timeline(width: int, char_ms: int, fill: str, W: int) -> str:
 
     mult = {
         'ms': 1,
-        's' : 1000,
-        'm' : 1000 * 60,
-        'h' : 1000 * 60 * 60,
-        'd' : 1000 * 60 * 60 * 24
+        's' : 1000
     }
 
     for unit, m in reversed(mult.items()):
