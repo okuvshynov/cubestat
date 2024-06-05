@@ -16,6 +16,7 @@ from cubestat.readers.macos_reader import AppleReader
 
 from cubestat.common import EnumLoop, EnumStr
 from cubestat.colors import Color, dark_colormap, light_colormap, colors_ansi256
+from cubestat.timeline import plot_timeline
 
 class Legend(EnumLoop, EnumStr):
     hidden = 'off'
@@ -36,7 +37,12 @@ class GPUMode(EnumLoop, EnumStr):
     load_only = 'load_only'
     load_and_vram = 'load_and_vram'
 
-def auto_cpu_mode():
+class TimelineMode(EnumLoop, EnumStr):
+    none = "none",
+    one  = "one",
+    mult = "mult"
+
+def auto_cpu_mode() -> CPUMode:
      return CPUMode.all if os.cpu_count() < 40 else CPUMode.by_cluster
 
 parser = argparse.ArgumentParser("cubestat")
@@ -66,6 +72,7 @@ class Horizon:
 
         self.spacing_width = 1
         self.filling = '.'
+        self.timeline_interval = 20 # chars
 
         self.cells = self.prepare_cells()
         self.stdscr = stdscr
@@ -82,6 +89,7 @@ class Horizon:
         self.snapshots_observed = 0
         self.snapshots_rendered = 0
         self.legend_mode = args.legend
+        self.timeline_mode = TimelineMode.one
         self.cpumode = args.cpu
         self.show_disk = args.disk
         self.show_swap = args.swap
@@ -159,8 +167,14 @@ class Horizon:
         # ╔ GPU util %........................................................................last:  4% ╗
         # ╚ ▁▁▁  ▁    ▁▆▅▄ ▁▁▁      ▂ ▇▃▃▂█▃▇▁▃▂▁▁▂▁▁▃▃▂▁▂▄▄▁▂▆▁▃▁▂▃▁▁▁▂▂▂▂▂▂▁▁▃▂▂▁▂▁▃▄▃ ▁▁▃▁▄▂▃▂▂▂▃▃▅▅ ╝
 
+        base_fill = ['.'] * self.cols
+
+        i = 0
         with self.lock:
-            i = 0
+            if self.timeline_mode == TimelineMode.mult:
+                for j in range(self.cols - 1 - self.timeline_interval, -1, -self.timeline_interval):
+                    base_fill[j] = '|'
+            base_line = "".join(base_fill)
             skip = self.vertical_shift
             is_multigpu = len(self.data['gpu']) > 1
             for group_name, group in self.data.items():
@@ -172,7 +186,6 @@ class Horizon:
                     continue
 
                 cells = self.cells[self.colormap[group_name]]
-                range = len(cells)
                 for title, series in group.items():
                     indent = ''
 
@@ -243,7 +256,8 @@ class Horizon:
                     #
                     # ╔ GPU util %........................................................................last:  4% ╗
                     # ╚
-                    title_filling = self.filling * (self.cols - len(strvalue) - len(titlestr))
+                    #title_filling = self.filling * (self.cols - len(strvalue) - )
+                    title_filling = base_line[len(titlestr):-len(strvalue)]
                     self.write_string(i * 2, len(titlestr), title_filling)
                     self.write_string(i * 2, self.cols - len(strvalue), strvalue)
 
@@ -258,31 +272,38 @@ class Horizon:
                     #
                     # ╔ GPU util %........................................................................last:  4% ╗
                     # ╚ ▁▁▁  ▁    ▁▆▅▄ ▁▁▁      ▂ ▇▃▃▂█▃▇▁▃▂▁▁▂▁▁▃▃▂▁▂▄▄▁▂▆▁▃▁▂▃▁▁▁▂▂▂▂▂▂▁▁▃▂▂▁▂▁▃▄▃ ▁▁▃▁▄▂▃▂▂▂▃▃▅▅ ╝
-                    scaler = range / B
+                    scaler = len(cells) / B
                     col = self.cols - (len(data_slice) + self.spacing_width) - 2
                     for v in data_slice:
                         col += 1
                         cell_index = floor(v * scaler)
                         if cell_index <= 0:
                             continue
-                        if cell_index >= range:
-                            cell_index = range - 1
+                        if cell_index >= len(cells):
+                            cell_index = len(cells) - 1
                         chr, color_pair = cells[cell_index]
                         self.write_char(i * 2 + 1, col, chr, curses.color_pair(color_pair))
 
                     i += 1
-
                 self.snapshots_rendered += 1
-                
+            if self.timeline_mode != TimelineMode.none:
+                tl = plot_timeline(self.cols - 2, args.refresh_ms, self.filling, self.timeline_interval)
+                self.write_string(i * 2, 0, "╚" + tl + "╝")             
         self.stdscr.refresh()
 
-    def render_loop(self):
+    def loop(self):
+        reader_thread = Thread(target=self.reader.loop, daemon=True, args=[self.process_snapshot])
+        reader_thread.start()
         self.stdscr.keypad(True)
         while True:
             self.render()
             key = self.stdscr.getch()
             if key == ord('q') or key == ord('Q'):
                 exit(0)
+            if key == ord('t'):
+                with self.lock:
+                    self.timeline_mode = self.timeline_mode.next()
+                    self.settings_changed = True
             if key == ord('l'):
                 with self.lock:
                     self.legend_mode = self.legend_mode.next()
@@ -335,11 +356,6 @@ class Horizon:
                     if self.horizontal_shift > 0:
                         self.horizontal_shift = 0
                         self.settings_changed = True
-
-    def loop(self):
-        reader_thread = Thread(target=self.reader.loop, daemon=True, args=[self.process_snapshot])
-        reader_thread.start()
-        self.render_loop()
 
 def start(stdscr, reader):
     h = Horizon(stdscr, reader)
