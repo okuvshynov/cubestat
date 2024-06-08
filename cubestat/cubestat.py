@@ -4,6 +4,7 @@ import argparse
 import collections
 import curses
 import itertools
+import logging
 import os
 import sys
 import math
@@ -362,6 +363,7 @@ def start(stdscr, reader):
     h.loop()
 
 def main():
+    logging.basicConfig(filename='/tmp/cubestat.log', level=logging.INFO)
     if sys.platform == "darwin":
         curses.wrapper(start, AppleReader(args.refresh_ms))
     if sys.platform == "linux" or sys.platform == "linux2":
