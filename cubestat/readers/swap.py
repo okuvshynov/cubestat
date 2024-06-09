@@ -38,16 +38,16 @@ class SwapLinuxReader:
         pass
 
     def read(self):
-        res = {}
-        try:
-            swap_stats = subprocess.run(["free", "-b"], capture_output=True, text=True)
-            lines = swap_stats.stdout.splitlines()
-            for l in lines:
-                if l.startswith("Swap:"):
-                    parts = l.split()
-                    res['swap used'] = float(parts[2])
-        except:
-            # TODO: log something
-            pass
+        with open('/proc/meminfo', 'r') as file:
+            meminfo = file.readlines()
 
-        return res
+        swap_total = 0
+        swap_free = 0
+
+        for line in meminfo:
+            if 'SwapTotal:' in line:
+                swap_total = int(line.split()[1])
+            if 'SwapFree:' in line:
+                swap_free = int(line.split()[1])
+
+        return {'swap used': 1024 * float(swap_total - swap_free)}
