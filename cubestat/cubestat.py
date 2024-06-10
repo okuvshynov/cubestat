@@ -19,6 +19,7 @@ from cubestat.common import EnumLoop, EnumStr
 from cubestat.colors import Color, dark_colormap, light_colormap, colors_ansi256
 from cubestat.timeline import plot_timeline
 
+# TODO: joint with timeline mode?
 class Legend(EnumLoop, EnumStr):
     hidden = 'off'
     last = 'last'
@@ -71,7 +72,7 @@ class Horizon:
         curses.start_color()
         curses.use_default_colors()
 
-        self.spacing_width = 1
+        self.spacing = ' '
         self.filling = '.'
         self.timeline_interval = 20 # chars
 
@@ -147,6 +148,16 @@ class Horizon:
             # TODO: log something
             pass
 
+    def label2(self, slice, buckets):
+        mx = max(slice)
+        mx = float(1 if mx == 0 else 2 ** (int((mx - 1)).bit_length()))
+        return mx, self.format_measurement(self.spacing, slice[-1], mx, buckets)
+    
+    def label10(self, slice, buckets):
+        mx = max(slice)
+        mx = float(1 if mx <= 0 else 10 ** math.ceil(math.log10(mx)))
+        return mx, self.format_measurement(self.spacing, slice[-1], mx, buckets)
+
     # buckets is a list of factor/label, e.g. [(1024*1024, 'Mb'), (1024, 'Kb'), (1, 'b')]
     def format_measurement(self, spacing, curr, mx, buckets):
         if self.legend_mode != Legend.last:
@@ -162,7 +173,6 @@ class Horizon:
                 return
         self.stdscr.erase()
         self.rows, self.cols = self.stdscr.getmaxyx()
-        spacing = ' ' * self.spacing_width
 
         # Each chart takes two lines, with format roughly
         # ╔ GPU util %............................................................................:  4% ╗
@@ -222,7 +232,7 @@ class Horizon:
                     #
                     # ╔ GPU util %
                     # ╚
-                    titlestr = f'{indent}╔{spacing}{title}'
+                    titlestr = f'{indent}╔{self.spacing}{title}'
                     self.write_string(i * 2, 0, titlestr)
                     self.write_string(i * 2 + 1, 0, f'{indent}╚')
 
@@ -236,22 +246,16 @@ class Horizon:
 
                     # for percentage-like measurements
                     B = 100.0
-                    strvalue = f'{data_slice[-1]:3.0f}%{spacing}╗' if self.legend_mode == Legend.last else f'{spacing}╗'
+                    strvalue = f'{data_slice[-1]:3.0f}%{self.spacing}╗' if self.legend_mode == Legend.last else f'{self.spacing}╗'
                     
                     if group_name == 'disk' or group_name == 'network':
-                        B = max(data_slice)
-                        B = float(1 if B == 0 else 2 ** (int((B - 1)).bit_length()))
-                        strvalue = self.format_measurement(spacing, data_slice[-1], B, [(1024 * 1024, 'MB/s'), (1024, 'KB/s'), (1, 'Bytes/s')])
-
+                        B, strvalue = self.label2(data_slice, [(1024 * 1024, 'MB/s'), (1024, 'KB/s'), (1, 'Bytes/s')])
+                        
                     if group_name == 'swap':
-                        B = max(data_slice)
-                        B = float(1 if B == 0 else 2 ** (int((B - 1)).bit_length()))
-                        strvalue = self.format_measurement(spacing, data_slice[-1], B, [(1024 * 1024, 'MB'), (1024, 'KB'), (1, 'Bytes')])
+                        B, strvalue = self.label2(data_slice, [(1024 * 1024, 'MB'), (1024, 'KB'), (1, 'Bytes')])
 
                     if group_name == 'power':
-                        B = max(data_slice)
-                        B = float(1 if B <= 0 else 10 ** math.ceil(math.log10(B)))
-                        strvalue = self.format_measurement(spacing, data_slice[-1], B, [(1000 * 1000, 'kW'), (1000, 'W'), (1, 'mW')])
+                        B, strvalue = self.label10(data_slice, [(1000 * 1000, 'kW'), (1000, 'W'), (1, 'mW')])
 
                     # render the rest of title row
                     #
@@ -266,7 +270,7 @@ class Horizon:
                     #
                     # ╔ GPU util %............................................................................:  4% ╗
                     # ╚                                                                                             ╝
-                    border = f'{spacing}╝'
+                    border = f'{self.spacing}╝'
                     self.write_string(i * 2 + 1, self.cols - len(border), border)
 
                     # Render the chart itself
