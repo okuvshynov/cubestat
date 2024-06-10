@@ -305,6 +305,10 @@ class Horizon:
                 with self.lock:
                     self.timeline_mode = self.timeline_mode.next()
                     self.settings_changed = True
+            if key == ord('T'):
+                with self.lock:
+                    self.timeline_mode = self.timeline_mode.prev()
+                    self.settings_changed = True
             if key == ord('l'):
                 with self.lock:
                     self.legend_mode = self.legend_mode.next()
