@@ -243,13 +243,10 @@ class Horizon:
             skip = self.vertical_shift
             is_multigpu = len(self.data['gpu']) > 1
             for group_name, group in self.data.items():
-                
-
                 for title, series in group.items():
                     show, indent = self.pre(group_name, title, is_multigpu)
                     if not show:
                         continue
-
                     
                     if skip > 0:
                         skip -= 1
@@ -259,8 +256,8 @@ class Horizon:
                     #
                     # ╔ GPU util %
                     # ╚
-                    titlestr = f'{indent}╔{self.spacing}{title}'
-                    self.write_string(i * 2, 0, titlestr)
+                    title_str = f'{indent}╔{self.spacing}{title}'
+                    self.write_string(i * 2, 0, title_str)
                     self.write_string(i * 2 + 1, 0, f'{indent}╚')
 
                     # data slice size
@@ -271,15 +268,15 @@ class Horizon:
                     index = max(0, length - width)
                     data_slice = list(itertools.islice(series, index, min(index + width, length)))
 
-                    B, strvalue = self.format_legend(group_name, data_slice)
+                    max_value, value_str = self.format_legend(group_name, data_slice)
 
                     # render the rest of title row
                     #
                     # ╔ GPU util %............................................................................:  4% ╗
                     # ╚
-                    title_filling = base_line[len(titlestr):-len(strvalue)]
-                    self.write_string(i * 2, len(titlestr), title_filling)
-                    self.write_string(i * 2, self.cols - len(strvalue), strvalue)
+                    title_filling = base_line[len(title_str):-len(value_str)]
+                    self.write_string(i * 2, len(title_str), title_filling)
+                    self.write_string(i * 2, self.cols - len(value_str), value_str)
 
                     # render the right border
                     #
@@ -293,7 +290,7 @@ class Horizon:
                     # ╔ GPU util %............................................................................:  4% ╗
                     # ╚ ▁▁▁  ▁    ▁▆▅▄ ▁▁▁      ▂ ▇▃▃▂█▃▇▁▃▂▁▁▂▁▁▃▃▂▁▂▄▄▁▂▆▁▃▁▂▃▁▁▁▂▂▂▂▂▂▁▁▃▂▂▁▂▁▃▄▃ ▁▁▃▁▄▂▃▂▂▂▃▃▅▅ ╝
                     cells = self.cells[self.colormap[group_name]]
-                    scaler = len(cells) / B
+                    scaler = len(cells) / max_value
                     col = self.cols - (len(data_slice) + len(self.spacing)) - 2
                     for v in data_slice:
                         col += 1
