@@ -90,18 +90,20 @@ class Horizon:
             self.colormap = {k: args.color for k, _ in light_colormap.items()}
         self.snapshots_observed = 0
         self.snapshots_rendered = 0
-        self.legend_mode = args.legend
-        self.timeline_mode = TimelineMode.one
-        self.cpumode = args.cpu
         self.show_disk = args.disk
         self.show_swap = args.swap
         self.show_network = args.network
-        self.power_mode = args.power
-        self.gpumode = args.gpu
         self.settings_changed = False
         self.reader = reader
         self.vertical_shift = 0
         self.horizontal_shift = 0
+        self.modes = {
+            'time'  : TimelineMode.one,
+            'legend': args.legend,
+            'cpu'   : args.cpu,
+            'gpu'   : args.gpu,
+            'power' : args.power,
+        }
 
     def prepare_cells(self):
         chrs = [' ', '▁', '▂', '▃', '▄', '▅', '▆', '▇', '█']
@@ -160,7 +162,7 @@ class Horizon:
 
     # buckets is a list of factor/label, e.g. [(1024*1024, 'Mb'), (1024, 'Kb'), (1, 'b')]
     def format_measurement(self, spacing, curr, mx, buckets):
-        if self.legend_mode != Legend.last:
+        if self.modes['legend'] != Legend.last:
             return f'{spacing}╗'
         for lim, unit in buckets[:-1]:
             if mx > lim:
@@ -182,7 +184,7 @@ class Horizon:
 
         i = 0
         with self.lock:
-            if self.timeline_mode == TimelineMode.mult:
+            if self.modes['time'] == TimelineMode.mult:
                 for j in range(self.cols - 1 - self.timeline_interval, -1, -self.timeline_interval):
                     base_fill[j] = '|'
             base_line = "".join(base_fill)
@@ -201,25 +203,25 @@ class Horizon:
                     indent = ''
 
                     if group_name == 'cpu':
-                        if self.cpumode == CPUMode.by_cluster and title not in self.cpu_clusters:
+                        if self.modes['cpu'] == CPUMode.by_cluster and title not in self.cpu_clusters:
                             continue
-                        if self.cpumode == CPUMode.by_core and title in self.cpu_clusters:
+                        if self.modes['cpu'] == CPUMode.by_core and title in self.cpu_clusters:
                             continue
-                        if self.cpumode == CPUMode.all and title not in self.cpu_clusters:
+                        if self.modes['cpu'] == CPUMode.all and title not in self.cpu_clusters:
                             indent = '  '
 
                     if group_name == 'gpu':
-                        if is_multigpu and self.gpumode == GPUMode.collapsed and "Total GPU" not in title:
+                        if is_multigpu and self.modes['gpu'] == GPUMode.collapsed and "Total GPU" not in title:
                             continue
-                        if self.gpumode == GPUMode.load_only and "vram" in title:
+                        if self.modes['gpu'] == GPUMode.load_only and "vram" in title:
                             continue
                         if is_multigpu and "Total GPU" not in title:
                             indent = '  '
 
                     if group_name == 'power':
-                        if self.power_mode == PowerMode.off:
+                        if self.modes['power'] == PowerMode.off:
                             continue
-                        if self.power_mode == PowerMode.combined and 'total' not in title:
+                        if self.modes['power'] == PowerMode.combined and 'total' not in title:
                             continue
                         if 'total' not in title:
                             indent = '  '
@@ -240,13 +242,13 @@ class Horizon:
                     length = len(series) - self.horizontal_shift if self.horizontal_shift > 0 else len(series)
                     
                     # chart area width
-                    width = self.cols - 2 * self.spacing_width - 2 - len(indent)
+                    width = self.cols - 2 * len(self.spacing) - 2 - len(indent)
                     index = max(0, length - width)
                     data_slice = list(itertools.islice(series, index, min(index + width, length)))
 
                     # for percentage-like measurements
                     B = 100.0
-                    strvalue = f'{data_slice[-1]:3.0f}%{self.spacing}╗' if self.legend_mode == Legend.last else f'{self.spacing}╗'
+                    strvalue = f'{data_slice[-1]:3.0f}%{self.spacing}╗' if self.modes['legend'] == Legend.last else f'{self.spacing}╗'
                     
                     if group_name == 'disk' or group_name == 'network':
                         B, strvalue = self.label2(data_slice, [(1024 * 1024, 'MB/s'), (1024, 'KB/s'), (1, 'Bytes/s')])
@@ -278,7 +280,7 @@ class Horizon:
                     # ╔ GPU util %............................................................................:  4% ╗
                     # ╚ ▁▁▁  ▁    ▁▆▅▄ ▁▁▁      ▂ ▇▃▃▂█▃▇▁▃▂▁▁▂▁▁▃▃▂▁▂▄▄▁▂▆▁▃▁▂▃▁▁▁▂▂▂▂▂▂▁▁▃▂▂▁▂▁▃▄▃ ▁▁▃▁▄▂▃▂▂▂▃▃▅▅ ╝
                     scaler = len(cells) / B
-                    col = self.cols - (len(data_slice) + self.spacing_width) - 2
+                    col = self.cols - (len(data_slice) + len(self.spacing)) - 2
                     for v in data_slice:
                         col += 1
                         cell_index = floor(v * scaler)
@@ -291,7 +293,7 @@ class Horizon:
 
                     i += 1
                 self.snapshots_rendered += 1
-            if self.timeline_mode != TimelineMode.none:
+            if self.modes['time'] != TimelineMode.none:
                 tl = plot_timeline(self.cols - 2, args.refresh_ms, self.filling, self.timeline_interval, self.horizontal_shift)
                 self.write_string(i * 2, 0, "╚" + tl + "╝")             
         self.stdscr.refresh()
@@ -300,35 +302,27 @@ class Horizon:
         reader_thread = Thread(target=self.reader.loop, daemon=True, args=[self.process_snapshot])
         reader_thread.start()
         self.stdscr.keypad(True)
+        mode_keymap = {
+            't': 'time',
+            'c': 'cpu',
+            'l': 'legend',
+            'p': 'power',
+            'g': 'gpu',
+        }
         while True:
             self.render()
             key = self.stdscr.getch()
             if key == ord('q') or key == ord('Q'):
                 exit(0)
-            if key == ord('t'):
-                with self.lock:
-                    self.timeline_mode = self.timeline_mode.next()
-                    self.settings_changed = True
-            if key == ord('T'):
-                with self.lock:
-                    self.timeline_mode = self.timeline_mode.prev()
-                    self.settings_changed = True
-            if key == ord('l'):
-                with self.lock:
-                    self.legend_mode = self.legend_mode.next()
-                    self.settings_changed = True
-            if key == ord('c'):
-                with self.lock:
-                    self.cpumode = self.cpumode.next()
-                    self.settings_changed = True
-            if key == ord('p'):
-                with self.lock:
-                    self.power_mode = self.power_mode.next()
-                    self.settings_changed = True
-            if key == ord('g'):
-                with self.lock:
-                    self.gpumode = self.gpumode.next()
-                    self.settings_changed = True
+            for k, mode in mode_keymap.items():
+                if key == ord(k):
+                    with self.lock:
+                        self.modes[mode] = self.modes[mode].next()
+                        self.settings_changed = True
+                if key == ord(k.upper()):
+                    with self.lock:
+                        self.modes[mode] = self.modes[mode].prev()
+                        self.settings_changed = True
             if key == ord('s'):
                 with self.lock:
                     self.show_swap = not self.show_swap
