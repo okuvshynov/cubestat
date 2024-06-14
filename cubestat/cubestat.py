@@ -80,7 +80,9 @@ class Horizon:
         self.stdscr = stdscr
 
         self.lock = Lock()
-        self.data = {k: collections.defaultdict(lambda: collections.deque(maxlen=args.buffer_size)) for k in ['cpu', 'ram', 'swap', 'gpu', 'ane', 'disk', 'network', 'power']}
+        init_series = lambda: collections.deque(maxlen=args.buffer_size)
+        init_group  = lambda: collections.defaultdict(init_series)
+        self.data = collections.defaultdict(init_group)
 
         if args.color == Color.mixed:
             self.colormap = light_colormap
@@ -168,7 +170,7 @@ class Horizon:
             if mx > lim:
                 return f'{curr / lim :3.0f}|{int(mx / lim)}{unit}{spacing}╗'
         return f'{curr :3.0f}|{int(mx)}{buckets[-1][1]}{spacing}╗'
-
+    
     def render(self):
         with self.lock:
             if self.snapshots_observed == self.snapshots_rendered and not self.settings_changed:
@@ -370,7 +372,7 @@ def main():
         curses.wrapper(start, AppleReader(args.refresh_ms))
     if sys.platform == "linux" or sys.platform == "linux2":
         curses.wrapper(start, LinuxReader(args.refresh_ms))
-    # TODO: write something about platform not supported
+    logging.fatal(f'platform {sys.platform} is not supported yet.')
 
 if __name__ == '__main__':
     main()
