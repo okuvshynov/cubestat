@@ -171,6 +171,56 @@ class Horizon:
                 return f'{curr / lim :3.0f}|{int(mx / lim)}{unit}{spacing}╗'
         return f'{curr :3.0f}|{int(mx)}{buckets[-1][1]}{spacing}╗'
     
+    def format_legend(self, group_name, data_slice):
+        # for percentage-like measurements
+        B = 100.0
+        strvalue = f'{data_slice[-1]:3.0f}%{self.spacing}╗' if self.modes['legend'] == Legend.last else f'{self.spacing}╗'
+        
+        if group_name == 'disk' or group_name == 'network':
+            B, strvalue = self.label2(data_slice, [(1024 * 1024, 'MB/s'), (1024, 'KB/s'), (1, 'Bytes/s')])
+            
+        if group_name == 'swap':
+            B, strvalue = self.label2(data_slice, [(1024 * 1024, 'MB'), (1024, 'KB'), (1, 'Bytes')])
+
+        if group_name == 'power':
+            B, strvalue = self.label10(data_slice, [(1000 * 1000, 'kW'), (1000, 'W'), (1, 'mW')])
+
+        return B, strvalue
+    
+    def pre(self, group_name, title, is_multigpu):
+        if group_name == 'disk' and not self.show_disk:
+            return False, ''
+        if group_name == 'network' and not self.show_network:
+            return False, ''
+        if group_name == 'swap' and not self.show_swap:
+            return False, ''
+        
+        if group_name == 'cpu':
+            if self.modes['cpu'] == CPUMode.by_cluster and title not in self.cpu_clusters:
+                return False, ''
+            if self.modes['cpu'] == CPUMode.by_core and title in self.cpu_clusters:
+                return False, ''
+            if self.modes['cpu'] == CPUMode.all and title not in self.cpu_clusters:
+                return True, '  '
+
+        if group_name == 'gpu':
+            if is_multigpu and self.modes['gpu'] == GPUMode.collapsed and "Total GPU" not in title:
+                return False, ''
+            if self.modes['gpu'] == GPUMode.load_only and "vram" in title:
+                return False, ''
+            if is_multigpu and "Total GPU" not in title:
+                return True, '  '
+
+        if group_name == 'power':
+            if self.modes['power'] == PowerMode.off:
+                return False, ''
+            if self.modes['power'] == PowerMode.combined and 'total' not in title:
+                return False, ''
+            if 'total' not in title:
+                return True, '  '
+        
+        return True, ''
+    
     def render(self):
         with self.lock:
             if self.snapshots_observed == self.snapshots_rendered and not self.settings_changed:
@@ -193,40 +243,13 @@ class Horizon:
             skip = self.vertical_shift
             is_multigpu = len(self.data['gpu']) > 1
             for group_name, group in self.data.items():
-                if group_name == 'disk' and not self.show_disk:
-                    continue
-                if group_name == 'network' and not self.show_network:
-                    continue
-                if group_name == 'swap' and not self.show_swap:
-                    continue
+                
 
-                cells = self.cells[self.colormap[group_name]]
                 for title, series in group.items():
-                    indent = ''
+                    show, indent = self.pre(group_name, title, is_multigpu)
+                    if not show:
+                        continue
 
-                    if group_name == 'cpu':
-                        if self.modes['cpu'] == CPUMode.by_cluster and title not in self.cpu_clusters:
-                            continue
-                        if self.modes['cpu'] == CPUMode.by_core and title in self.cpu_clusters:
-                            continue
-                        if self.modes['cpu'] == CPUMode.all and title not in self.cpu_clusters:
-                            indent = '  '
-
-                    if group_name == 'gpu':
-                        if is_multigpu and self.modes['gpu'] == GPUMode.collapsed and "Total GPU" not in title:
-                            continue
-                        if self.modes['gpu'] == GPUMode.load_only and "vram" in title:
-                            continue
-                        if is_multigpu and "Total GPU" not in title:
-                            indent = '  '
-
-                    if group_name == 'power':
-                        if self.modes['power'] == PowerMode.off:
-                            continue
-                        if self.modes['power'] == PowerMode.combined and 'total' not in title:
-                            continue
-                        if 'total' not in title:
-                            indent = '  '
                     
                     if skip > 0:
                         skip -= 1
@@ -248,24 +271,12 @@ class Horizon:
                     index = max(0, length - width)
                     data_slice = list(itertools.islice(series, index, min(index + width, length)))
 
-                    # for percentage-like measurements
-                    B = 100.0
-                    strvalue = f'{data_slice[-1]:3.0f}%{self.spacing}╗' if self.modes['legend'] == Legend.last else f'{self.spacing}╗'
-                    
-                    if group_name == 'disk' or group_name == 'network':
-                        B, strvalue = self.label2(data_slice, [(1024 * 1024, 'MB/s'), (1024, 'KB/s'), (1, 'Bytes/s')])
-                        
-                    if group_name == 'swap':
-                        B, strvalue = self.label2(data_slice, [(1024 * 1024, 'MB'), (1024, 'KB'), (1, 'Bytes')])
-
-                    if group_name == 'power':
-                        B, strvalue = self.label10(data_slice, [(1000 * 1000, 'kW'), (1000, 'W'), (1, 'mW')])
+                    B, strvalue = self.format_legend(group_name, data_slice)
 
                     # render the rest of title row
                     #
                     # ╔ GPU util %............................................................................:  4% ╗
                     # ╚
-                    #title_filling = self.filling * (self.cols - len(strvalue) - )
                     title_filling = base_line[len(titlestr):-len(strvalue)]
                     self.write_string(i * 2, len(titlestr), title_filling)
                     self.write_string(i * 2, self.cols - len(strvalue), strvalue)
@@ -281,6 +292,7 @@ class Horizon:
                     #
                     # ╔ GPU util %............................................................................:  4% ╗
                     # ╚ ▁▁▁  ▁    ▁▆▅▄ ▁▁▁      ▂ ▇▃▃▂█▃▇▁▃▂▁▁▂▁▁▃▃▂▁▂▄▄▁▂▆▁▃▁▂▃▁▁▁▂▂▂▂▂▂▁▁▃▂▂▁▂▁▃▄▃ ▁▁▃▁▄▂▃▂▂▂▃▃▅▅ ╝
+                    cells = self.cells[self.colormap[group_name]]
                     scaler = len(cells) / B
                     col = self.cols - (len(data_slice) + len(self.spacing)) - 2
                     for v in data_slice:
