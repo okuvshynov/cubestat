@@ -223,6 +223,9 @@ class Horizon:
     
     def render(self):
         with self.lock:
+            if self.snapshots_rendered > self.snapshots_observed:
+                logging.fatal('self.snapshots_rendered > self.snapshots_observed')
+                exit(0)
             if self.snapshots_observed == self.snapshots_rendered and not self.settings_changed:
                 return
         self.stdscr.erase()
@@ -303,7 +306,7 @@ class Horizon:
                         self.write_char(i * 2 + 1, col, chr, curses.color_pair(color_pair))
 
                     i += 1
-                self.snapshots_rendered += 1
+            self.snapshots_rendered += 1
             if self.modes['time'] != TimelineMode.none:
                 tl = plot_timeline(self.cols - 2, args.refresh_ms, self.filling, self.timeline_interval, self.horizontal_shift)
                 self.write_string(i * 2, 0, "╚" + tl + "╝")             
