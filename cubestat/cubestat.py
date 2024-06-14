@@ -40,9 +40,13 @@ class GPUMode(EnumLoop, EnumStr):
     load_and_vram = 'load_and_vram'
 
 class TimelineMode(EnumLoop, EnumStr):
-    none = "none",
-    one  = "one",
+    none = "none"
+    one  = "one"
     mult = "mult"
+
+class SimpleMode(EnumLoop, EnumStr):
+    show = 'show'
+    hide = 'hide'
 
 def auto_cpu_mode() -> CPUMode:
      return CPUMode.all if os.cpu_count() < 40 else CPUMode.by_cluster
@@ -55,12 +59,9 @@ parser.add_argument('--gpu', type=GPUMode, default=GPUMode.load_only, choices=li
 parser.add_argument('--power', type=PowerMode, default=PowerMode.combined, choices=list(PowerMode), help='Power mode - off, showing breakdown CPU/GPU/ANE load, or showing combined usage. Can be toggled by pressing p.')
 parser.add_argument('--color', type=Color, default=Color.mixed, choices=list(Color))
 parser.add_argument('--legend', type=Legend, default=Legend.last, choices=list(Legend), help='Show/hide numeric utilization percentage. Can be toggled by pressing l.')
-parser.add_argument('--disk', action="store_true", default=True, help="Show disk read/write. Can be toggled by pressing d.")
-parser.add_argument('--swap', action="store_true", default=True, help="Show swap . Can be toggled by pressing s.")
-parser.add_argument('--network', action="store_true", default=True, help="Show network io. Can be toggled by pressing n.")
-parser.add_argument('--no-disk', action="store_false", dest="disk", help="Hide disk read/write. Can be toggled by pressing d.")
-parser.add_argument('--no-swap', action="store_false", default=True, help="Hide swap. Can be toggled by pressing s.")
-parser.add_argument('--no-network', action="store_false", dest="network", help="Hide network io. Can be toggled by pressing n.")
+parser.add_argument('--disk', type=SimpleMode, default=SimpleMode.show, choices=list(SimpleMode), help="Show disk read/write. Can be toggled by pressing d.")
+parser.add_argument('--swap', type=SimpleMode, default=SimpleMode.show, choices=list(SimpleMode), help="Show swap . Can be toggled by pressing s.")
+parser.add_argument('--network', type=SimpleMode, default=SimpleMode.show, choices=list(SimpleMode), help="Show network io. Can be toggled by pressing n.")
 
 args = parser.parse_args()
 
@@ -92,9 +93,6 @@ class Horizon:
             self.colormap = {k: args.color for k, _ in light_colormap.items()}
         self.snapshots_observed = 0
         self.snapshots_rendered = 0
-        self.show_disk = args.disk
-        self.show_swap = args.swap
-        self.show_network = args.network
         self.settings_changed = False
         self.reader = reader
         self.vertical_shift = 0
@@ -105,6 +103,9 @@ class Horizon:
             'cpu'   : args.cpu,
             'gpu'   : args.gpu,
             'power' : args.power,
+            'disk'  : args.disk,
+            'swap'  : args.swap,
+            'network'   : args.network,
         }
 
     def prepare_cells(self):
@@ -188,11 +189,11 @@ class Horizon:
         return B, strvalue
     
     def pre(self, group_name, title, is_multigpu):
-        if group_name == 'disk' and not self.show_disk:
+        if group_name == 'disk' and self.modes['disk'] == SimpleMode.hide:
             return False, ''
-        if group_name == 'network' and not self.show_network:
+        if group_name == 'network' and self.modes['network'] == SimpleMode.hide:
             return False, ''
-        if group_name == 'swap' and not self.show_swap:
+        if group_name == 'swap' and self.modes['swap'] == SimpleMode.hide:
             return False, ''
         
         if group_name == 'cpu':
@@ -237,7 +238,7 @@ class Horizon:
 
         base_fill = ['.'] * self.cols
 
-        i = 0
+        row = 0
         with self.lock:
             if self.modes['time'] == TimelineMode.mult:
                 for j in range(self.cols - 1 - self.timeline_interval, -1, -self.timeline_interval):
@@ -260,8 +261,8 @@ class Horizon:
                     # ╔ GPU util %
                     # ╚
                     title_str = f'{indent}╔{self.spacing}{title}'
-                    self.write_string(i * 2, 0, title_str)
-                    self.write_string(i * 2 + 1, 0, f'{indent}╚')
+                    self.write_string(row, 0, title_str)
+                    self.write_string(row + 1, 0, f'{indent}╚')
 
                     # data slice size
                     length = len(series) - self.horizontal_shift if self.horizontal_shift > 0 else len(series)
@@ -278,15 +279,15 @@ class Horizon:
                     # ╔ GPU util %............................................................................:  4% ╗
                     # ╚
                     title_filling = base_line[len(title_str):-len(value_str)]
-                    self.write_string(i * 2, len(title_str), title_filling)
-                    self.write_string(i * 2, self.cols - len(value_str), value_str)
+                    self.write_string(row, len(title_str), title_filling)
+                    self.write_string(row, self.cols - len(value_str), value_str)
 
                     # render the right border
                     #
                     # ╔ GPU util %............................................................................:  4% ╗
                     # ╚                                                                                             ╝
                     border = f'{self.spacing}╝'
-                    self.write_string(i * 2 + 1, self.cols - len(border), border)
+                    self.write_string(row + 1, self.cols - len(border), border)
 
                     # Render the chart itself
                     #
@@ -303,13 +304,13 @@ class Horizon:
                         if cell_index >= len(cells):
                             cell_index = len(cells) - 1
                         chr, color_pair = cells[cell_index]
-                        self.write_char(i * 2 + 1, col, chr, curses.color_pair(color_pair))
+                        self.write_char(row + 1, col, chr, curses.color_pair(color_pair))
 
-                    i += 1
+                    row += 2
             self.snapshots_rendered = self.snapshots_observed
             if self.modes['time'] != TimelineMode.none:
                 tl = plot_timeline(self.cols - 2, args.refresh_ms, self.filling, self.timeline_interval, self.horizontal_shift)
-                self.write_string(i * 2, 0, "╚" + tl + "╝")             
+                self.write_string(row, 0, "╚" + tl + "╝")             
         self.stdscr.refresh()
 
     def loop(self):
@@ -322,6 +323,9 @@ class Horizon:
             'l': 'legend',
             'p': 'power',
             'g': 'gpu',
+            'n': 'network',
+            'd': 'disk',
+            's': 'swap',
         }
         while True:
             self.render()
@@ -337,18 +341,6 @@ class Horizon:
                     with self.lock:
                         self.modes[mode] = self.modes[mode].prev()
                         self.settings_changed = True
-            if key == ord('s'):
-                with self.lock:
-                    self.show_swap = not self.show_swap
-                    self.settings_changed = True
-            if key == ord('d'):
-                with self.lock:
-                    self.show_disk = not self.show_disk
-                    self.settings_changed = True
-            if key == ord('n'):
-                with self.lock:
-                    self.show_network = not self.show_network
-                    self.settings_changed = True
             if key == curses.KEY_UP:
                 with self.lock:
                     if self.vertical_shift > 0:
