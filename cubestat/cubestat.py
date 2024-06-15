@@ -308,6 +308,7 @@ class Horizon:
 
                     row += 2
             self.snapshots_rendered = self.snapshots_observed
+            self.settings_changed   = False
             if self.modes['time'] != TimelineMode.none:
                 tl = plot_timeline(self.cols - 2, args.refresh_ms, self.filling, self.timeline_interval, self.horizontal_shift)
                 self.write_string(row, 0, "╚" + tl + "╝")             
