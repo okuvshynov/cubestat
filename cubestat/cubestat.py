@@ -15,19 +15,16 @@ from threading import Thread, Lock
 from cubestat.readers.linux_reader import LinuxReader
 from cubestat.readers.macos_reader import AppleReader
 
-from cubestat.common import EnumLoop, EnumStr
+from cubestat.common import EnumLoop, EnumStr, CPUMode
 from cubestat.colors import Color, dark_colormap, light_colormap, colors_ansi256
 from cubestat.timeline import plot_timeline
+
+from cubestat.metrics.cpu import cpu_metric
 
 # TODO: joint with timeline mode?
 class Legend(EnumLoop, EnumStr):
     hidden = 'off'
     last = 'last'
-    
-class CPUMode(EnumLoop, EnumStr):
-    all = 'all'
-    by_cluster = 'by_cluster'
-    by_core = 'by_core'
 
 class PowerMode(EnumLoop, EnumStr):
     combined = 'combined'
@@ -108,6 +105,10 @@ class Horizon:
             'network'   : args.network,
         }
 
+        self.metrics = {
+            'cpu': cpu_metric(reader.platform)
+        }
+
     def prepare_cells(self):
         chrs = [' ', '▁', '▂', '▃', '▄', '▅', '▆', '▇', '█']
 
@@ -121,14 +122,21 @@ class Horizon:
                 colorpair += 1
         return cells
 
-    def process_snapshot(self, data, cpu_clusters):
+    def process_snapshot(self, data, context):
+        # process metrics
+        for group, metric in self.metrics.items():
+            datapoint = metric.read(context)
+            for title, value in datapoint.items():
+                with self.lock:
+                    self.data[group][title].append(value)
+
         for group, vals in data:
             for title, value in vals.items():
                 with self.lock:
                     self.data[group][title].append(value)
 
+
         with self.lock:
-            self.cpu_clusters = cpu_clusters
             self.snapshots_observed += 1
             if self.horizontal_shift > 0:
                 self.horizontal_shift += 1
@@ -197,12 +205,7 @@ class Horizon:
             return False, ''
         
         if group_name == 'cpu':
-            if self.modes['cpu'] == CPUMode.by_cluster and title not in self.cpu_clusters:
-                return False, ''
-            if self.modes['cpu'] == CPUMode.by_core and title in self.cpu_clusters:
-                return False, ''
-            if self.modes['cpu'] == CPUMode.all and title not in self.cpu_clusters:
-                return True, '  '
+            return self.metrics['cpu'].pre(self.modes['cpu'], title)
 
         if group_name == 'gpu':
             if is_multigpu and self.modes['gpu'] == GPUMode.collapsed and "Total GPU" not in title:

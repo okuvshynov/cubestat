@@ -12,3 +12,8 @@ class EnumLoop(Enum):
 class EnumStr(Enum):
     def __str__(self):
         return self.value
+
+class CPUMode(EnumLoop, EnumStr):
+    all = 'all'
+    by_cluster = 'by_cluster'
+    by_core = 'by_core'

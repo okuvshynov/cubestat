@@ -3,7 +3,6 @@ import plistlib
 
 from cubestat.readers.mem_reader import MemReader
 from cubestat.readers.swap import SwapMacOSReader
-from cubestat.readers.cpu import CPUMacOSReader
 
 def get_ane_scaler() -> float:
     # This is pretty much a guess based on tests on a few models I had available.
@@ -38,13 +37,11 @@ class AppleReader:
 
         self.mem_reader = MemReader(interval_ms)
         self.swap_reader = SwapMacOSReader()
-        self.cpu_reader = CPUMacOSReader()
+        self.platform = 'macos'
 
     def read(self, snapshot):
         res = self.mem_reader.read()
         res['swap'] = self.swap_reader.read()
-
-        res['cpu'], cpu_clusters = self.cpu_reader.read(snapshot=snapshot)
 
         res['gpu']['GPU util %'] = 100.0 - 100.0 * snapshot['gpu']['idle_ratio']
         res['ane']['ANE util %'] = 100.0 * snapshot['processor']['ane_power'] / self.ane_scaler
@@ -58,7 +55,7 @@ class AppleReader:
         res['disk']['disk write']    = snapshot['disk']['wbytes_per_s']
         res['network']['network rx'] = snapshot['network']['ibyte_rate']
         res['network']['network tx'] = snapshot['network']['obyte_rate']
-        return res.items(), cpu_clusters
+        return res.items()
     
     def loop(self, on_snapshot_cb):
         buf = bytearray()
@@ -71,6 +68,7 @@ class AppleReader:
             # right before the measurement event, not right after. So, if we were to wait 
             # for 0x00 we'll be delaying next sample by sampling period. 
             if b'</plist>\n' == line:
-                snapshot, cpu_clusters = self.read(plistlib.loads(bytes(buf).strip(b'\x00')))
-                on_snapshot_cb(snapshot, cpu_clusters)
+                data = plistlib.loads(bytes(buf).strip(b'\x00'))
+                snapshot = self.read(data)
+                on_snapshot_cb(snapshot, data)
                 buf.clear()
