@@ -15,11 +15,12 @@ from threading import Thread, Lock
 from cubestat.readers.linux_reader import LinuxReader
 from cubestat.readers.macos_reader import AppleReader
 
-from cubestat.common import EnumLoop, EnumStr, CPUMode
+from cubestat.common import EnumLoop, EnumStr, CPUMode, SimpleMode
 from cubestat.colors import Color, dark_colormap, light_colormap, colors_ansi256
 from cubestat.timeline import plot_timeline
 
 from cubestat.metrics.cpu import cpu_metric
+from cubestat.metrics.disk import disk_metric
 
 # TODO: joint with timeline mode?
 class Legend(EnumLoop, EnumStr):
@@ -40,10 +41,6 @@ class TimelineMode(EnumLoop, EnumStr):
     none = "none"
     one  = "one"
     mult = "mult"
-
-class SimpleMode(EnumLoop, EnumStr):
-    show = 'show'
-    hide = 'hide'
 
 def auto_cpu_mode() -> CPUMode:
      return CPUMode.all if os.cpu_count() < 40 else CPUMode.by_cluster
@@ -106,7 +103,8 @@ class Horizon:
         }
 
         self.metrics = {
-            'cpu': cpu_metric(reader.platform)
+            'cpu': cpu_metric(reader.platform),
+            'disk': disk_metric(reader.platform, args.refresh_ms)
         }
 
     def prepare_cells(self):
@@ -197,16 +195,14 @@ class Horizon:
         return B, strvalue
     
     def pre(self, group_name, title, is_multigpu):
-        if group_name == 'disk' and self.modes['disk'] == SimpleMode.hide:
-            return False, ''
+        if group_name in self.metrics.keys():
+            return self.metrics[group_name].pre(self.modes[group_name], title)
+        
         if group_name == 'network' and self.modes['network'] == SimpleMode.hide:
             return False, ''
         if group_name == 'swap' and self.modes['swap'] == SimpleMode.hide:
             return False, ''
         
-        if group_name == 'cpu':
-            return self.metrics['cpu'].pre(self.modes['cpu'], title)
-
         if group_name == 'gpu':
             if is_multigpu and self.modes['gpu'] == GPUMode.collapsed and "Total GPU" not in title:
                 return False, ''

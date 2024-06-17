@@ -8,7 +8,7 @@ from cubestat.common import CPUMode
 #  - colors
 class cpu_metric:
     def __init__(self, platform) -> None:
-        if platform == 'lunux':
+        if platform == 'linux':
             self.read = self.read_linux
         if platform == 'macos':
             self.read = self.read_osx

@@ -51,8 +51,6 @@ class AppleReader:
         res['power']['CPU power']    = snapshot['processor']['cpu_power']
         res['power']['GPU power']    = snapshot['processor']['gpu_power']
 
-        res['disk']['disk read']     = snapshot['disk']['rbytes_per_s']
-        res['disk']['disk write']    = snapshot['disk']['wbytes_per_s']
         res['network']['network rx'] = snapshot['network']['ibyte_rate']
         res['network']['network tx'] = snapshot['network']['obyte_rate']
         return res.items()

@@ -5,17 +5,7 @@ from cubestat.readers.mem_reader import MemReader
 from cubestat.readers.nv_reader import NVReader
 from cubestat.readers.swap import SwapLinuxReader
 
-class RateReader:
-    def __init__(self, interval_ms):
-        self.interval_s = interval_ms / 1000.0
-        self.last = {}
-
-    def next(self, key, value):
-        if key not in self.last.keys():
-            self.last[key] = value
-        res = (value - self.last[key]) / self.interval_s
-        self.last[key] = value
-        return res
+from cubestat.common import RateReader
 
 class LinuxReader:
     def __init__(self, interval_ms):
@@ -31,12 +21,9 @@ class LinuxReader:
         res = self.mem_reader.read()
         res['swap'] = self.swap_reader.read()
 
-        disk_load = psutil.disk_io_counters()
         nw_load = psutil.net_io_counters()
 
         res['gpu'] = self.nv.read()
-        res['disk']['disk read']  = self.rate_reader.next('disk read', disk_load.read_bytes)
-        res['disk']['disk write']  = self.rate_reader.next('disk write', disk_load.write_bytes)
         res['network']['network rx'] = self.rate_reader.next('network rx', nw_load.bytes_sent)
         res['network']['network tx'] = self.rate_reader.next('network tx', nw_load.bytes_recv)
 
