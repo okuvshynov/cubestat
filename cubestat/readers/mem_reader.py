@@ -9,12 +9,9 @@ class MemReader:
     # TODO: make this return only memory
     def read(self):
         res = {
-            'cpu': {},
             'ram': {'RAM used %': psutil.virtual_memory().percent},
-            'swap': {},
             'gpu': {},
             'ane': {},
-            'disk': {},
             'network': {},
             'power': {},
         }

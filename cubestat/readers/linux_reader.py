@@ -3,7 +3,6 @@ import time
 
 from cubestat.readers.mem_reader import MemReader
 from cubestat.readers.nv_reader import NVReader
-from cubestat.readers.swap import SwapLinuxReader
 
 from cubestat.common import RateReader
 
@@ -13,13 +12,11 @@ class LinuxReader:
         self.interval_ms = interval_ms
         self.mem_reader = MemReader(interval_ms)
         self.nv = NVReader()
-        self.swap_reader = SwapLinuxReader()
         self.rate_reader = RateReader(self.interval_ms)
         self.platform    = 'linux'
 
     def read(self):
         res = self.mem_reader.read()
-        res['swap'] = self.swap_reader.read()
 
         nw_load = psutil.net_io_counters()
 

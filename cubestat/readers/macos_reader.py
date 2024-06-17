@@ -2,7 +2,6 @@ import subprocess
 import plistlib
 
 from cubestat.readers.mem_reader import MemReader
-from cubestat.readers.swap import SwapMacOSReader
 
 def get_ane_scaler() -> float:
     # This is pretty much a guess based on tests on a few models I had available.
@@ -36,13 +35,11 @@ class AppleReader:
         self.firstline = self.powermetrics.stdout.readline()
 
         self.mem_reader = MemReader(interval_ms)
-        self.swap_reader = SwapMacOSReader()
         self.platform = 'macos'
 
     def read(self, snapshot):
         res = self.mem_reader.read()
-        res['swap'] = self.swap_reader.read()
-
+        
         res['gpu']['GPU util %'] = 100.0 - 100.0 * snapshot['gpu']['idle_ratio']
         res['ane']['ANE util %'] = 100.0 * snapshot['processor']['ane_power'] / self.ane_scaler
 
