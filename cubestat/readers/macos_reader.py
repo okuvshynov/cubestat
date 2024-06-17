@@ -48,8 +48,6 @@ class AppleReader:
         res['power']['CPU power']    = snapshot['processor']['cpu_power']
         res['power']['GPU power']    = snapshot['processor']['gpu_power']
 
-        res['network']['network rx'] = snapshot['network']['ibyte_rate']
-        res['network']['network tx'] = snapshot['network']['obyte_rate']
         return res.items()
     
     def loop(self, on_snapshot_cb):

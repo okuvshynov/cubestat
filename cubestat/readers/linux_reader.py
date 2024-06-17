@@ -1,4 +1,3 @@
-import psutil
 import time
 
 from cubestat.readers.mem_reader import MemReader
@@ -17,13 +16,7 @@ class LinuxReader:
 
     def read(self):
         res = self.mem_reader.read()
-
-        nw_load = psutil.net_io_counters()
-
         res['gpu'] = self.nv.read()
-        res['network']['network rx'] = self.rate_reader.next('network rx', nw_load.bytes_sent)
-        res['network']['network tx'] = self.rate_reader.next('network tx', nw_load.bytes_recv)
-
         return res.items()
 
     def loop(self, on_snapshot_cb):

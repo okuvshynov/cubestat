@@ -12,7 +12,6 @@ class MemReader:
             'ram': {'RAM used %': psutil.virtual_memory().percent},
             'gpu': {},
             'ane': {},
-            'network': {},
             'power': {},
         }
         return res

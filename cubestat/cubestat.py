@@ -22,6 +22,7 @@ from cubestat.timeline import plot_timeline
 from cubestat.metrics.cpu import cpu_metric
 from cubestat.metrics.disk import disk_metric
 from cubestat.metrics.swap import swap_metric
+from cubestat.metrics.network import network_metric
 
 # TODO: joint with timeline mode?
 class Legend(EnumLoop, EnumStr):
@@ -107,6 +108,7 @@ class Horizon:
             'cpu': cpu_metric(reader.platform),
             'disk': disk_metric(reader.platform, args.refresh_ms),
             'swap': swap_metric(reader.platform),
+            'network': network_metric(reader.platform, args.refresh_ms)
         }
 
     def prepare_cells(self):
@@ -199,9 +201,6 @@ class Horizon:
     def pre(self, group_name, title, is_multigpu):
         if group_name in self.metrics.keys():
             return self.metrics[group_name].pre(self.modes[group_name], title)
-        
-        if group_name == 'network' and self.modes['network'] == SimpleMode.hide:
-            return False, ''
         
         if group_name == 'gpu':
             if is_multigpu and self.modes['gpu'] == GPUMode.collapsed and "Total GPU" not in title:
