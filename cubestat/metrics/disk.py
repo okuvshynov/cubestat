@@ -19,8 +19,8 @@ class disk_metric:
     def read_linux(self, _context):
         res = {}
         disk_load = psutil.disk_io_counters()
-        res['disk']['disk read']  = self.rate_reader.next('disk read', disk_load.read_bytes)
-        res['disk']['disk write']  = self.rate_reader.next('disk write', disk_load.write_bytes)
+        res['disk read']  = self.rate_reader.next('disk read', disk_load.read_bytes)
+        res['disk write']  = self.rate_reader.next('disk write', disk_load.write_bytes)
         return res
     
     def pre(self, mode, title):
