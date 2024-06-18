@@ -11,7 +11,7 @@ class LinuxReader:
         n = 0
         d = self.interval_ms / 1000.0
         while True:
-            do_read_cb()
+            do_read_cb(None)
             n += 1
             expected_time = begin_ts + n * d
             current_time = time.time()
