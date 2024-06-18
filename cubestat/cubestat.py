@@ -26,6 +26,7 @@ from cubestat.metrics.network import network_metric
 from cubestat.metrics.gpu import gpu_metric
 from cubestat.metrics.accel import ane_metric
 from cubestat.metrics.power import power_metric
+from cubestat.metrics.memory import ram_metric
 
 def auto_cpu_mode() -> CPUMode:
      return CPUMode.all if os.cpu_count() < 40 else CPUMode.by_cluster
@@ -85,7 +86,8 @@ class Horizon:
             'disk'  : args.disk,
             'swap'  : args.swap,
             'network' : args.network,
-            'ane'   : SimpleMode.show
+            'ane'   : SimpleMode.show,
+            'ram'   : SimpleMode.show,
         }
 
         self.metrics = {
@@ -95,7 +97,8 @@ class Horizon:
             'network': network_metric(reader.platform, args.refresh_ms),
             'gpu' : gpu_metric(reader.platform),
             'ane' : ane_metric(reader.platform),
-            'power': power_metric(reader.platform)
+            'power': power_metric(reader.platform),
+            'ram'  : ram_metric(reader.platform),
         }
 
     def prepare_cells(self):
@@ -111,19 +114,13 @@ class Horizon:
                 colorpair += 1
         return cells
 
-    def process_snapshot(self, data, context):
+    def do_read(self, context):
         # process metrics
         for group, metric in self.metrics.items():
             datapoint = metric.read(context)
             for title, value in datapoint.items():
                 with self.lock:
                     self.data[group][title].append(value)
-
-        for group, vals in data:
-            for title, value in vals.items():
-                with self.lock:
-                    self.data[group][title].append(value)
-
 
         with self.lock:
             self.snapshots_observed += 1
@@ -283,7 +280,7 @@ class Horizon:
         self.stdscr.refresh()
 
     def loop(self):
-        reader_thread = Thread(target=self.reader.loop, daemon=True, args=[self.process_snapshot])
+        reader_thread = Thread(target=self.reader.loop, daemon=True, args=[self.do_read])
         reader_thread.start()
         self.stdscr.keypad(True)
         mode_keymap = {

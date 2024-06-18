@@ -1,8 +1,6 @@
 import subprocess
 import plistlib
 
-from cubestat.readers.mem_reader import MemReader
-
 class AppleReader:
     def __init__(self, interval_ms) -> None:
         cmd = ['sudo', 'powermetrics', '-f', 'plist', '-i', str(interval_ms), '-s', 'cpu_power,gpu_power,ane_power,network,disk']
@@ -10,15 +8,9 @@ class AppleReader:
         # we are getting first line here to allow user to enter sudo credentials before 
         # curses initialization.
         self.firstline = self.powermetrics.stdout.readline()
-
-        self.mem_reader = MemReader(interval_ms)
         self.platform = 'macos'
-
-    def read(self, snapshot):
-        res = self.mem_reader.read()
-        return res.items()
     
-    def loop(self, on_snapshot_cb):
+    def loop(self, do_read_cb):
         buf = bytearray()
         buf.extend(self.firstline)
 
@@ -29,7 +21,6 @@ class AppleReader:
             # right before the measurement event, not right after. So, if we were to wait 
             # for 0x00 we'll be delaying next sample by sampling period. 
             if b'</plist>\n' == line:
-                data = plistlib.loads(bytes(buf).strip(b'\x00'))
-                snapshot = self.read(data)
-                on_snapshot_cb(snapshot, data)
+                context = plistlib.loads(bytes(buf).strip(b'\x00'))
+                do_read_cb(context)
                 buf.clear()
