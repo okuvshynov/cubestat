@@ -1,7 +1,6 @@
 import time
 
 from cubestat.readers.mem_reader import MemReader
-from cubestat.readers.nv_reader import NVReader
 
 from cubestat.common import RateReader
 

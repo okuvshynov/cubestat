@@ -15,7 +15,7 @@ from threading import Thread, Lock
 from cubestat.readers.linux_reader import LinuxReader
 from cubestat.readers.macos_reader import AppleReader
 
-from cubestat.common import EnumLoop, EnumStr, CPUMode, SimpleMode
+from cubestat.common import EnumLoop, EnumStr, CPUMode, SimpleMode, GPUMode
 from cubestat.colors import Color, dark_colormap, light_colormap, colors_ansi256
 from cubestat.timeline import plot_timeline
 
@@ -23,6 +23,7 @@ from cubestat.metrics.cpu import cpu_metric
 from cubestat.metrics.disk import disk_metric
 from cubestat.metrics.swap import swap_metric
 from cubestat.metrics.network import network_metric
+from cubestat.metrics.gpu import gpu_metric
 
 # TODO: joint with timeline mode?
 class Legend(EnumLoop, EnumStr):
@@ -33,11 +34,6 @@ class PowerMode(EnumLoop, EnumStr):
     combined = 'combined'
     all = 'all'
     off = 'off'
-
-class GPUMode(EnumLoop, EnumStr):
-    collapsed = 'collapsed'
-    load_only = 'load_only'
-    load_and_vram = 'load_and_vram'
 
 class TimelineMode(EnumLoop, EnumStr):
     none = "none"
@@ -108,7 +104,8 @@ class Horizon:
             'cpu': cpu_metric(reader.platform),
             'disk': disk_metric(reader.platform, args.refresh_ms),
             'swap': swap_metric(reader.platform),
-            'network': network_metric(reader.platform, args.refresh_ms)
+            'network': network_metric(reader.platform, args.refresh_ms),
+            'gpu' : gpu_metric(reader.platform),
         }
 
     def prepare_cells(self):
@@ -198,17 +195,9 @@ class Horizon:
 
         return B, strvalue
     
-    def pre(self, group_name, title, is_multigpu):
+    def pre(self, group_name, title):
         if group_name in self.metrics.keys():
             return self.metrics[group_name].pre(self.modes[group_name], title)
-        
-        if group_name == 'gpu':
-            if is_multigpu and self.modes['gpu'] == GPUMode.collapsed and "Total GPU" not in title:
-                return False, ''
-            if self.modes['gpu'] == GPUMode.load_only and "vram" in title:
-                return False, ''
-            if is_multigpu and "Total GPU" not in title:
-                return True, '  '
 
         if group_name == 'power':
             if self.modes['power'] == PowerMode.off:
@@ -243,10 +232,9 @@ class Horizon:
                     base_fill[j] = '|'
             base_line = "".join(base_fill)
             skip = self.vertical_shift
-            is_multigpu = len(self.data['gpu']) > 1
             for group_name, group in self.data.items():
                 for title, series in group.items():
-                    show, indent = self.pre(group_name, title, is_multigpu)
+                    show, indent = self.pre(group_name, title)
                     if not show:
                         continue
                     

@@ -40,7 +40,6 @@ class AppleReader:
     def read(self, snapshot):
         res = self.mem_reader.read()
         
-        res['gpu']['GPU util %'] = 100.0 - 100.0 * snapshot['gpu']['idle_ratio']
         res['ane']['ANE util %'] = 100.0 * snapshot['processor']['ane_power'] / self.ane_scaler
 
         res['power']['total power']  = snapshot['processor']['combined_power']

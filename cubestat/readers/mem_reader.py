@@ -10,7 +10,6 @@ class MemReader:
     def read(self):
         res = {
             'ram': {'RAM used %': psutil.virtual_memory().percent},
-            'gpu': {},
             'ane': {},
             'power': {},
         }

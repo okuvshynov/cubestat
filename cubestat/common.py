@@ -22,6 +22,11 @@ class SimpleMode(EnumLoop, EnumStr):
     show = 'show'
     hide = 'hide'
 
+class GPUMode(EnumLoop, EnumStr):
+    collapsed = 'collapsed'
+    load_only = 'load_only'
+    load_and_vram = 'load_and_vram'
+
 class RateReader:
     def __init__(self, interval_ms):
         self.interval_s = interval_ms / 1000.0
