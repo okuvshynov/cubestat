@@ -16,12 +16,6 @@ class AppleReader:
 
     def read(self, snapshot):
         res = self.mem_reader.read()
-
-        res['power']['total power']  = snapshot['processor']['combined_power']
-        res['power']['ANE power']    = snapshot['processor']['ane_power']
-        res['power']['CPU power']    = snapshot['processor']['cpu_power']
-        res['power']['GPU power']    = snapshot['processor']['gpu_power']
-
         return res.items()
     
     def loop(self, on_snapshot_cb):

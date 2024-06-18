@@ -27,6 +27,20 @@ class GPUMode(EnumLoop, EnumStr):
     load_only = 'load_only'
     load_and_vram = 'load_and_vram'
 
+class Legend(EnumLoop, EnumStr):
+    hidden = 'off'
+    last = 'last'
+
+class PowerMode(EnumLoop, EnumStr):
+    combined = 'combined'
+    all = 'all'
+    off = 'off'
+
+class TimelineMode(EnumLoop, EnumStr):
+    none = "none"
+    one  = "one"
+    mult = "mult"
+
 class RateReader:
     def __init__(self, interval_ms):
         self.interval_s = interval_ms / 1000.0

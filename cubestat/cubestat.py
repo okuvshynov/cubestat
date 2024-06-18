@@ -15,7 +15,7 @@ from threading import Thread, Lock
 from cubestat.readers.linux_reader import LinuxReader
 from cubestat.readers.macos_reader import AppleReader
 
-from cubestat.common import EnumLoop, EnumStr, CPUMode, SimpleMode, GPUMode
+from cubestat.common import CPUMode, SimpleMode, GPUMode, PowerMode, Legend, TimelineMode
 from cubestat.colors import Color, dark_colormap, light_colormap, colors_ansi256
 from cubestat.timeline import plot_timeline
 
@@ -25,21 +25,7 @@ from cubestat.metrics.swap import swap_metric
 from cubestat.metrics.network import network_metric
 from cubestat.metrics.gpu import gpu_metric
 from cubestat.metrics.accel import ane_metric
-
-# TODO: joint with timeline mode?
-class Legend(EnumLoop, EnumStr):
-    hidden = 'off'
-    last = 'last'
-
-class PowerMode(EnumLoop, EnumStr):
-    combined = 'combined'
-    all = 'all'
-    off = 'off'
-
-class TimelineMode(EnumLoop, EnumStr):
-    none = "none"
-    one  = "one"
-    mult = "mult"
+from cubestat.metrics.power import power_metric
 
 def auto_cpu_mode() -> CPUMode:
      return CPUMode.all if os.cpu_count() < 40 else CPUMode.by_cluster
@@ -108,7 +94,8 @@ class Horizon:
             'swap': swap_metric(reader.platform),
             'network': network_metric(reader.platform, args.refresh_ms),
             'gpu' : gpu_metric(reader.platform),
-            'ane' : ane_metric(reader.platform)
+            'ane' : ane_metric(reader.platform),
+            'power': power_metric(reader.platform)
         }
 
     def prepare_cells(self):
@@ -202,15 +189,7 @@ class Horizon:
         if group_name in self.metrics.keys():
             return self.metrics[group_name].pre(self.modes[group_name], title)
 
-        if group_name == 'power':
-            if self.modes['power'] == PowerMode.off:
-                return False, ''
-            if self.modes['power'] == PowerMode.combined and 'total' not in title:
-                return False, ''
-            if 'total' not in title:
-                return True, '  '
-        
-        return True, ''
+        return False, ''
     
     def render(self):
         with self.lock:

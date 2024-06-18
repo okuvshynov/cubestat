@@ -59,16 +59,3 @@ class cpu_metric:
             return True, '  '
         else:
             return True, ''
-    
-    def rows(self, mode, data):
-        res = []
-        for title, series in data.items():
-            if mode == CPUMode.by_cluster and title not in self.cpu_clusters:
-                continue
-            if mode == CPUMode.by_core and title in self.cpu_clusters:
-                continue
-            if mode == CPUMode.all and title not in self.cpu_clusters:
-                res.append(('  ', title, series))
-            else:
-                res.append(('', title, series))
-        return res

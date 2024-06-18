@@ -3,13 +3,10 @@ import psutil
 # based on psutil
 class MemReader:
     def __init__(self, interval_ms):
-        self.first = True
-        self.interval_ms = interval_ms
+        pass
 
-    # TODO: make this return only memory
     def read(self):
         res = {
             'ram': {'RAM used %': psutil.virtual_memory().percent},
-            'power': {},
         }
         return res
