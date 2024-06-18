@@ -120,7 +120,6 @@ class Horizon:
         try:
             self.stdscr.addstr(row, col, s, color)
         except:
-            # TODO: log something
             pass
 
     def write_char(self, row, col, chr, color=0):
@@ -129,12 +128,15 @@ class Horizon:
         try:
             self.stdscr.addch(row, col, chr, color)
         except:
-            # TODO: log something
             pass
     
     def format_legend(self, group_name, data_slice):
         max_value, values = self.metrics[group_name].format(data_slice, [-1])
         return max_value, f'{values[0]}{self.spacing}╗' if self.modes['legend'] == Legend.last else f'{self.spacing}╗'
+    
+    def format_value(self, group_name, data_slice, idx):
+        max_value, values = self.metrics[group_name].format(data_slice, [idx])
+        return f'{values[0]}' if self.modes['time'] == TimelineMode.mult else ''
     
     def render(self):
         with self.lock:
@@ -161,9 +163,7 @@ class Horizon:
             skip = self.vertical_shift
             for group_name, group in self.data.items():
                 for title, series in group.items():
-                    show = False
-                    if group_name in self.metrics.keys():
-                        show, indent = self.metrics[group_name].pre(self.modes[group_name], title)
+                    show, indent = self.metrics[group_name].pre(self.modes[group_name], title)
 
                     if not show:
                         continue
@@ -194,7 +194,17 @@ class Horizon:
                     #
                     # ╔ GPU util %............................................................................:  4% ╗
                     # ╚
-                    title_filling = base_line[len(title_str):-len(value_str)]
+                    
+                    # we update title row with values if tl mode is mult
+                    curr_line = base_line
+                    if self.modes['time'] == TimelineMode.mult:
+                        i = len(data_slice) - self.timeline_interval
+                        while i >= 0:
+                            v = self.format_value(group_name, data_slice, i + 1)
+                            si = len(curr_line) - len(data_slice) + i - 1
+                            curr_line = curr_line[:si - len(v)] + v + curr_line[si:]
+                            i -= self.timeline_interval
+                    title_filling = curr_line[len(title_str):-len(value_str)]
                     self.write_string(row, len(title_str), title_filling)
                     self.write_string(row, self.cols - len(value_str), value_str)
 
