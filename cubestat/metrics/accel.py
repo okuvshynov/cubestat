@@ -3,10 +3,10 @@ import subprocess
 
 class ane_metric:
     def __init__(self, platform) -> None:
-        self.ane_scaler = self.get_ane_scaler()
         if platform == 'linux':
             self.read = self.read_linux
         if platform == 'macos':
+            self.ane_scaler = self.get_ane_scaler()
             self.read = self.read_macos
 
     def get_ane_scaler(self) -> float:
