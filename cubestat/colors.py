@@ -1,5 +1,7 @@
 from cubestat.common import EnumStr
 
+import curses
+
 class Color(EnumStr):
     red = 'red'
     green = 'green'
@@ -44,3 +46,15 @@ colors_ansi256 = {
     Color.blue_dark: [-1, 23, 66, 109],
     Color.purple: [-1, 53, 96, 138]
 }
+
+def prepare_cells():
+    chrs = [' ', '▁', '▂', '▃', '▄', '▅', '▆', '▇', '█']
+    cells = {}
+    colorpair = 1
+    for name, colors in colors_ansi256.items():
+        cells[name] = []
+        for fg, bg in zip(colors[1:], colors[:-1]):
+            curses.init_pair(colorpair, fg, bg)
+            cells[name].extend((chr, colorpair) for chr in chrs)
+            colorpair += 1
+    return cells

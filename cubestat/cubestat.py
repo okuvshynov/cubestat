@@ -7,7 +7,6 @@ import itertools
 import logging
 import os
 import sys
-import math
 
 from math import floor
 from threading import Thread, Lock
@@ -16,7 +15,7 @@ from cubestat.readers.linux_reader import LinuxReader
 from cubestat.readers.macos_reader import AppleReader
 
 from cubestat.common import CPUMode, SimpleMode, GPUMode, PowerMode, Legend, TimelineMode
-from cubestat.colors import Color, dark_colormap, light_colormap, colors_ansi256
+from cubestat.colors import Color, dark_colormap, light_colormap, prepare_cells
 from cubestat.timeline import plot_timeline
 
 from cubestat.metrics.cpu import cpu_metric
@@ -57,7 +56,7 @@ class Horizon:
         self.filling = '.'
         self.timeline_interval = 20 # chars
 
-        self.cells = self.prepare_cells()
+        self.cells = prepare_cells()
         self.stdscr = stdscr
 
         self.lock = Lock()
@@ -100,18 +99,6 @@ class Horizon:
             'power': power_metric(reader.platform),
             'ram'  : ram_metric(reader.platform),
         }
-
-    def prepare_cells(self):
-        chrs = [' ', '▁', '▂', '▃', '▄', '▅', '▆', '▇', '█']
-        cells = {}
-        colorpair = 1
-        for name, colors in colors_ansi256.items():
-            cells[name] = []
-            for fg, bg in zip(colors[1:], colors[:-1]):
-                curses.init_pair(colorpair, fg, bg)
-                cells[name].extend((chr, colorpair) for chr in chrs)
-                colorpair += 1
-        return cells
 
     def do_read(self, context):
         for group, metric in self.metrics.items():
