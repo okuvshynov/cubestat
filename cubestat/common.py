@@ -28,26 +28,21 @@ class GPUMode(EnumLoop, EnumStr):
     load_only = 'load_only'
     load_and_vram = 'load_and_vram'
 
-class Legend(EnumLoop, EnumStr):
-    hidden = 'off'
-    last = 'last'
-
 class PowerMode(EnumLoop, EnumStr):
     combined = 'combined'
     all = 'all'
     off = 'off'
 
-class TimelineMode(EnumLoop, EnumStr):
-    none = "none"
-    one  = "one"
-    mult = "mult"
+class ViewMode(EnumLoop, EnumStr):
+    off = "off"
+    one = "one"
+    all = "all"
 
 # buckets is a list of factor/label, e.g. [(1024*1024, 'Mb'), (1024, 'Kb'), (1, 'b')]
 def format_measurement(curr, mx, buckets):
     for lim, unit in buckets[:-1]:
         if mx > lim:
             return f'{curr / lim :3.0f}{unit}'
-    #return f'{curr :3.0f}|{int(mx)}{buckets[-1][1]}'
     return f'{curr :3.0f}{buckets[-1][1]}'
 
 def label2(slice, buckets, idxs):

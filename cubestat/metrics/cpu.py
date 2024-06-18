@@ -1,6 +1,6 @@
 import psutil
 
-from cubestat.common import CPUMode, Legend
+from cubestat.common import CPUMode
 
 # TODO: also need to define:
 #  - options (command-line, hotkey)

@@ -137,3 +137,5 @@ Example notebook: [colab example](https://colab.research.google.com/drive/1EUOXG
 * show help
 * storing history
 * all of https://github.com/okuvshynov/cubestat/issues
+* remote monitoring
+* amd gpus

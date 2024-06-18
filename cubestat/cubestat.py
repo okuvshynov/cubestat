@@ -14,7 +14,7 @@ from threading import Thread, Lock
 from cubestat.readers.linux_reader import LinuxReader
 from cubestat.readers.macos_reader import AppleReader
 
-from cubestat.common import CPUMode, SimpleMode, GPUMode, PowerMode, Legend, TimelineMode
+from cubestat.common import CPUMode, SimpleMode, GPUMode, PowerMode, ViewMode
 from cubestat.colors import Color, dark_colormap, light_colormap, prepare_cells
 from cubestat.timeline import plot_timeline
 
@@ -37,7 +37,7 @@ parser.add_argument('--cpu', type=CPUMode, default=auto_cpu_mode(), choices=list
 parser.add_argument('--gpu', type=GPUMode, default=GPUMode.load_only, choices=list(GPUMode), help='GPU mode - hidden, showing all GPUs load, or showing load and vram usage. Can be toggled by pressing g.')
 parser.add_argument('--power', type=PowerMode, default=PowerMode.combined, choices=list(PowerMode), help='Power mode - off, showing breakdown CPU/GPU/ANE load, or showing combined usage. Can be toggled by pressing p.')
 parser.add_argument('--color', type=Color, default=Color.mixed, choices=list(Color))
-parser.add_argument('--legend', type=Legend, default=Legend.last, choices=list(Legend), help='Show/hide numeric utilization percentage. Can be toggled by pressing l.')
+parser.add_argument('--view', type=ViewMode, default=ViewMode.one, choices=list(ViewMode), help='legend/values/time mode. Can be toggled by pressing v.')
 parser.add_argument('--disk', type=SimpleMode, default=SimpleMode.show, choices=list(SimpleMode), help="Show disk read/write. Can be toggled by pressing d.")
 parser.add_argument('--swap', type=SimpleMode, default=SimpleMode.show, choices=list(SimpleMode), help="Show swap . Can be toggled by pressing s.")
 parser.add_argument('--network', type=SimpleMode, default=SimpleMode.show, choices=list(SimpleMode), help="Show network io. Can be toggled by pressing n.")
@@ -77,8 +77,7 @@ class Horizon:
         self.vertical_shift   = 0
         self.horizontal_shift = 0
         self.modes = {
-            'time'  : TimelineMode.one,
-            'legend': args.legend,
+            'view'  : ViewMode.one,
             'cpu'   : args.cpu,
             'gpu'   : args.gpu,
             'power' : args.power,
@@ -132,11 +131,11 @@ class Horizon:
     
     def format_legend(self, group_name, data_slice):
         max_value, values = self.metrics[group_name].format(data_slice, [-1])
-        return max_value, f'{values[0]}{self.spacing}╗' if self.modes['legend'] == Legend.last else f'{self.spacing}╗'
+        return max_value, f'{values[0]}{self.spacing}╗' if self.modes['view'] != ViewMode.off else f'{self.spacing}╗'
     
     def format_value(self, group_name, data_slice, idx):
         max_value, values = self.metrics[group_name].format(data_slice, [idx])
-        return f'{values[0]}' if self.modes['time'] == TimelineMode.mult else ''
+        return f'{values[0]}' if self.modes['view'] == ViewMode.all else ''
     
     def render(self):
         with self.lock:
@@ -156,7 +155,7 @@ class Horizon:
 
         row = 0
         with self.lock:
-            if self.modes['time'] == TimelineMode.mult:
+            if self.modes['view'] == ViewMode.all:
                 for j in range(self.cols - 1 - self.timeline_interval, -1, -self.timeline_interval):
                     base_fill[j] = '|'
             base_line = "".join(base_fill)
@@ -195,9 +194,8 @@ class Horizon:
                     # ╔ GPU util %............................................................................:  4% ╗
                     # ╚
                     
-                    # we update title row with values if tl mode is mult
                     curr_line = base_line
-                    if self.modes['time'] == TimelineMode.mult:
+                    if self.modes['view'] == ViewMode.all:
                         i = len(data_slice) - self.timeline_interval + 1
                         while i >= 0:
                             v = self.format_value(group_name, data_slice, i)
@@ -235,7 +233,7 @@ class Horizon:
                     row += 2
             self.snapshots_rendered = self.snapshots_observed
             self.settings_changed   = False
-            if self.modes['time'] != TimelineMode.none:
+            if self.modes['view'] != ViewMode.off:
                 tl = plot_timeline(self.cols - 2, args.refresh_ms, self.filling, self.timeline_interval, self.horizontal_shift)
                 self.write_string(row, 0, "╚" + tl + "╝")             
         self.stdscr.refresh()
@@ -245,9 +243,8 @@ class Horizon:
         reader_thread.start()
         self.stdscr.keypad(True)
         mode_keymap = {
-            't': 'time',
+            'v': 'view',
             'c': 'cpu',
-            'l': 'legend',
             'p': 'power',
             'g': 'gpu',
             'n': 'network',
