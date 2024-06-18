@@ -54,3 +54,6 @@ class gpu_metric:
         if self.n_gpus > 1 and "Total GPU" not in title:
             return True, '  '
         return True, ''
+    
+    def format(self, values, idxs):
+        return 100.0, [f'{values[i]:3.0f}%' for i in idxs]

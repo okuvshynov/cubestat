@@ -1,4 +1,4 @@
-from cubestat.common import PowerMode
+from cubestat.common import PowerMode, label10
 
 class power_metric:
     def __init__(self, platform) -> None:
@@ -26,3 +26,6 @@ class power_metric:
         if 'total' not in title:
             return True, '  '
         return True, ''
+
+    def format(self, values, idxs):
+        return label10(values, [(1000 * 1000, 'kW'), (1000, 'W'), (1, 'mW')], idxs)

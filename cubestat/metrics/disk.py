@@ -1,6 +1,6 @@
 import psutil
 
-from cubestat.common import SimpleMode, RateReader
+from cubestat.common import SimpleMode, RateReader, label2
 
 class disk_metric:
     def __init__(self, platform, interval_ms) -> None:
@@ -27,3 +27,6 @@ class disk_metric:
         if mode == SimpleMode.hide:
             return False, ''
         return True, ''
+    
+    def format(self, values, idxs):
+        return label2(values, [(1024 * 1024, 'MB/s'), (1024, 'KB/s'), (1, 'Bytes/s')], idxs)

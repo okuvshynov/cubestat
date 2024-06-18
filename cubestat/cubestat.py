@@ -63,7 +63,7 @@ class Horizon:
         self.lock = Lock()
         init_series = lambda: collections.deque(maxlen=args.buffer_size)
         init_group  = lambda: collections.defaultdict(init_series)
-        self.data = collections.defaultdict(init_group)
+        self.data   = collections.defaultdict(init_group)
 
         if args.color == Color.mixed:
             self.colormap = light_colormap
@@ -75,7 +75,7 @@ class Horizon:
         self.snapshots_rendered = 0
         self.settings_changed = False
         self.reader = reader
-        self.vertical_shift = 0
+        self.vertical_shift   = 0
         self.horizontal_shift = 0
         self.modes = {
             'time'  : TimelineMode.one,
@@ -103,7 +103,6 @@ class Horizon:
 
     def prepare_cells(self):
         chrs = [' ', '▁', '▂', '▃', '▄', '▅', '▆', '▇', '█']
-
         cells = {}
         colorpair = 1
         for name, colors in colors_ansi256.items():
@@ -115,7 +114,6 @@ class Horizon:
         return cells
 
     def do_read(self, context):
-        # process metrics
         for group, metric in self.metrics.items():
             datapoint = metric.read(context)
             for title, value in datapoint.items():
@@ -146,47 +144,10 @@ class Horizon:
         except:
             # TODO: log something
             pass
-
-    def label2(self, slice, buckets):
-        mx = max(slice)
-        mx = float(1 if mx == 0 else 2 ** (int((mx - 1)).bit_length()))
-        return mx, self.format_measurement(self.spacing, slice[-1], mx, buckets)
-    
-    def label10(self, slice, buckets):
-        mx = max(slice)
-        mx = float(1 if mx <= 0 else 10 ** math.ceil(math.log10(mx)))
-        return mx, self.format_measurement(self.spacing, slice[-1], mx, buckets)
-
-    # buckets is a list of factor/label, e.g. [(1024*1024, 'Mb'), (1024, 'Kb'), (1, 'b')]
-    def format_measurement(self, spacing, curr, mx, buckets):
-        if self.modes['legend'] != Legend.last:
-            return f'{spacing}╗'
-        for lim, unit in buckets[:-1]:
-            if mx > lim:
-                return f'{curr / lim :3.0f}|{int(mx / lim)}{unit}{spacing}╗'
-        return f'{curr :3.0f}|{int(mx)}{buckets[-1][1]}{spacing}╗'
     
     def format_legend(self, group_name, data_slice):
-        # for percentage-like measurements
-        B = 100.0
-        strvalue = f'{data_slice[-1]:3.0f}%{self.spacing}╗' if self.modes['legend'] == Legend.last else f'{self.spacing}╗'
-        
-        if group_name == 'disk' or group_name == 'network':
-            B, strvalue = self.label2(data_slice, [(1024 * 1024, 'MB/s'), (1024, 'KB/s'), (1, 'Bytes/s')])
-            
-        if group_name == 'swap':
-            B, strvalue = self.label2(data_slice, [(1024 * 1024, 'MB'), (1024, 'KB'), (1, 'Bytes')])
-
-        if group_name == 'power':
-            B, strvalue = self.label10(data_slice, [(1000 * 1000, 'kW'), (1000, 'W'), (1, 'mW')])
-
-        return B, strvalue
-    
-    def pre(self, group_name, title):
-        if group_name in self.metrics.keys():
-            return self.metrics[group_name].pre(self.modes[group_name], title)
-
-        return False, ''
+        max_value, values = self.metrics[group_name].format(data_slice, [-1])
+        return max_value, f'{values[0]}{self.spacing}╗' if self.modes['legend'] == Legend.last else f'{self.spacing}╗'
     
     def render(self):
         with self.lock:
@@ -213,7 +174,10 @@ class Horizon:
             skip = self.vertical_shift
             for group_name, group in self.data.items():
                 for title, series in group.items():
-                    show, indent = self.pre(group_name, title)
+                    show = False
+                    if group_name in self.metrics.keys():
+                        show, indent = self.metrics[group_name].pre(self.modes[group_name], title)
+
                     if not show:
                         continue
                     

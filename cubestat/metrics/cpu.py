@@ -1,6 +1,6 @@
 import psutil
 
-from cubestat.common import CPUMode
+from cubestat.common import CPUMode, Legend
 
 # TODO: also need to define:
 #  - options (command-line, hotkey)
@@ -59,3 +59,6 @@ class cpu_metric:
             return True, '  '
         else:
             return True, ''
+        
+    def format(self, values, idxs):
+        return 100.0, [f'{values[i]:3.0f}%' for i in idxs]

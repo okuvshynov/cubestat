@@ -1,7 +1,7 @@
 import re
 import subprocess
 
-from cubestat.common import SimpleMode
+from cubestat.common import SimpleMode, label2
 
 class swap_metric:
     def __init__(self, platform):
@@ -56,3 +56,6 @@ class swap_metric:
         if mode == SimpleMode.hide:
             return False, ''
         return True, ''
+
+    def format(self, values, idxs):
+        return label2(values, [(1024 * 1024, 'MB'), (1024, 'KB'), (1, 'Bytes')], idxs)
