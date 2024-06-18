@@ -198,10 +198,10 @@ class Horizon:
                     # we update title row with values if tl mode is mult
                     curr_line = base_line
                     if self.modes['time'] == TimelineMode.mult:
-                        i = len(data_slice) - self.timeline_interval
+                        i = len(data_slice) - self.timeline_interval + 1
                         while i >= 0:
-                            v = self.format_value(group_name, data_slice, i + 1)
-                            si = len(curr_line) - len(data_slice) + i - 1
+                            v = self.format_value(group_name, data_slice, i)
+                            si = len(curr_line) - len(data_slice) + i - 2
                             curr_line = curr_line[:si - len(v)] + v + curr_line[si:]
                             i -= self.timeline_interval
                     title_filling = curr_line[len(title_str):-len(value_str)]
