@@ -24,6 +24,7 @@ from cubestat.metrics.disk import disk_metric
 from cubestat.metrics.swap import swap_metric
 from cubestat.metrics.network import network_metric
 from cubestat.metrics.gpu import gpu_metric
+from cubestat.metrics.accel import ane_metric
 
 # TODO: joint with timeline mode?
 class Legend(EnumLoop, EnumStr):
@@ -97,7 +98,8 @@ class Horizon:
             'power' : args.power,
             'disk'  : args.disk,
             'swap'  : args.swap,
-            'network'   : args.network,
+            'network' : args.network,
+            'ane'   : SimpleMode.show
         }
 
         self.metrics = {
@@ -106,6 +108,7 @@ class Horizon:
             'swap': swap_metric(reader.platform),
             'network': network_metric(reader.platform, args.refresh_ms),
             'gpu' : gpu_metric(reader.platform),
+            'ane' : ane_metric(reader.platform)
         }
 
     def prepare_cells(self):

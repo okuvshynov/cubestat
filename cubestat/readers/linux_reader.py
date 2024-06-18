@@ -6,16 +6,13 @@ from cubestat.common import RateReader
 
 class LinuxReader:
     def __init__(self, interval_ms):
-        self.first = True
         self.interval_ms = interval_ms
-        self.mem_reader = MemReader(interval_ms)
-        self.nv = NVReader()
+        self.mem_reader  = MemReader(interval_ms)
         self.rate_reader = RateReader(self.interval_ms)
         self.platform    = 'linux'
 
     def read(self):
         res = self.mem_reader.read()
-        res['gpu'] = self.nv.read()
         return res.items()
 
     def loop(self, on_snapshot_cb):

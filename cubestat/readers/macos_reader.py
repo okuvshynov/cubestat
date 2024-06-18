@@ -3,31 +3,8 @@ import plistlib
 
 from cubestat.readers.mem_reader import MemReader
 
-def get_ane_scaler() -> float:
-    # This is pretty much a guess based on tests on a few models I had available.
-    # Need anything M3 + Ultra models to test.
-    # Based on TOPS numbers Apple published, all models seem to have same ANE 
-    # except Ultra having 2x.
-    ane_power_scalers = {
-        "M1": 13000.0,
-        "M2": 15500.0,
-        "M3": 15500.0,
-    }
-    # identity the model to get ANE scaler
-    brand_str = subprocess.check_output(['sysctl', '-n', 'machdep.cpu.brand_string'], text=True)
-    ane_scaler = 15500 # default to M2
-    for k, v in ane_power_scalers.items():
-        if k in brand_str:
-            ane_scaler = v
-            if 'ultra' in brand_str.lower():
-                ane_scaler *= 2
-            break
-    return ane_scaler
-
 class AppleReader:
     def __init__(self, interval_ms) -> None:
-        self.ane_scaler = get_ane_scaler()
-
         cmd = ['sudo', 'powermetrics', '-f', 'plist', '-i', str(interval_ms), '-s', 'cpu_power,gpu_power,ane_power,network,disk']
         self.powermetrics = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         # we are getting first line here to allow user to enter sudo credentials before 
@@ -39,8 +16,6 @@ class AppleReader:
 
     def read(self, snapshot):
         res = self.mem_reader.read()
-        
-        res['ane']['ANE util %'] = 100.0 * snapshot['processor']['ane_power'] / self.ane_scaler
 
         res['power']['total power']  = snapshot['processor']['combined_power']
         res['power']['ANE power']    = snapshot['processor']['ane_power']
