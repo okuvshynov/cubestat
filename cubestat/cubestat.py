@@ -15,38 +15,18 @@ from threading import Thread, Lock
 from cubestat.readers.linux_reader import LinuxReader
 from cubestat.readers.macos_reader import AppleReader
 
-from cubestat.common import EnumLoop, EnumStr
+from cubestat.common import CPUMode, SimpleMode, GPUMode, PowerMode, Legend, TimelineMode
 from cubestat.colors import Color, dark_colormap, light_colormap, colors_ansi256
 from cubestat.timeline import plot_timeline
 
-# TODO: joint with timeline mode?
-class Legend(EnumLoop, EnumStr):
-    hidden = 'off'
-    last = 'last'
-    
-class CPUMode(EnumLoop, EnumStr):
-    all = 'all'
-    by_cluster = 'by_cluster'
-    by_core = 'by_core'
-
-class PowerMode(EnumLoop, EnumStr):
-    combined = 'combined'
-    all = 'all'
-    off = 'off'
-
-class GPUMode(EnumLoop, EnumStr):
-    collapsed = 'collapsed'
-    load_only = 'load_only'
-    load_and_vram = 'load_and_vram'
-
-class TimelineMode(EnumLoop, EnumStr):
-    none = "none"
-    one  = "one"
-    mult = "mult"
-
-class SimpleMode(EnumLoop, EnumStr):
-    show = 'show'
-    hide = 'hide'
+from cubestat.metrics.cpu import cpu_metric
+from cubestat.metrics.disk import disk_metric
+from cubestat.metrics.swap import swap_metric
+from cubestat.metrics.network import network_metric
+from cubestat.metrics.gpu import gpu_metric
+from cubestat.metrics.accel import ane_metric
+from cubestat.metrics.power import power_metric
+from cubestat.metrics.memory import ram_metric
 
 def auto_cpu_mode() -> CPUMode:
      return CPUMode.all if os.cpu_count() < 40 else CPUMode.by_cluster
@@ -105,7 +85,20 @@ class Horizon:
             'power' : args.power,
             'disk'  : args.disk,
             'swap'  : args.swap,
-            'network'   : args.network,
+            'network' : args.network,
+            'ane'   : SimpleMode.show,
+            'ram'   : SimpleMode.show,
+        }
+
+        self.metrics = {
+            'cpu': cpu_metric(reader.platform),
+            'disk': disk_metric(reader.platform, args.refresh_ms),
+            'swap': swap_metric(reader.platform),
+            'network': network_metric(reader.platform, args.refresh_ms),
+            'gpu' : gpu_metric(reader.platform),
+            'ane' : ane_metric(reader.platform),
+            'power': power_metric(reader.platform),
+            'ram'  : ram_metric(reader.platform),
         }
 
     def prepare_cells(self):
@@ -121,14 +114,15 @@ class Horizon:
                 colorpair += 1
         return cells
 
-    def process_snapshot(self, data, cpu_clusters):
-        for group, vals in data:
-            for title, value in vals.items():
+    def do_read(self, context):
+        # process metrics
+        for group, metric in self.metrics.items():
+            datapoint = metric.read(context)
+            for title, value in datapoint.items():
                 with self.lock:
                     self.data[group][title].append(value)
 
         with self.lock:
-            self.cpu_clusters = cpu_clusters
             self.snapshots_observed += 1
             if self.horizontal_shift > 0:
                 self.horizontal_shift += 1
@@ -188,39 +182,11 @@ class Horizon:
 
         return B, strvalue
     
-    def pre(self, group_name, title, is_multigpu):
-        if group_name == 'disk' and self.modes['disk'] == SimpleMode.hide:
-            return False, ''
-        if group_name == 'network' and self.modes['network'] == SimpleMode.hide:
-            return False, ''
-        if group_name == 'swap' and self.modes['swap'] == SimpleMode.hide:
-            return False, ''
-        
-        if group_name == 'cpu':
-            if self.modes['cpu'] == CPUMode.by_cluster and title not in self.cpu_clusters:
-                return False, ''
-            if self.modes['cpu'] == CPUMode.by_core and title in self.cpu_clusters:
-                return False, ''
-            if self.modes['cpu'] == CPUMode.all and title not in self.cpu_clusters:
-                return True, '  '
+    def pre(self, group_name, title):
+        if group_name in self.metrics.keys():
+            return self.metrics[group_name].pre(self.modes[group_name], title)
 
-        if group_name == 'gpu':
-            if is_multigpu and self.modes['gpu'] == GPUMode.collapsed and "Total GPU" not in title:
-                return False, ''
-            if self.modes['gpu'] == GPUMode.load_only and "vram" in title:
-                return False, ''
-            if is_multigpu and "Total GPU" not in title:
-                return True, '  '
-
-        if group_name == 'power':
-            if self.modes['power'] == PowerMode.off:
-                return False, ''
-            if self.modes['power'] == PowerMode.combined and 'total' not in title:
-                return False, ''
-            if 'total' not in title:
-                return True, '  '
-        
-        return True, ''
+        return False, ''
     
     def render(self):
         with self.lock:
@@ -245,10 +211,9 @@ class Horizon:
                     base_fill[j] = '|'
             base_line = "".join(base_fill)
             skip = self.vertical_shift
-            is_multigpu = len(self.data['gpu']) > 1
             for group_name, group in self.data.items():
                 for title, series in group.items():
-                    show, indent = self.pre(group_name, title, is_multigpu)
+                    show, indent = self.pre(group_name, title)
                     if not show:
                         continue
                     
@@ -315,7 +280,7 @@ class Horizon:
         self.stdscr.refresh()
 
     def loop(self):
-        reader_thread = Thread(target=self.reader.loop, daemon=True, args=[self.process_snapshot])
+        reader_thread = Thread(target=self.reader.loop, daemon=True, args=[self.do_read])
         reader_thread.start()
         self.stdscr.keypad(True)
         mode_keymap = {
