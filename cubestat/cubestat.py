@@ -52,7 +52,7 @@ class Horizon:
         curses.start_color()
         curses.use_default_colors()
 
-        self.spacing = '     '
+        self.spacing = ' '
         self.filling = '.'
         self.timeline_interval = 20 # chars
 
