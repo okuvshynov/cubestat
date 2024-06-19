@@ -247,7 +247,7 @@ class Horizon:
                 for ago in range(0, self.cols, self.timeline_interval):
                     str_pos = self.get_col(ago)
                     time_s = (args.refresh_ms * (ago + self.horizontal_shift)) / 1000.0
-                    time_str = f'-{time_s:.2f}s '
+                    time_str = f'-{time_s:.2f}s'
                     if str_pos > len(time_str):
                         curr_line = curr_line[:str_pos - len(time_str)] + time_str + "|" + curr_line[str_pos + 1:]
                 curr_line = curr_line[len(self.spacing) + 1:  - len(self.spacing) - 1]
