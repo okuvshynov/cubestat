@@ -16,7 +16,6 @@ from cubestat.readers.macos_reader import AppleReader
 
 from cubestat.common import CPUMode, SimpleMode, GPUMode, PowerMode, ViewMode
 from cubestat.colors import Color, dark_colormap, light_colormap, prepare_cells
-from cubestat.timeline import plot_timeline
 
 from cubestat.metrics.cpu import cpu_metric
 from cubestat.metrics.disk import disk_metric
@@ -134,10 +133,9 @@ class Horizon:
         return max_value
     
     def format_value(self, group_name, data_slice, idx):
-        max_value, values = self.metrics[group_name].format(data_slice, [idx])
+        _, values = self.metrics[group_name].format(data_slice, [idx])
         return f'{values[0]}' if self.modes['view'] != ViewMode.off else ''
     
-    # we need a function like ago(20s). Get a char position based on relative time?
     def get_col(self, ago):
         return self.cols - 1 - len(self.spacing) - 1 - ago
 
@@ -186,12 +184,12 @@ class Horizon:
                     self.write_string(row + 1, 0, f'{indent}╚')
 
                     # data slice size
-                    length = len(series) - self.horizontal_shift if self.horizontal_shift > 0 else len(series)
+                    data_length = len(series) - self.horizontal_shift if self.horizontal_shift > 0 else len(series)
                     
                     # chart area width
-                    width = self.cols - 2 * len(self.spacing) - 2 - len(indent)
-                    index = max(0, length - width)
-                    data_slice = list(itertools.islice(series, index, min(index + width, length)))
+                    chart_width = self.cols - 2 * len(self.spacing) - 2 - len(indent)
+                    index = max(0, data_length - chart_width)
+                    data_slice = list(itertools.islice(series, index, min(index + chart_width, data_length)))
 
                     max_value = self.max_val(group_name, data_slice)
 
@@ -200,7 +198,7 @@ class Horizon:
                     # ╔ GPU util %............................................................................:  4% ╗
                     # ╚
                     
-                    right = f"{self.spacing}╗"
+                    topright_border = f"{self.spacing}╗"
                     curr_line = base_line
                     if self.modes['view'] != ViewMode.off:
                         for ago in range(0, self.cols, self.timeline_interval):
@@ -213,9 +211,9 @@ class Horizon:
                                 curr_line = curr_line[:str_pos - len(v)] + v + curr_line[str_pos:]
                             if self.modes['view'] != ViewMode.all:
                                 break
-                    title_filling = curr_line[len(title_str):-len(right)]
+                    title_filling = curr_line[len(title_str):-len(topright_border)]
                     self.write_string(row, len(title_str), title_filling)
-                    self.write_string(row, self.cols - len(right), right)
+                    self.write_string(row, self.cols - len(topright_border), topright_border)
 
                     # render the right border
                     #
@@ -249,13 +247,11 @@ class Horizon:
                 for ago in range(0, self.cols, self.timeline_interval):
                     str_pos = self.get_col(ago)
                     time_s = (args.refresh_ms * (ago + self.horizontal_shift)) / 1000.0
-                    time_str = f'-{time_s:.3f}s '
+                    time_str = f'-{time_s:.2f}s '
                     if str_pos > len(time_str):
                         curr_line = curr_line[:str_pos - len(time_str)] + time_str + "|" + curr_line[str_pos + 1:]
                 curr_line = curr_line[len(self.spacing) + 1:  - len(self.spacing) - 1]
-                self.write_string(row, 0, f"╚{self.spacing}{curr_line}{self.spacing}╝")   
-        #self.write_char(row + 1, self.get_col(0), 'x')
-        #self.write_char(row + 1, self.get_col(self.timeline_interval), 'y')
+                self.write_string(row, 0, f"╚{self.spacing}{curr_line}{self.spacing}╝")
 
         self.stdscr.refresh()
 
