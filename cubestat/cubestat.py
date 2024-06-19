@@ -209,7 +209,8 @@ class Horizon:
                             data_index = - ago - 1
                             v = self.format_value(group_name, data_slice, data_index)
                             str_pos = self.get_col(ago)
-                            curr_line = curr_line[:str_pos - len(v)] + v + curr_line[str_pos:]
+                            if str_pos > len(v):
+                                curr_line = curr_line[:str_pos - len(v)] + v + curr_line[str_pos:]
                             if self.modes['view'] != ViewMode.all:
                                 break
                     title_filling = curr_line[len(title_str):-len(right)]
