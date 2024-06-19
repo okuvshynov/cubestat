@@ -52,7 +52,7 @@ class Horizon:
         curses.start_color()
         curses.use_default_colors()
 
-        self.spacing = ' '
+        self.spacing = '     '
         self.filling = '.'
         self.timeline_interval = 20 # chars
 
@@ -129,14 +129,18 @@ class Horizon:
         except:
             pass
     
-    def format_legend(self, group_name, data_slice):
-        max_value, values = self.metrics[group_name].format(data_slice, [-1])
-        return max_value, f'{values[0]}{self.spacing}╗' if self.modes['view'] != ViewMode.off else f'{self.spacing}╗'
+    def max_val(self, group_name, data_slice):
+        max_value, _ = self.metrics[group_name].format(data_slice, [-1])
+        return max_value
     
     def format_value(self, group_name, data_slice, idx):
         max_value, values = self.metrics[group_name].format(data_slice, [idx])
-        return f'{values[0]}' if self.modes['view'] == ViewMode.all else ''
+        return f'{values[0]}' if self.modes['view'] != ViewMode.off else ''
     
+    # we need a function like ago(20s). Get a char position based on relative time?
+    def get_col(self, ago):
+        return self.cols - 1 - len(self.spacing) - 1 - ago
+
     def render(self):
         with self.lock:
             if self.snapshots_rendered > self.snapshots_observed:
@@ -155,9 +159,11 @@ class Horizon:
 
         row = 0
         with self.lock:
-            if self.modes['view'] == ViewMode.all:
-                for j in range(self.cols - 1 - self.timeline_interval, -1, -self.timeline_interval):
-                    base_fill[j] = '|'
+            if self.modes['view'] != ViewMode.off:
+                for ago in range(0, self.cols, self.timeline_interval):
+                    base_fill[self.get_col(ago)] = '|'
+                    if self.modes['view'] != ViewMode.all:
+                        break
             base_line = "".join(base_fill)
             skip = self.vertical_shift
             for group_name, group in self.data.items():
@@ -187,24 +193,28 @@ class Horizon:
                     index = max(0, length - width)
                     data_slice = list(itertools.islice(series, index, min(index + width, length)))
 
-                    max_value, value_str = self.format_legend(group_name, data_slice)
+                    max_value = self.max_val(group_name, data_slice)
 
                     # render the rest of title row
                     #
                     # ╔ GPU util %............................................................................:  4% ╗
                     # ╚
                     
+                    right = f"{self.spacing}╗"
                     curr_line = base_line
-                    if self.modes['view'] == ViewMode.all:
-                        i = len(data_slice) - self.timeline_interval + 1
-                        while i >= 0:
-                            v = self.format_value(group_name, data_slice, i)
-                            si = len(curr_line) - len(data_slice) + i - 2
-                            curr_line = curr_line[:si - len(v)] + v + curr_line[si:]
-                            i -= self.timeline_interval
-                    title_filling = curr_line[len(title_str):-len(value_str)]
+                    if self.modes['view'] != ViewMode.off:
+                        for ago in range(0, self.cols, self.timeline_interval):
+                            if ago >= len(data_slice):
+                                break
+                            data_index = - ago - 1
+                            v = self.format_value(group_name, data_slice, data_index)
+                            str_pos = self.get_col(ago)
+                            curr_line = curr_line[:str_pos - len(v)] + v + curr_line[str_pos:]
+                            if self.modes['view'] != ViewMode.all:
+                                break
+                    title_filling = curr_line[len(title_str):-len(right)]
                     self.write_string(row, len(title_str), title_filling)
-                    self.write_string(row, self.cols - len(value_str), value_str)
+                    self.write_string(row, self.cols - len(right), right)
 
                     # render the right border
                     #
@@ -234,8 +244,18 @@ class Horizon:
             self.snapshots_rendered = self.snapshots_observed
             self.settings_changed   = False
             if self.modes['view'] != ViewMode.off:
-                tl = plot_timeline(self.cols - 2, args.refresh_ms, self.filling, self.timeline_interval, self.horizontal_shift)
-                self.write_string(row, 0, "╚" + tl + "╝")             
+                curr_line = base_line
+                for ago in range(0, self.cols, self.timeline_interval):
+                    str_pos = self.get_col(ago)
+                    time_s = (args.refresh_ms * (ago + self.horizontal_shift)) / 1000.0
+                    time_str = f'-{time_s:.3f}s '
+                    if str_pos > len(time_str):
+                        curr_line = curr_line[:str_pos - len(time_str)] + time_str + "|" + curr_line[str_pos + 1:]
+                curr_line = curr_line[len(self.spacing) + 1:  - len(self.spacing) - 1]
+                self.write_string(row, 0, f"╚{self.spacing}{curr_line}{self.spacing}╝")   
+        #self.write_char(row + 1, self.get_col(0), 'x')
+        #self.write_char(row + 1, self.get_col(self.timeline_interval), 'y')
+
         self.stdscr.refresh()
 
     def loop(self):
