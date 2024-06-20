@@ -16,9 +16,9 @@ Currently cubestat reports:
 1. CPU utilization - configurable per core ('by_core'), cluster of cores on Apple M1+: Efficiency/Performance ('by_cluster') or all. Is shown as percentage.
 2. GPU utilization per card/chip. Is shown in percentage. Works for Apple's M1/M2 SoC and NVIDIA GPUs. For NVIDIA GPU can show VRAM usage as well. In case of multi-GPU can show individual GPUs or aggregated average.
 3. ANE (Neural Engine) power consumption. According to `man powermetrics` it is an estimate, but seems working good enough as a proxy to ANE utilization. Is shown as percentage.
-4. Disk and network IO; Is shown as rate (Kb/s, Mb/s, Gb/s).
+4. Disk and network IO; Is shown as rate (KB/s, MB/s, GB/s).
 5. Memory usage in %
-6. Swap usage. Is shown as absolute value (Kb, Mb, Gb)
+6. Swap usage. Is shown as absolute value (KB, MB, GB)
 
 Known limitations:
 1. **On MacOS cubestat needs to run `powermetrics` with sudo**. You don't need to run cubestat itself with sudo, but you'll be asked sudo password when cubestat launches powermetrics. If you are comfortable doing that, you can add `powermetrics` to `/etc/sudoers` (`your_user_name ALL=(ALL) NOPASSWD: /usr/bin/powermetrics`) and avoid this.
@@ -40,41 +40,53 @@ or
 ## Usage
 
 ```
-% cubestat [-h] [--refresh_ms REFRESH_MS] [--buffer_size BUFFER_SIZE] [--cpu {all,by_cluster,by_core}]
-                [--gpu {collapsed,load_only,load_and_vram}] [--color {red,green,blue,pink,mixed}]
-                [--percentages {hidden,last}] [--disk] [--swap] [--network] [--no-disk] [--no-swap] [--no-network]
+cubestat [-h] [--refresh_ms REFRESH_MS]
+                [--buffer_size BUFFER_SIZE]
+                [--cpu {all,by_cluster,by_core}]
+                [--gpu {collapsed,load_only,load_and_vram}]
+                [--power {combined,all,off}]
+                [--color {red,green,blue,pink,olive,navy,blue_dark,purple,mixed,dark}]
+                [--view {off,one,all}] [--disk {show,hide}]
+                [--swap {show,hide}] [--network {show,hide}]
 
 options:
   -h, --help            show this help message and exit
   --refresh_ms REFRESH_MS, -i REFRESH_MS
                         Update frequency, milliseconds
   --buffer_size BUFFER_SIZE
-                        How many datapoints to store. Having it larger than screen width is a good idea as terminal window
-                        can be resized
+                        How many datapoints to store. Having it larger
+                        than screen width is a good idea as terminal
+                        window can be resized
   --cpu {all,by_cluster,by_core}
-                        CPU mode - showing all cores, only cumulative by cluster or both. Can be toggled by pressing c.
+                        CPU mode - showing all cores, only cumulative by
+                        cluster or both. Can be toggled by pressing c.
   --gpu {collapsed,load_only,load_and_vram}
-                        GPU mode - hidden, showing all GPUs load, or showing load and vram usage. Can be toggled by pressing
-                        g.
-  --color {red,green,blue,pink,mixed}
-  --percentages {hidden,last}
-                        Show/hide numeric utilization percentage. Can be toggled by pressing p.
-  --disk                Show disk read/write. Can be toggled by pressing d.
-  --swap                Show swap . Can be toggled by pressing s.
-  --network             Show network io. Can be toggled by pressing n.
-  --no-disk             Hide disk read/write. Can be toggled by pressing d.
-  --no-swap             Hide swap. Can be toggled by pressing s.
-  --no-network          Hide network io. Can be toggled by pressing n.
+                        GPU mode - hidden, showing all GPUs load, or
+                        showing load and vram usage. Can be toggled by
+                        pressing g.
+  --power {combined,all,off}
+                        Power mode - off, showing breakdown CPU/GPU/ANE
+                        load, or showing combined usage. Can be toggled
+                        by pressing p.
+  --color {red,green,blue,pink,olive,navy,blue_dark,purple,mixed,dark}
+  --view {off,one,all}  legend/values/time mode. Can be toggled by
+                        pressing v.
+  --disk {show,hide}    Show disk read/write. Can be toggled by pressing
+                        d.
+  --swap {show,hide}    Show swap . Can be toggled by pressing s.
+  --network {show,hide}
+                        Show network io. Can be toggled by pressing n.
 ```
 
 Interactive commands:
 * q - quit
-* p - show/hide values for last data point
+* v - toggle view mode
 * c - change cpu display mode (individual cores, aggregated or both)
 * g - change gpu display mode (individual gpus, aggregated and optionally VRAM usage)
 * d - show/hide disk reads/writes
 * n - show/hide network utilization
 * s - show/hide swap
+* p - show/hide power usage if available
 * UP/DOWN - scroll the lines in case there are more cores;
 * LEFT/RIGHT - scroll left/right. Autorefresh is paused when user scrolled to non-latest position. To resume autorefresh either scroll back to the right or press '0';
 * 0 - reset horizontal scroll, continue autorefresh.
