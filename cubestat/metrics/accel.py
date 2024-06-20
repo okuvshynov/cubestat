@@ -32,7 +32,6 @@ class ane_metric:
 
     def read_macos(self, context):
         res = {}
-        self.n_gpus = 1
         res['ANE util %'] = 100.0 * context['processor']['ane_power'] / self.ane_scaler
         return res
     

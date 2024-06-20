@@ -97,6 +97,7 @@ class Horizon:
             'power': power_metric(reader.platform),
             'ram'  : ram_metric(reader.platform),
         }
+        self.selection = None
 
     def do_read(self, context):
         for group, metric in self.metrics.items():
@@ -138,6 +139,24 @@ class Horizon:
     
     def get_col(self, ago):
         return self.cols - 1 - len(self.spacing) - 1 - ago
+    
+    def vertical_time(self, at, curr_line):
+        str_pos = self.get_col(at)
+        time_s = (args.refresh_ms * (at + self.horizontal_shift)) / 1000.0
+        time_str = f'-{time_s:.2f}s'
+        if str_pos > len(time_str):
+            curr_line = curr_line[:str_pos - len(time_str)] + time_str + "|" + curr_line[str_pos + 1:]
+        return curr_line
+    
+    def vertical_val(self, group_name, at, data_slice, curr_line):
+        if at >= len(data_slice):
+            return curr_line
+        data_index = - at - 1
+        v = self.format_value(group_name, data_slice, data_index)
+        str_pos = self.get_col(at)
+        if str_pos > len(v):
+            curr_line = curr_line[:str_pos - len(v)] + v + "|" + curr_line[str_pos + 1:]
+        return curr_line
 
     def render(self):
         with self.lock:
@@ -154,6 +173,7 @@ class Horizon:
         # ╚ ▁▁▁  ▁    ▁▆▅▄ ▁▁▁      ▂ ▇▃▃▂█▃▇▁▃▂▁▁▂▁▁▃▃▂▁▂▄▄▁▂▆▁▃▁▂▃▁▁▁▂▂▂▂▂▂▁▁▃▂▂▁▂▁▃▄▃ ▁▁▃▁▄▂▃▂▂▂▃▃▅▅ ╝
 
         base_fill = ['.'] * self.cols
+        base_line = "".join(base_fill)
 
         row = 0
         with self.lock:
@@ -162,7 +182,7 @@ class Horizon:
                     base_fill[self.get_col(ago)] = '|'
                     if self.modes['view'] != ViewMode.all:
                         break
-            base_line = "".join(base_fill)
+            
             skip = self.vertical_shift
             for group_name, group in self.data.items():
                 for title, series in group.items():
@@ -202,15 +222,11 @@ class Horizon:
                     curr_line = base_line
                     if self.modes['view'] != ViewMode.off:
                         for ago in range(0, self.cols, self.timeline_interval):
-                            if ago >= len(data_slice):
-                                break
-                            data_index = - ago - 1
-                            v = self.format_value(group_name, data_slice, data_index)
-                            str_pos = self.get_col(ago)
-                            if str_pos > len(v):
-                                curr_line = curr_line[:str_pos - len(v)] + v + curr_line[str_pos:]
+                            curr_line = self.vertical_val(group_name, ago, data_slice, curr_line)
                             if self.modes['view'] != ViewMode.all:
                                 break
+                        if self.selection is not None:
+                            curr_line = self.vertical_val(group_name, self.get_col(self.selection), data_slice, curr_line)
                     title_filling = curr_line[len(title_str):-len(topright_border)]
                     self.write_string(row, len(title_str), title_filling)
                     self.write_string(row, self.cols - len(topright_border), topright_border)
@@ -245,12 +261,11 @@ class Horizon:
             if self.modes['view'] != ViewMode.off:
                 curr_line = base_line
                 for ago in range(0, self.cols, self.timeline_interval):
-                    str_pos = self.get_col(ago)
-                    time_s = (args.refresh_ms * (ago + self.horizontal_shift)) / 1000.0
-                    time_str = f'-{time_s:.2f}s'
-                    if str_pos > len(time_str):
-                        curr_line = curr_line[:str_pos - len(time_str)] + time_str + "|" + curr_line[str_pos + 1:]
+                    curr_line = self.vertical_time(ago, curr_line)
+                if self.selection is not None:
+                    curr_line = self.vertical_time(self.get_col(self.selection), curr_line)
                 curr_line = curr_line[len(self.spacing) + 1:  - len(self.spacing) - 1]
+
                 self.write_string(row, 0, f"╚{self.spacing}{curr_line}{self.spacing}╝")
 
         self.stdscr.refresh()
@@ -259,6 +274,7 @@ class Horizon:
         reader_thread = Thread(target=self.reader.loop, daemon=True, args=[self.do_read])
         reader_thread.start()
         self.stdscr.keypad(True)
+        curses.mousemask(1)
         mode_keymap = {
             'v': 'view',
             'c': 'cpu',
@@ -306,6 +322,11 @@ class Horizon:
                     if self.horizontal_shift > 0:
                         self.horizontal_shift = 0
                         self.settings_changed = True
+            if key == curses.KEY_MOUSE:
+                _, mx, my, _, _ = curses.getmouse()
+                with self.lock:
+                    self.selection = mx
+                    self.settings_changed = True
 
 def start(stdscr, reader):
     h = Horizon(stdscr, reader)
