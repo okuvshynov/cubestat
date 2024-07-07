@@ -24,7 +24,7 @@ class gpu_metric(base_metric):
 
 @register_metric
 class nvidia_gpu_metric(gpu_metric):
-    def __init__(self, platform) -> None:
+    def __init__(self) -> None:
         self.has_nvidia = False
         self.n_gpus     = 0
         try:
