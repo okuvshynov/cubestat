@@ -42,7 +42,6 @@ class psutil_cpu_metric(cpu_metric):
 
         return res
 
-    # probably more, but I don't have other OS anyway
     @classmethod
     def supported_platforms(cls):
         return ['linux']
