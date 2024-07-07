@@ -2,13 +2,29 @@ import subprocess
 from importlib.util import find_spec
 
 from cubestat.common import GPUMode
+from cubestat.metrics.base_metric import base_metric
+from cubestat.metrics.registry import register_metric
 
-class gpu_metric:
+class gpu_metric(base_metric):
+    def pre(self, mode, title):
+        if self.n_gpus > 0 and mode == GPUMode.collapsed and "Total GPU" not in title:
+            return False, ''
+        if mode == GPUMode.load_only and "vram" in title:
+            return False, ''
+        if self.n_gpus > 1 and "Total GPU" not in title:
+            return True, '  '
+        return True, ''
+    
+    def format(self, values, idxs):
+        return 100.0, [f'{values[i]:3.0f}%' for i in idxs]
+
+    @classmethod
+    def key(cls):
+        return 'gpu'
+
+@register_metric
+class nvidia_gpu_metric(gpu_metric):
     def __init__(self, platform) -> None:
-        if platform == 'linux':
-            self.read = self.read_linux
-        if platform == 'macos':
-            self.read = self.read_macos
         self.has_nvidia = False
         self.n_gpus     = 0
         try:
@@ -22,13 +38,7 @@ class gpu_metric:
             # TODO: add logging here
             pass
 
-    def read_macos(self, context):
-        res = {}
-        self.n_gpus = 1
-        res['GPU util %'] = 100.0 - 100.0 * context['gpu']['idle_ratio']
-        return res
-    
-    def read_linux(self, _context):
+    def read(self, _context):
         res = {}
         total = 0
         if self.has_nvidia:
@@ -45,15 +55,19 @@ class gpu_metric:
                     combined[k] = v
                 return combined
         return res
+
+    @classmethod
+    def supported_platforms(cls):
+        return ['linux']
     
-    def pre(self, mode, title):
-        if self.n_gpus > 0 and mode == GPUMode.collapsed and "Total GPU" not in title:
-            return False, ''
-        if mode == GPUMode.load_only and "vram" in title:
-            return False, ''
-        if self.n_gpus > 1 and "Total GPU" not in title:
-            return True, '  '
-        return True, ''
+@register_metric
+class macos_gpu_metric(gpu_metric):
+    def read(self, context):
+        res = {}
+        self.n_gpus = 1
+        res['GPU util %'] = 100.0 - 100.0 * context['gpu']['idle_ratio']
+        return res
     
-    def format(self, values, idxs):
-        return 100.0, [f'{values[i]:3.0f}%' for i in idxs]
+    @classmethod
+    def supported_platforms(cls):
+        return ['macos']

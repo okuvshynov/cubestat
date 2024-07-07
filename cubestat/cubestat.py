@@ -89,12 +89,10 @@ class Horizon:
         }
 
         self.metrics = {
-        #    'cpu': cpu_metric(reader.platform),
             'disk': disk_metric(reader.platform, args.refresh_ms),
             'swap': swap_metric(reader.platform),
             'network': network_metric(reader.platform, args.refresh_ms),
-            'gpu' : gpu_metric(reader.platform),
-        #    'ane' : ane_metric(reader.platform),
+            #    'gpu' : gpu_metric(reader.platform),
             'power': power_metric(reader.platform),
             'ram'  : ram_metric(reader.platform),
         }
