@@ -18,15 +18,11 @@ from cubestat.common import CPUMode, SimpleMode, GPUMode, PowerMode, ViewMode
 from cubestat.colors import Color, dark_colormap, light_colormap, prepare_cells
 
 from cubestat.metrics.registry import get_metrics
-from cubestat.metrics.cpu import cpu_metric
 from cubestat.metrics.disk import disk_metric
-from cubestat.metrics.swap import swap_metric
 from cubestat.metrics.network import network_metric
-from cubestat.metrics.gpu import gpu_metric
-from cubestat.metrics.accel import ane_metric
 from cubestat.metrics.memory import ram_metric
 
-import cubestat.metrics.power
+from cubestat.metrics import power, cpu, gpu, accel, swap
 
 def auto_cpu_mode() -> CPUMode:
      return CPUMode.all if os.cpu_count() < 40 else CPUMode.by_cluster
