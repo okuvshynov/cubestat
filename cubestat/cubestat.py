@@ -18,6 +18,7 @@ from cubestat.common import CPUMode, SimpleMode, GPUMode, PowerMode, ViewMode
 from cubestat.colors import Color, dark_colormap, light_colormap, prepare_cells
 
 from cubestat.metrics.registry import get_metrics
+from cubestat.metrics.cpu import cpu_metric
 from cubestat.metrics.disk import disk_metric
 from cubestat.metrics.swap import swap_metric
 from cubestat.metrics.network import network_metric
