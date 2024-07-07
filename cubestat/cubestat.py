@@ -17,7 +17,7 @@ from cubestat.readers.macos_reader import AppleReader
 from cubestat.common import CPUMode, SimpleMode, GPUMode, PowerMode, ViewMode
 from cubestat.colors import Color, dark_colormap, light_colormap, prepare_cells
 
-from cubestat.metrics.cpu import cpu_metric
+from cubestat.metrics.registry import get_metrics
 from cubestat.metrics.disk import disk_metric
 from cubestat.metrics.swap import swap_metric
 from cubestat.metrics.network import network_metric
@@ -88,7 +88,7 @@ class Horizon:
         }
 
         self.metrics = {
-            'cpu': cpu_metric(reader.platform),
+        #    'cpu': cpu_metric(reader.platform),
             'disk': disk_metric(reader.platform, args.refresh_ms),
             'swap': swap_metric(reader.platform),
             'network': network_metric(reader.platform, args.refresh_ms),
@@ -97,6 +97,10 @@ class Horizon:
             'power': power_metric(reader.platform),
             'ram'  : ram_metric(reader.platform),
         }
+
+        reg_metrics = get_metrics(reader.platform)
+        for k, v in reg_metrics.items():
+            self.metrics[k] = v
         self.selection = None
 
     def do_read(self, context):
