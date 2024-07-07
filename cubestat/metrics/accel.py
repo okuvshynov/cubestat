@@ -1,13 +1,12 @@
 # various ML accelerators, for now supports apple's NE
 import subprocess
+from cubestat.metrics.base_metric import base_metric
+from cubestat.metrics.registry import register_metric
 
-class ane_metric:
-    def __init__(self, platform) -> None:
-        if platform == 'linux':
-            self.read = self.read_linux
-        if platform == 'macos':
-            self.ane_scaler = self.get_ane_scaler()
-            self.read = self.read_macos
+@register_metric
+class ane_metric(base_metric):
+    def __init__(self) -> None:
+        self.ane_scaler = self.get_ane_scaler()
 
     def get_ane_scaler(self) -> float:
         # This is pretty much a guess based on tests on a few models I had available.
@@ -30,16 +29,21 @@ class ane_metric:
                 break
         return ane_scaler
 
-    def read_macos(self, context):
+    def read(self, context):
         res = {}
         res['ANE util %'] = 100.0 * context['processor']['ane_power'] / self.ane_scaler
         return res
-    
-    def read_linux(self, _context):
-        return {}
     
     def pre(self, mode, title):
         return True, ''
     
     def format(self, values, idxs):
         return 100.0, [f'{values[i]:3.0f}%' for i in idxs]
+
+    @classmethod
+    def key(cls):
+        return 'ane'
+
+    @classmethod
+    def supported_platforms(cls):
+        return ['macos']
