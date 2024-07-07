@@ -24,8 +24,9 @@ from cubestat.metrics.swap import swap_metric
 from cubestat.metrics.network import network_metric
 from cubestat.metrics.gpu import gpu_metric
 from cubestat.metrics.accel import ane_metric
-from cubestat.metrics.power import power_metric
 from cubestat.metrics.memory import ram_metric
+
+import cubestat.metrics.power
 
 def auto_cpu_mode() -> CPUMode:
      return CPUMode.all if os.cpu_count() < 40 else CPUMode.by_cluster
@@ -90,10 +91,7 @@ class Horizon:
 
         self.metrics = {
             'disk': disk_metric(reader.platform, args.refresh_ms),
-            #'swap': swap_metric(reader.platform),
             'network': network_metric(reader.platform, args.refresh_ms),
-            #    'gpu' : gpu_metric(reader.platform),
-            'power': power_metric(reader.platform),
             'ram'  : ram_metric(reader.platform),
         }
 
