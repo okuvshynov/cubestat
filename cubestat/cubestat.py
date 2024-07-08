@@ -236,13 +236,13 @@ class Horizon:
         t.start()
         self.stdscr.keypad(True)
         curses.mousemask(1)
-        mode_keymap = {m.hotkey() : m for _, m in self.metrics.items() if m.hotkey()}
+        hotkeys = [(m.hotkey(), m) for m in self.metrics.values() if m.hotkey()]
         while True:
             self.render()
             key = self.stdscr.getch()
             if key == ord('q') or key == ord('Q'):
                 exit(0)
-            for k, metric in mode_keymap.items():
+            for k, metric in hotkeys:
                 if key == ord(k):
                     with self.lock:
                         metric.mode = metric.mode.next()
