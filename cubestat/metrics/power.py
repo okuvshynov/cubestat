@@ -32,6 +32,9 @@ class macos_power_metric(base_metric):
     def key(cls):
         return 'power'
 
+    def hotkey(self):
+        return 'p'
+
     @classmethod
     def configure_argparse(cls, parser):
         parser.add_argument('--power', type=PowerMode, default=PowerMode.combined, choices=list(PowerMode), help='Power mode - off, showing breakdown CPU/GPU/ANE load, or showing combined usage. Can be toggled by pressing p.')

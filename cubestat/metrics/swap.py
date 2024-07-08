@@ -27,6 +27,9 @@ class swap_metric(base_metric):
         self.mode = conf.swap
         return self
 
+    def hotkey(self):
+        return 's'
+
 @cubestat_metric('darwin')
 class macos_swap_metric(swap_metric):
     def _parse_memstr(self, size_str):

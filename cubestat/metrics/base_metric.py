@@ -29,3 +29,6 @@ class base_metric(ABC):
     @abstractmethod
     def key(cls):
         pass
+
+    def hotkey(self):
+        return None

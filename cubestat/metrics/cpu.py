@@ -30,6 +30,9 @@ class cpu_metric(base_metric):
     def key(cls):
         return 'cpu'
 
+    def hotkey(self):
+        return 'c'
+
     @classmethod
     def configure_argparse(cls, parser):
         parser.add_argument('--cpu', type=CPUMode, default=auto_cpu_mode(), choices=list(CPUMode), help='CPU mode - showing all cores, only cumulative by cluster or both. Can be toggled by pressing c.')

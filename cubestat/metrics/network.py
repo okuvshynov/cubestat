@@ -17,6 +17,9 @@ class network_metric(base_metric):
     def key(cls):
         return 'network'
 
+    def hotkey(self):
+        return 'n'
+
     def configure(self, conf):
         self.mode = conf.network
         self.rate_reader = RateReader(conf.refresh_ms)

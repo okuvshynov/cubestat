@@ -239,16 +239,8 @@ class Horizon:
         t.start()
         self.stdscr.keypad(True)
         curses.mousemask(1)
-        mode_keymap = {
-            'v': 'view',
-            'c': 'cpu',
-            'p': 'power',
-            'g': 'gpu',
-            'n': 'network',
-            'd': 'disk',
-            's': 'swap',
-        }
-        mode_keymap = {k : v for k, v in mode_keymap.items() if v in self.metrics.keys()}
+        mode_keymap = {m.hotkey() : k for k, m in self.metrics.items() if m.hotkey()}
+        mode_keymap['v'] = 'view'
         while True:
             self.render()
             key = self.stdscr.getch()

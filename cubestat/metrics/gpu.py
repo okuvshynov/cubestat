@@ -26,6 +26,9 @@ class gpu_metric(base_metric):
     def key(cls):
         return 'gpu'
 
+    def hotkey(self):
+        return 'g'
+
     @classmethod
     def configure_argparse(cls, parser):
         parser.add_argument('--gpu', type=GPUMode, default=GPUMode.load_only, choices=list(GPUMode), help='GPU mode - hidden, showing all GPUs load, or showing load and vram usage. Can be toggled by pressing g.')
