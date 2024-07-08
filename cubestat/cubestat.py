@@ -11,8 +11,8 @@ import sys
 from math import floor
 from threading import Thread, Lock
 
-from cubestat.readers.linux_reader import LinuxReader
-from cubestat.readers.macos_reader import AppleReader
+from cubestat.platforms.linux import LinuxPlatform
+from cubestat.platforms.macos import MacOSPlatform
 
 from cubestat.common import CPUMode, SimpleMode, GPUMode, PowerMode, ViewMode
 from cubestat.colors import Color, dark_colormap, light_colormap, prepare_cells
@@ -324,9 +324,9 @@ def start(stdscr, reader):
 def main():
     logging.basicConfig(filename='/tmp/cubestat.log', level=logging.INFO)
     if sys.platform == "darwin":
-        curses.wrapper(start, AppleReader(args.refresh_ms))
+        curses.wrapper(start, MacOSPlatform(args.refresh_ms))
     if sys.platform == "linux" or sys.platform == "linux2":
-        curses.wrapper(start, LinuxReader(args.refresh_ms))
+        curses.wrapper(start, LinuxPlatform(args.refresh_ms))
     logging.fatal(f'platform {sys.platform} is not supported yet.')
 
 if __name__ == '__main__':

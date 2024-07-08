@@ -1,6 +1,6 @@
 import time
 
-class LinuxReader:
+class LinuxPlatform:
     def __init__(self, interval_ms):
         self.interval_ms = interval_ms
         self.platform    = 'linux'
