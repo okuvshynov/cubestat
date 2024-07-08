@@ -21,9 +21,9 @@ class disk_metric(base_metric):
     def configure_argparse(cls, parser):
         parser.add_argument('--disk', type=SimpleMode, default=SimpleMode.show, choices=list(SimpleMode), help="Show disk read/write. Can be toggled by pressing d.")
 
-
     def configure(self, conf):
-        self.rate_reader = RateReader(conf['interval_ms'])
+        self.mode = conf.disk
+        self.rate_reader = RateReader(conf.refresh_ms)
         return self
 
 @cubestat_metric('darwin')

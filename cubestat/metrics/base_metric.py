@@ -1,5 +1,7 @@
 from abc import ABC, abstractmethod
 
+from cubestat.common import SimpleMode
+
 class base_metric(ABC):
     @abstractmethod
     def read(self, context):
@@ -15,6 +17,7 @@ class base_metric(ABC):
 
     # configure metric instance
     def configure(self, config):
+        self.mode = SimpleMode.show
         return self
 
     # if we define any options to select/toggle view mode

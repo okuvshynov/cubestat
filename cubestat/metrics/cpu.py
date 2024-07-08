@@ -22,6 +22,10 @@ class cpu_metric(base_metric):
     def format(self, values, idxs):
         return 100.0, [f'{values[i]:3.0f}%' for i in idxs]
 
+    def configure(self, conf):
+        self.mode = conf.cpu
+        return self
+
     @classmethod
     def key(cls):
         return 'cpu'

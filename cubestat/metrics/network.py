@@ -18,7 +18,8 @@ class network_metric(base_metric):
         return 'network'
 
     def configure(self, conf):
-        self.rate_reader = RateReader(conf['interval_ms'])
+        self.mode = conf.network
+        self.rate_reader = RateReader(conf.refresh_ms)
         return self
 
     @classmethod

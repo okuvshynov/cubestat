@@ -54,22 +54,13 @@ class Horizon:
         self.horizontal_shift = 0
         self.modes = {
             'view'  : ViewMode.one,
-            'cpu'   : args.cpu,
-            'gpu'   : args.gpu,
-            'power' : args.power,
-            'disk'  : args.disk,
-            'swap'  : args.swap,
-            'network' : args.network,
-            'ane'   : SimpleMode.show,
-            'ram'   : SimpleMode.show,
         }
 
         self.refresh_ms = args.refresh_ms
-        metric_conf = {
-            'interval_ms': args.refresh_ms
-        }
+        self.metrics = get_metrics(args)
 
-        self.metrics = get_metrics(metric_conf)
+        for k, m in self.metrics.items():
+            self.modes[k] = m.mode
         self.selection = None
 
     def do_read(self, context):
@@ -257,6 +248,7 @@ class Horizon:
             'd': 'disk',
             's': 'swap',
         }
+        mode_keymap = {k : v for k, v in mode_keymap.items() if v in self.metrics.keys()}
         while True:
             self.render()
             key = self.stdscr.getch()

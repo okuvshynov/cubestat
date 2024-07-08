@@ -14,9 +14,9 @@ def metrics_configure_argparse(parser):
     for _, metric_cls in _metrics:
         metric_cls.configure_argparse(parser)
 
-def get_metrics(config):
+def get_metrics(args):
     return {
-        key: cls().configure(config)
+        key: cls().configure(args)
         for key, cls in _metrics
     }
 

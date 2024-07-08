@@ -23,6 +23,10 @@ class swap_metric(base_metric):
     def configure_argparse(cls, parser):
         parser.add_argument('--swap', type=SimpleMode, default=SimpleMode.show, choices=list(SimpleMode), help="Show swap . Can be toggled by pressing s.")
 
+    def configure(self, conf):
+        self.mode = conf.swap
+        return self
+
 @cubestat_metric('darwin')
 class macos_swap_metric(swap_metric):
     def _parse_memstr(self, size_str):
