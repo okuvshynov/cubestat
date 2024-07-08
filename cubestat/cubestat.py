@@ -38,7 +38,7 @@ parser.add_argument('--network', type=SimpleMode, default=SimpleMode.show, choic
 args = parser.parse_args()
 
 class Horizon:
-    def __init__(self, stdscr, reader):
+    def __init__(self, stdscr, platform):
         stdscr.nodelay(False)
         stdscr.timeout(50)
         curses.curs_set(0)
@@ -66,7 +66,7 @@ class Horizon:
         self.snapshots_observed = 0
         self.snapshots_rendered = 0
         self.settings_changed = False
-        self.reader = reader
+        self.platform = platform
         self.vertical_shift   = 0
         self.horizontal_shift = 0
         self.modes = {
@@ -85,7 +85,7 @@ class Horizon:
             'interval_ms': args.refresh_ms
         }
 
-        self.metrics = get_metrics(reader.platform, metric_conf)
+        self.metrics = get_metrics(platform.platform, metric_conf)
         self.selection = None
 
     def do_read(self, context):
@@ -260,8 +260,8 @@ class Horizon:
         self.stdscr.refresh()
 
     def loop(self):
-        reader_thread = Thread(target=self.reader.loop, daemon=True, args=[self.do_read])
-        reader_thread.start()
+        t = Thread(target=self.platform.loop, daemon=True, args=[self.do_read])
+        t.start()
         self.stdscr.keypad(True)
         curses.mousemask(1)
         mode_keymap = {
@@ -317,8 +317,8 @@ class Horizon:
                     self.selection = mx
                     self.settings_changed = True
 
-def start(stdscr, reader):
-    h = Horizon(stdscr, reader)
+def start(stdscr, platform):
+    h = Horizon(stdscr, platform)
     h.loop()
 
 def main():
