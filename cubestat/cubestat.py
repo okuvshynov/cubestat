@@ -15,7 +15,7 @@ from cubestat.platforms.linux import LinuxPlatform
 from cubestat.platforms.macos import MacOSPlatform
 
 from cubestat.common import CPUMode, SimpleMode, GPUMode, PowerMode, ViewMode
-from cubestat.colors import Color, dark_colormap, light_colormap, prepare_cells
+from cubestat.colors import get_scheme, prepare_cells
 
 from cubestat.metrics.registry import get_metrics, metrics_configure_argparse
 from cubestat.metrics import cpu, gpu, memory, accel, swap, network, disk, power
@@ -40,12 +40,6 @@ class Horizon:
         init_group  = lambda: collections.defaultdict(init_series)
         self.data   = collections.defaultdict(init_group)
 
-        if args.color == Color.mixed:
-            self.colormap = light_colormap
-        elif args.color == Color.dark:
-            self.colormap = dark_colormap
-        else:
-            self.colormap = {k: args.color for k, _ in light_colormap.items()}
         self.snapshots_observed = 0
         self.snapshots_rendered = 0
         self.settings_changed = False
@@ -203,7 +197,7 @@ class Horizon:
                     #
                     # ╔ GPU util %............................................................................:  4% ╗
                     # ╚ ▁▁▁  ▁    ▁▆▅▄ ▁▁▁      ▂ ▇▃▃▂█▃▇▁▃▂▁▁▂▁▁▃▃▂▁▂▄▄▁▂▆▁▃▁▂▃▁▁▁▂▂▂▂▂▂▁▁▃▂▂▁▂▁▃▄▃ ▁▁▃▁▄▂▃▂▂▂▃▃▅▅ ╝
-                    cells = self.cells[self.colormap[group_name]]
+                    cells = self.cells[get_scheme(group_name)]
                     scaler = len(cells) / max_value
                     col = self.cols - (len(data_slice) + len(self.spacing)) - 2
                     for v in data_slice:
@@ -298,7 +292,6 @@ def main():
     parser = argparse.ArgumentParser("cubestat")
     parser.add_argument('--refresh_ms', '-i', type=int, default=1000, help='Update frequency, milliseconds')
     parser.add_argument('--buffer_size', type=int, default=500, help='How many datapoints to store. Having it larger than screen width is a good idea as terminal window can be resized')
-    parser.add_argument('--color', type=Color, default=Color.mixed, choices=list(Color))
     parser.add_argument('--view', type=ViewMode, default=ViewMode.one, choices=list(ViewMode), help='legend/values/time mode. Can be toggled by pressing v.')
 
     metrics_configure_argparse(parser)

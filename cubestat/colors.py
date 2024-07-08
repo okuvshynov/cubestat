@@ -7,24 +7,8 @@ class Color(EnumStr):
     green = 'green'
     blue = 'blue'
     pink = 'pink'
-    olive = 'olive'
-    navy = 'navy'
-    blue_dark = 'blue_dark'
-    purple = 'purple'
-    mixed = 'mixed'
-    dark = 'dark'
 
-dark_colormap = {
-    'cpu': Color.purple,
-    'ram': Color.navy,
-    'gpu': Color.blue_dark,
-    'ane': Color.blue_dark,
-    'disk': Color.olive,
-    'network': Color.olive,
-    'swap': Color.navy,
-    'power': Color.blue_dark,
-}
-
+# TODO: should this be defined in the metric as well?
 light_colormap = {
     'cpu': Color.green,
     'ram': Color.pink,
@@ -41,10 +25,6 @@ colors_ansi256 = {
     Color.red: [-1, 224, 181, 138],
     Color.blue: [-1, 189, 146, 103],
     Color.pink: [-1, 223, 180, 137],
-    Color.olive: [-1, 58, 101, 144],
-    Color.navy: [-1, 18, 61, 105],
-    Color.blue_dark: [-1, 23, 66, 109],
-    Color.purple: [-1, 53, 96, 138]
 }
 
 def prepare_cells():
@@ -58,3 +38,6 @@ def prepare_cells():
             cells[name].extend((chr, colorpair) for chr in chrs)
             colorpair += 1
     return cells
+
+def get_scheme(metric):
+    return light_colormap.get(metric, Color.green)

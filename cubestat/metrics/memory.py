@@ -2,6 +2,7 @@ import psutil
 
 from cubestat.metrics.base_metric import base_metric
 from cubestat.metrics.registry import cubestat_metric
+from cubestat.common import label2
 
 @cubestat_metric('darwin', 'linux')
 class ram_metric(base_metric):
@@ -18,13 +19,12 @@ class ram_metric(base_metric):
     def key(cls):
         return 'ram'
 
-"""
 @cubestat_metric('darwin', 'linux')
 class abs_ram_metric(base_metric):
     def read(self, _context):
         return {'RAM used': psutil.virtual_memory().used}
     
-    def pre(self, mode, title):
+    def pre(self, title):
         return True, ''
     
     def format(self, values, idxs):
@@ -33,4 +33,3 @@ class abs_ram_metric(base_metric):
     @classmethod
     def key(cls):
         return 'ram_abs'
-"""
