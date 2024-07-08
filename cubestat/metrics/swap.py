@@ -19,7 +19,7 @@ class swap_metric(base_metric):
     def key(cls):
         return 'swap'
 
-@cubestat_metric
+@cubestat_metric('macos')
 class macos_swap_metric(swap_metric):
     def _parse_memstr(self, size_str):
         match = re.match(r"(\d+(\.\d+)?)([KMG]?)", size_str)
@@ -47,11 +47,7 @@ class macos_swap_metric(swap_metric):
             logging.error("unable to get swap stats.")
         return res
 
-    @classmethod
-    def supported_platforms(cls):
-        return ['macos']
-
-@cubestat_metric
+@cubestat_metric('linux')
 class linux_swap_metric(swap_metric):
     def read(self, _context):
         with open('/proc/meminfo', 'r') as file:
@@ -67,7 +63,3 @@ class linux_swap_metric(swap_metric):
                 swap_free = int(line.split()[1])
 
         return {'swap used': 1024 * float(swap_total - swap_free)}
-    
-    @classmethod
-    def supported_platforms(cls):
-        return ['linux']

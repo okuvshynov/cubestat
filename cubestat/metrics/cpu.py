@@ -22,7 +22,7 @@ class cpu_metric(base_metric):
     def key(cls):
         return 'cpu'
 
-@cubestat_metric
+@cubestat_metric('linux')
 class psutil_cpu_metric(cpu_metric):
     def read(self, _context):
         self.cpu_clusters = []
@@ -42,11 +42,7 @@ class psutil_cpu_metric(cpu_metric):
 
         return res
 
-    @classmethod
-    def supported_platforms(cls):
-        return ['linux']
-
-@cubestat_metric
+@cubestat_metric('macos')
 class macos_cpu_metric(cpu_metric):
     def read(self, context):
         self.cpu_clusters = []
@@ -65,8 +61,4 @@ class macos_cpu_metric(cpu_metric):
             res[cluster_title] = 100.0 - 100.0 * idle_cluster / total_cluster
 
         return res
-
-    @classmethod
-    def supported_platforms(cls):
-        return ['macos']
 

@@ -18,10 +18,5 @@ class base_metric(ABC):
 
     @classmethod
     @abstractmethod
-    def supported_platforms(cls):
-        pass
- 
-    @classmethod
-    @abstractmethod
     def key(cls):
         pass

@@ -21,19 +21,15 @@ class disk_metric(base_metric):
         self.rate_reader = RateReader(conf['interval_ms'])
         return self
 
-@cubestat_metric
+@cubestat_metric('macos')
 class macos_disc_metric(disk_metric):
     def read(self, context):
         res = {}
         res['disk read']  = context['disk']['rbytes_per_s']
         res['disk write'] = context['disk']['wbytes_per_s']
         return res
-
-    @classmethod
-    def supported_platforms(cls):
-        return ['macos']
     
-@cubestat_metric
+@cubestat_metric('linux')
 class linux_disc_metric(disk_metric):
     def read(self, _context):
         res = {}
@@ -41,7 +37,3 @@ class linux_disc_metric(disk_metric):
         res['disk read']  = self.rate_reader.next('disk read', disk_io.read_bytes)
         res['disk write']  = self.rate_reader.next('disk write', disk_io.write_bytes)
         return res
-    
-    @classmethod
-    def supported_platforms(cls):
-        return ['linux']

@@ -2,7 +2,7 @@ from cubestat.common import PowerMode, label10
 from cubestat.metrics.base_metric import base_metric
 from cubestat.metrics.registry import cubestat_metric
 
-@cubestat_metric
+@cubestat_metric('macos')
 class macos_power_metric(base_metric):
     def read(self, context):
         res = {}
@@ -27,7 +27,3 @@ class macos_power_metric(base_metric):
     @classmethod
     def key(cls):
         return 'power'
-
-    @classmethod
-    def supported_platforms(cls):
-        return ['macos']

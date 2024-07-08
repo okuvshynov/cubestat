@@ -21,7 +21,7 @@ class network_metric(base_metric):
         self.rate_reader = RateReader(conf['interval_ms'])
         return self
 
-@cubestat_metric
+@cubestat_metric('macos')
 class macos_network_metric(network_metric):
     def read(self, context):
         res = {}
@@ -29,11 +29,7 @@ class macos_network_metric(network_metric):
         res['network tx'] = context['network']['obyte_rate']
         return res
 
-    @classmethod
-    def supported_platforms(cls):
-        return ['macos']
-
-@cubestat_metric
+@cubestat_metric('linux')
 class linux_network_metric(network_metric):
     def read(self, _context):
         res = {}
@@ -41,7 +37,3 @@ class linux_network_metric(network_metric):
         res['network rx'] = self.rate_reader.next('network rx', net_io.bytes_sent)
         res['network tx'] = self.rate_reader.next('network tx', net_io.bytes_recv)
         return res
-    
-    @classmethod
-    def supported_platforms(cls):
-        return ['linux']

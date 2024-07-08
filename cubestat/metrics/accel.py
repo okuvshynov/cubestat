@@ -3,7 +3,7 @@ import subprocess
 from cubestat.metrics.base_metric import base_metric
 from cubestat.metrics.registry import cubestat_metric
 
-@cubestat_metric
+@cubestat_metric('macos')
 class ane_metric(base_metric):
     def __init__(self) -> None:
         self.ane_scaler = self.get_ane_scaler()
@@ -43,7 +43,3 @@ class ane_metric(base_metric):
     @classmethod
     def key(cls):
         return 'ane'
-
-    @classmethod
-    def supported_platforms(cls):
-        return ['macos']

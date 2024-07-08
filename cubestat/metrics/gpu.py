@@ -22,7 +22,7 @@ class gpu_metric(base_metric):
     def key(cls):
         return 'gpu'
 
-@cubestat_metric
+@cubestat_metric('linux')
 class nvidia_gpu_metric(gpu_metric):
     def __init__(self) -> None:
         self.has_nvidia = False
@@ -55,19 +55,11 @@ class nvidia_gpu_metric(gpu_metric):
                     combined[k] = v
                 return combined
         return res
-
-    @classmethod
-    def supported_platforms(cls):
-        return ['linux']
     
-@cubestat_metric
+@cubestat_metric('macos')
 class macos_gpu_metric(gpu_metric):
     def read(self, context):
         res = {}
         self.n_gpus = 1
         res['GPU util %'] = 100.0 - 100.0 * context['gpu']['idle_ratio']
         return res
-    
-    @classmethod
-    def supported_platforms(cls):
-        return ['macos']
