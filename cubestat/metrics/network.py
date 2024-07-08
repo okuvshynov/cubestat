@@ -36,7 +36,7 @@ class macos_network_metric(network_metric):
     
 @register_metric
 class linux_network_metric(network_metric):
-    def read_linux(self, _context):
+    def read(self, _context):
         res = {}
         net_io = psutil.net_io_counters()
         res['network rx'] = self.rate_reader.next('network rx', net_io.bytes_sent)
