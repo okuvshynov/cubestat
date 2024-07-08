@@ -7,8 +7,8 @@ from cubestat.metrics.registry import cubestat_metric
 from cubestat.common import SimpleMode, label2
 
 class swap_metric(base_metric):
-    def pre(self, mode, title):
-        if mode == SimpleMode.hide:
+    def pre(self, title):
+        if self.mode == SimpleMode.hide:
             return False, ''
         return True, ''
 

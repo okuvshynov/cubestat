@@ -34,7 +34,7 @@ class ane_metric(base_metric):
         res['ANE util %'] = 100.0 * context['processor']['ane_power'] / self.ane_scaler
         return res
     
-    def pre(self, mode, title):
+    def pre(self, title):
         return True, ''
     
     def format(self, values, idxs):

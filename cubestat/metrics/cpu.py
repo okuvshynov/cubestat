@@ -9,12 +9,12 @@ def auto_cpu_mode() -> CPUMode:
      return CPUMode.all if os.cpu_count() < 40 else CPUMode.by_cluster
 
 class cpu_metric(base_metric):
-    def pre(self, mode, title):
-        if mode == CPUMode.by_cluster and title not in self.cpu_clusters:
+    def pre(self, title):
+        if self.mode == CPUMode.by_cluster and title not in self.cpu_clusters:
             return False, ''
-        if mode == CPUMode.by_core and title in self.cpu_clusters:
+        if self.mode == CPUMode.by_core and title in self.cpu_clusters:
             return False, ''
-        if mode == CPUMode.all and title not in self.cpu_clusters:
+        if self.mode == CPUMode.all and title not in self.cpu_clusters:
             return True, '  '
         else:
             return True, ''

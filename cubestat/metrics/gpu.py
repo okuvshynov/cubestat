@@ -6,10 +6,10 @@ from cubestat.metrics.base_metric import base_metric
 from cubestat.metrics.registry import cubestat_metric
 
 class gpu_metric(base_metric):
-    def pre(self, mode, title):
-        if self.n_gpus > 0 and mode == GPUMode.collapsed and "Total GPU" not in title:
+    def pre(self, title):
+        if self.n_gpus > 0 and self.mode == GPUMode.collapsed and "Total GPU" not in title:
             return False, ''
-        if mode == GPUMode.load_only and "vram" in title:
+        if self.mode == GPUMode.load_only and "vram" in title:
             return False, ''
         if self.n_gpus > 1 and "Total GPU" not in title:
             return True, '  '

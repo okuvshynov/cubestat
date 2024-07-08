@@ -8,7 +8,7 @@ class ram_metric(base_metric):
     def read(self, _context):
         return {'RAM used %': psutil.virtual_memory().percent}
     
-    def pre(self, mode, title):
+    def pre(self, title):
         return True, ''
     
     def format(self, values, idxs):

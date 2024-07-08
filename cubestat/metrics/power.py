@@ -12,10 +12,10 @@ class macos_power_metric(base_metric):
         res['GPU power']   = context['processor']['gpu_power']
         return res
     
-    def pre(self, mode, title):
-        if mode == PowerMode.off:
+    def pre(self, title):
+        if self.mode == PowerMode.off:
             return False, ''
-        if mode == PowerMode.combined and 'total' not in title:
+        if self.mode == PowerMode.combined and 'total' not in title:
             return False, ''
         if 'total' not in title:
             return True, '  '

@@ -5,8 +5,8 @@ from cubestat.metrics.base_metric import base_metric
 from cubestat.metrics.registry import cubestat_metric
 
 class network_metric(base_metric):
-    def pre(self, mode, title):
-        if mode == SimpleMode.hide:
+    def pre(self, title):
+        if self.mode == SimpleMode.hide:
             return False, ''
         return True, ''
     

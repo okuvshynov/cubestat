@@ -52,15 +52,12 @@ class Horizon:
         self.platform = platform
         self.vertical_shift   = 0
         self.horizontal_shift = 0
-        self.modes = {
-            'view'  : ViewMode.one,
-        }
+
+        self.view = ViewMode.one
 
         self.refresh_ms = args.refresh_ms
         self.metrics = get_metrics(args)
 
-        for k, m in self.metrics.items():
-            self.modes[k] = m.mode
         self.selection = None
 
     def do_read(self, context):
@@ -99,7 +96,7 @@ class Horizon:
     
     def format_value(self, group_name, data_slice, idx):
         _, values = self.metrics[group_name].format(data_slice, [idx])
-        return f'{values[0]}' if self.modes['view'] != ViewMode.off else ''
+        return f'{values[0]}' if self.view != ViewMode.off else ''
     
     def get_col(self, ago):
         return self.cols - 1 - len(self.spacing) - 1 - ago
@@ -141,16 +138,16 @@ class Horizon:
 
         row = 0
         with self.lock:
-            if self.modes['view'] != ViewMode.off:
+            if self.view != ViewMode.off:
                 for ago in range(0, self.cols, self.timeline_interval):
                     base_fill[self.get_col(ago)] = '|'
-                    if self.modes['view'] != ViewMode.all:
+                    if self.view != ViewMode.all:
                         break
             
             skip = self.vertical_shift
             for group_name, group in self.data.items():
                 for title, series in group.items():
-                    show, indent = self.metrics[group_name].pre(self.modes[group_name], title)
+                    show, indent = self.metrics[group_name].pre(title)
 
                     if not show:
                         continue
@@ -184,10 +181,10 @@ class Horizon:
                     
                     topright_border = f"{self.spacing}╗"
                     curr_line = base_line
-                    if self.modes['view'] != ViewMode.off:
+                    if self.view != ViewMode.off:
                         for ago in range(0, self.cols, self.timeline_interval):
                             curr_line = self.vertical_val(group_name, ago, data_slice, curr_line)
-                            if self.modes['view'] != ViewMode.all:
+                            if self.view != ViewMode.all:
                                 break
                         if self.selection is not None:
                             curr_line = self.vertical_val(group_name, self.get_col(self.selection), data_slice, curr_line)
@@ -222,7 +219,7 @@ class Horizon:
                     row += 2
             self.snapshots_rendered = self.snapshots_observed
             self.settings_changed   = False
-            if self.modes['view'] != ViewMode.off:
+            if self.view != ViewMode.off:
                 curr_line = base_line
                 for ago in range(0, self.cols, self.timeline_interval):
                     curr_line = self.vertical_time(ago, curr_line)
@@ -239,21 +236,20 @@ class Horizon:
         t.start()
         self.stdscr.keypad(True)
         curses.mousemask(1)
-        mode_keymap = {m.hotkey() : k for k, m in self.metrics.items() if m.hotkey()}
-        mode_keymap['v'] = 'view'
+        mode_keymap = {m.hotkey() : m for _, m in self.metrics.items() if m.hotkey()}
         while True:
             self.render()
             key = self.stdscr.getch()
             if key == ord('q') or key == ord('Q'):
                 exit(0)
-            for k, mode in mode_keymap.items():
+            for k, metric in mode_keymap.items():
                 if key == ord(k):
                     with self.lock:
-                        self.modes[mode] = self.modes[mode].next()
+                        metric.mode = metric.mode.next()
                         self.settings_changed = True
                 if key == ord(k.upper()):
                     with self.lock:
-                        self.modes[mode] = self.modes[mode].prev()
+                        metric.mode = metric.mode.prev()
                         self.settings_changed = True
             if key == curses.KEY_UP:
                 with self.lock:
@@ -279,6 +275,14 @@ class Horizon:
                     if self.horizontal_shift > 0:
                         self.horizontal_shift = 0
                         self.settings_changed = True
+            if key == ord('v'):
+                with self.lock:
+                    self.view = self.view.next()
+                    self.settings_changed = True
+            if key == ord('V'):
+                with self.lock:
+                    self.view = self.view.prev()
+                    self.settings_changed = True
             if key == curses.KEY_MOUSE:
                 _, mx, my, _, _ = curses.getmouse()
                 with self.lock:

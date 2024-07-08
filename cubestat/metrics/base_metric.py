@@ -8,7 +8,7 @@ class base_metric(ABC):
         pass
 
     @abstractmethod
-    def pre(self, mode, title):
+    def pre(self, title):
         pass
 
     @abstractmethod
