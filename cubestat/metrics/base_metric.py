@@ -13,8 +13,14 @@ class base_metric(ABC):
     def format(self, values, idxs):
         pass
 
+    # configure metric instance
     def configure(self, config):
         return self
+
+    # if we define any options to select/toggle view mode
+    @classmethod
+    def configure_argparse(cls, parser):
+        pass
 
     @classmethod
     @abstractmethod

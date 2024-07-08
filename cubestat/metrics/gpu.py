@@ -22,6 +22,10 @@ class gpu_metric(base_metric):
     def key(cls):
         return 'gpu'
 
+    @classmethod
+    def configure_argparse(cls, parser):
+        parser.add_argument('--gpu', type=GPUMode, default=GPUMode.load_only, choices=list(GPUMode), help='GPU mode - hidden, showing all GPUs load, or showing load and vram usage. Can be toggled by pressing g.')
+
 @cubestat_metric('linux')
 class nvidia_gpu_metric(gpu_metric):
     def __init__(self) -> None:
@@ -56,7 +60,7 @@ class nvidia_gpu_metric(gpu_metric):
                 return combined
         return res
     
-@cubestat_metric('macos')
+@cubestat_metric('darwin')
 class macos_gpu_metric(gpu_metric):
     def read(self, context):
         res = {}

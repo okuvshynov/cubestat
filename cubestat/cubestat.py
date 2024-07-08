@@ -17,28 +17,11 @@ from cubestat.platforms.macos import MacOSPlatform
 from cubestat.common import CPUMode, SimpleMode, GPUMode, PowerMode, ViewMode
 from cubestat.colors import Color, dark_colormap, light_colormap, prepare_cells
 
-from cubestat.metrics.registry import get_metrics
+from cubestat.metrics.registry import get_metrics, metrics_configure_argparse
 from cubestat.metrics import cpu, gpu, memory, accel, swap, network, disk, power
 
-def auto_cpu_mode() -> CPUMode:
-     return CPUMode.all if os.cpu_count() < 40 else CPUMode.by_cluster
-
-parser = argparse.ArgumentParser("cubestat")
-parser.add_argument('--refresh_ms', '-i', type=int, default=1000, help='Update frequency, milliseconds')
-parser.add_argument('--buffer_size', type=int, default=500, help='How many datapoints to store. Having it larger than screen width is a good idea as terminal window can be resized')
-parser.add_argument('--cpu', type=CPUMode, default=auto_cpu_mode(), choices=list(CPUMode), help='CPU mode - showing all cores, only cumulative by cluster or both. Can be toggled by pressing c.')
-parser.add_argument('--gpu', type=GPUMode, default=GPUMode.load_only, choices=list(GPUMode), help='GPU mode - hidden, showing all GPUs load, or showing load and vram usage. Can be toggled by pressing g.')
-parser.add_argument('--power', type=PowerMode, default=PowerMode.combined, choices=list(PowerMode), help='Power mode - off, showing breakdown CPU/GPU/ANE load, or showing combined usage. Can be toggled by pressing p.')
-parser.add_argument('--color', type=Color, default=Color.mixed, choices=list(Color))
-parser.add_argument('--view', type=ViewMode, default=ViewMode.one, choices=list(ViewMode), help='legend/values/time mode. Can be toggled by pressing v.')
-parser.add_argument('--disk', type=SimpleMode, default=SimpleMode.show, choices=list(SimpleMode), help="Show disk read/write. Can be toggled by pressing d.")
-parser.add_argument('--swap', type=SimpleMode, default=SimpleMode.show, choices=list(SimpleMode), help="Show swap . Can be toggled by pressing s.")
-parser.add_argument('--network', type=SimpleMode, default=SimpleMode.show, choices=list(SimpleMode), help="Show network io. Can be toggled by pressing n.")
-
-args = parser.parse_args()
-
 class Horizon:
-    def __init__(self, stdscr, platform):
+    def __init__(self, stdscr, platform, args):
         stdscr.nodelay(False)
         stdscr.timeout(50)
         curses.curs_set(0)
@@ -81,11 +64,12 @@ class Horizon:
             'ram'   : SimpleMode.show,
         }
 
+        self.refresh_ms = args.refresh_ms
         metric_conf = {
             'interval_ms': args.refresh_ms
         }
 
-        self.metrics = get_metrics(platform.platform, metric_conf)
+        self.metrics = get_metrics(metric_conf)
         self.selection = None
 
     def do_read(self, context):
@@ -131,7 +115,7 @@ class Horizon:
     
     def vertical_time(self, at, curr_line):
         str_pos = self.get_col(at)
-        time_s = (args.refresh_ms * (at + self.horizontal_shift)) / 1000.0
+        time_s = (self.refresh_ms * (at + self.horizontal_shift)) / 1000.0
         time_str = f'-{time_s:.2f}s'
         if str_pos > len(time_str):
             curr_line = curr_line[:str_pos - len(time_str)] + time_str + "|" + curr_line[str_pos + 1:]
@@ -317,16 +301,24 @@ class Horizon:
                     self.selection = mx
                     self.settings_changed = True
 
-def start(stdscr, platform):
-    h = Horizon(stdscr, platform)
+def start(stdscr, platform, args):
+    h = Horizon(stdscr, platform, args)
     h.loop()
 
 def main():
     logging.basicConfig(filename='/tmp/cubestat.log', level=logging.INFO)
+    parser = argparse.ArgumentParser("cubestat")
+    parser.add_argument('--refresh_ms', '-i', type=int, default=1000, help='Update frequency, milliseconds')
+    parser.add_argument('--buffer_size', type=int, default=500, help='How many datapoints to store. Having it larger than screen width is a good idea as terminal window can be resized')
+    parser.add_argument('--color', type=Color, default=Color.mixed, choices=list(Color))
+    parser.add_argument('--view', type=ViewMode, default=ViewMode.one, choices=list(ViewMode), help='legend/values/time mode. Can be toggled by pressing v.')
+
+    metrics_configure_argparse(parser)
+    args = parser.parse_args()
     if sys.platform == "darwin":
-        curses.wrapper(start, MacOSPlatform(args.refresh_ms))
+        curses.wrapper(start, MacOSPlatform(args.refresh_ms), args)
     if sys.platform == "linux" or sys.platform == "linux2":
-        curses.wrapper(start, LinuxPlatform(args.refresh_ms))
+        curses.wrapper(start, LinuxPlatform(args.refresh_ms), args)
     logging.fatal(f'platform {sys.platform} is not supported yet.')
 
 if __name__ == '__main__':

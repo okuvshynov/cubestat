@@ -21,7 +21,11 @@ class network_metric(base_metric):
         self.rate_reader = RateReader(conf['interval_ms'])
         return self
 
-@cubestat_metric('macos')
+    @classmethod
+    def configure_argparse(cls, parser):
+        parser.add_argument('--network', type=SimpleMode, default=SimpleMode.show, choices=list(SimpleMode), help="Show network io. Can be toggled by pressing n.")
+
+@cubestat_metric('darwin')
 class macos_network_metric(network_metric):
     def read(self, context):
         res = {}

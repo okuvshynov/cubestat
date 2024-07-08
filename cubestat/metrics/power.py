@@ -2,7 +2,7 @@ from cubestat.common import PowerMode, label10
 from cubestat.metrics.base_metric import base_metric
 from cubestat.metrics.registry import cubestat_metric
 
-@cubestat_metric('macos')
+@cubestat_metric('darwin')
 class macos_power_metric(base_metric):
     def read(self, context):
         res = {}
@@ -27,3 +27,7 @@ class macos_power_metric(base_metric):
     @classmethod
     def key(cls):
         return 'power'
+
+    @classmethod
+    def configure_argparse(cls, parser):
+        parser.add_argument('--power', type=PowerMode, default=PowerMode.combined, choices=list(PowerMode), help='Power mode - off, showing breakdown CPU/GPU/ANE load, or showing combined usage. Can be toggled by pressing p.')

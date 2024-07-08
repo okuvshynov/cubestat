@@ -1,8 +1,12 @@
+import os
 import psutil
 
 from cubestat.metrics.base_metric import base_metric
 from cubestat.metrics.registry import cubestat_metric
 from cubestat.common import CPUMode
+
+def auto_cpu_mode() -> CPUMode:
+     return CPUMode.all if os.cpu_count() < 40 else CPUMode.by_cluster
 
 class cpu_metric(base_metric):
     def pre(self, mode, title):
@@ -21,6 +25,10 @@ class cpu_metric(base_metric):
     @classmethod
     def key(cls):
         return 'cpu'
+
+    @classmethod
+    def configure_argparse(cls, parser):
+        parser.add_argument('--cpu', type=CPUMode, default=auto_cpu_mode(), choices=list(CPUMode), help='CPU mode - showing all cores, only cumulative by cluster or both. Can be toggled by pressing c.')
 
 @cubestat_metric('linux')
 class psutil_cpu_metric(cpu_metric):
@@ -42,7 +50,7 @@ class psutil_cpu_metric(cpu_metric):
 
         return res
 
-@cubestat_metric('macos')
+@cubestat_metric('darwin')
 class macos_cpu_metric(cpu_metric):
     def read(self, context):
         self.cpu_clusters = []

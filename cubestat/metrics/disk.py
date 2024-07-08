@@ -17,11 +17,16 @@ class disk_metric(base_metric):
     def key(cls):
         return 'disk'
 
+    @classmethod
+    def configure_argparse(cls, parser):
+        parser.add_argument('--disk', type=SimpleMode, default=SimpleMode.show, choices=list(SimpleMode), help="Show disk read/write. Can be toggled by pressing d.")
+
+
     def configure(self, conf):
         self.rate_reader = RateReader(conf['interval_ms'])
         return self
 
-@cubestat_metric('macos')
+@cubestat_metric('darwin')
 class macos_disc_metric(disk_metric):
     def read(self, context):
         res = {}
