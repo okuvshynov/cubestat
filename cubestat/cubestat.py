@@ -18,11 +18,7 @@ from cubestat.common import CPUMode, SimpleMode, GPUMode, PowerMode, ViewMode
 from cubestat.colors import Color, dark_colormap, light_colormap, prepare_cells
 
 from cubestat.metrics.registry import get_metrics
-from cubestat.metrics.disk import disk_metric
-from cubestat.metrics.network import network_metric
-from cubestat.metrics.memory import ram_metric
-
-from cubestat.metrics import power, cpu, gpu, accel, swap
+from cubestat.metrics import cpu, gpu, memory, accel, swap, network, disk, power
 
 def auto_cpu_mode() -> CPUMode:
      return CPUMode.all if os.cpu_count() < 40 else CPUMode.by_cluster
@@ -85,15 +81,11 @@ class Horizon:
             'ram'   : SimpleMode.show,
         }
 
-        self.metrics = {
-            'disk': disk_metric(reader.platform, args.refresh_ms),
-            'network': network_metric(reader.platform, args.refresh_ms),
-            'ram'  : ram_metric(reader.platform),
+        metric_conf = {
+            'interval_ms': args.refresh_ms
         }
 
-        reg_metrics = get_metrics(reader.platform)
-        for k, v in reg_metrics.items():
-            self.metrics[k] = v
+        self.metrics = get_metrics(reader.platform, metric_conf)
         self.selection = None
 
     def do_read(self, context):

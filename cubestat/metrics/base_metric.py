@@ -13,6 +13,9 @@ class base_metric(ABC):
     def format(self, values, idxs):
         pass
 
+    def configure(self, config):
+        return self
+
     @classmethod
     @abstractmethod
     def supported_platforms(cls):
