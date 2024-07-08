@@ -1,9 +1,9 @@
 import psutil
 
 from cubestat.metrics.base_metric import base_metric
-from cubestat.metrics.registry import register_metric
+from cubestat.metrics.registry import cubestat_metric
 
-@register_metric
+@cubestat_metric
 class ram_metric(base_metric):
     def read(self, _context):
         return {'RAM used %': psutil.virtual_memory().percent}

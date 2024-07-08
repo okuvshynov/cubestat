@@ -3,7 +3,7 @@ import re
 import subprocess
 
 from cubestat.metrics.base_metric import base_metric
-from cubestat.metrics.registry import register_metric
+from cubestat.metrics.registry import cubestat_metric
 from cubestat.common import SimpleMode, label2
 
 class swap_metric(base_metric):
@@ -19,7 +19,7 @@ class swap_metric(base_metric):
     def key(cls):
         return 'swap'
 
-@register_metric
+@cubestat_metric
 class macos_swap_metric(swap_metric):
     def _parse_memstr(self, size_str):
         match = re.match(r"(\d+(\.\d+)?)([KMG]?)", size_str)
@@ -51,7 +51,7 @@ class macos_swap_metric(swap_metric):
     def supported_platforms(cls):
         return ['macos']
 
-@register_metric
+@cubestat_metric
 class linux_swap_metric(swap_metric):
     def read(self, _context):
         with open('/proc/meminfo', 'r') as file:

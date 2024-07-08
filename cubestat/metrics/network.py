@@ -2,7 +2,7 @@ import psutil
 
 from cubestat.common import SimpleMode, RateReader, label2
 from cubestat.metrics.base_metric import base_metric
-from cubestat.metrics.registry import register_metric
+from cubestat.metrics.registry import cubestat_metric
 
 class network_metric(base_metric):
     def pre(self, mode, title):
@@ -21,7 +21,7 @@ class network_metric(base_metric):
         self.rate_reader = RateReader(conf['interval_ms'])
         return self
 
-@register_metric
+@cubestat_metric
 class macos_network_metric(network_metric):
     def read(self, context):
         res = {}
@@ -33,8 +33,7 @@ class macos_network_metric(network_metric):
     def supported_platforms(cls):
         return ['macos']
 
-    
-@register_metric
+@cubestat_metric
 class linux_network_metric(network_metric):
     def read(self, _context):
         res = {}

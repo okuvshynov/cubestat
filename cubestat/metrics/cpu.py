@@ -1,7 +1,7 @@
 import psutil
 
 from cubestat.metrics.base_metric import base_metric
-from cubestat.metrics.registry import register_metric
+from cubestat.metrics.registry import cubestat_metric
 from cubestat.common import CPUMode
 
 class cpu_metric(base_metric):
@@ -22,7 +22,7 @@ class cpu_metric(base_metric):
     def key(cls):
         return 'cpu'
 
-@register_metric
+@cubestat_metric
 class psutil_cpu_metric(cpu_metric):
     def read(self, _context):
         self.cpu_clusters = []
@@ -46,7 +46,7 @@ class psutil_cpu_metric(cpu_metric):
     def supported_platforms(cls):
         return ['linux']
 
-@register_metric
+@cubestat_metric
 class macos_cpu_metric(cpu_metric):
     def read(self, context):
         self.cpu_clusters = []

@@ -3,7 +3,7 @@ from importlib.util import find_spec
 
 from cubestat.common import GPUMode
 from cubestat.metrics.base_metric import base_metric
-from cubestat.metrics.registry import register_metric
+from cubestat.metrics.registry import cubestat_metric
 
 class gpu_metric(base_metric):
     def pre(self, mode, title):
@@ -22,7 +22,7 @@ class gpu_metric(base_metric):
     def key(cls):
         return 'gpu'
 
-@register_metric
+@cubestat_metric
 class nvidia_gpu_metric(gpu_metric):
     def __init__(self) -> None:
         self.has_nvidia = False
@@ -60,7 +60,7 @@ class nvidia_gpu_metric(gpu_metric):
     def supported_platforms(cls):
         return ['linux']
     
-@register_metric
+@cubestat_metric
 class macos_gpu_metric(gpu_metric):
     def read(self, context):
         res = {}

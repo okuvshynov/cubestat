@@ -1,8 +1,8 @@
 from cubestat.common import PowerMode, label10
 from cubestat.metrics.base_metric import base_metric
-from cubestat.metrics.registry import register_metric
+from cubestat.metrics.registry import cubestat_metric
 
-@register_metric
+@cubestat_metric
 class macos_power_metric(base_metric):
     def read(self, context):
         res = {}

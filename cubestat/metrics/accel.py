@@ -1,9 +1,9 @@
 # various ML accelerators, for now supports apple's NE
 import subprocess
 from cubestat.metrics.base_metric import base_metric
-from cubestat.metrics.registry import register_metric
+from cubestat.metrics.registry import cubestat_metric
 
-@register_metric
+@cubestat_metric
 class ane_metric(base_metric):
     def __init__(self) -> None:
         self.ane_scaler = self.get_ane_scaler()
