@@ -14,11 +14,16 @@ from threading import Thread, Lock
 from cubestat.platforms.linux import LinuxPlatform
 from cubestat.platforms.macos import MacOSPlatform
 
-from cubestat.common import CPUMode, SimpleMode, GPUMode, PowerMode, ViewMode
+from cubestat.common import DisplayMode
 from cubestat.colors import get_scheme, prepare_cells
 
 from cubestat.metrics.registry import get_metrics, metrics_configure_argparse
 from cubestat.metrics import cpu, gpu, memory, accel, swap, network, disk, power
+
+class ViewMode(DisplayMode):
+    off = "off"
+    one = "one"
+    all = "all"
 
 class Horizon:
     def __init__(self, stdscr, platform, args):

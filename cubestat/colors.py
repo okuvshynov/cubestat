@@ -1,30 +1,21 @@
-from cubestat.common import EnumStr
-
 import curses
 
-class Color(EnumStr):
-    red = 'red'
-    green = 'green'
-    blue = 'blue'
-    pink = 'pink'
-
-# TODO: should this be defined in the metric as well?
-light_colormap = {
-    'cpu': Color.green,
-    'ram': Color.pink,
-    'gpu': Color.red,
-    'ane': Color.red,
-    'disk': Color.blue,
-    'network': Color.blue,
-    'swap': Color.pink,
-    'power': Color.red,
+colors_ansi256 = {
+    'green': [-1, 150, 107, 22],
+    'red'  : [-1, 224, 181, 138],
+    'blue' : [-1, 189, 146, 103],
+    'pink' : [-1, 223, 180, 137],
 }
 
-colors_ansi256 = {
-    Color.green: [-1, 150, 107, 22],
-    Color.red: [-1, 224, 181, 138],
-    Color.blue: [-1, 189, 146, 103],
-    Color.pink: [-1, 223, 180, 137],
+light_colormap = {
+    'cpu': 'green',
+    'ram': 'pink',
+    'gpu': 'red',
+    'ane': 'red',
+    'disk': 'blue',
+    'network': 'blue',
+    'swap': 'pink',
+    'power': 'red',
 }
 
 def prepare_cells():
@@ -40,4 +31,4 @@ def prepare_cells():
     return cells
 
 def get_scheme(metric):
-    return light_colormap.get(metric, Color.green)
+    return light_colormap.get(metric, 'green')

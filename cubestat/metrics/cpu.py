@@ -3,7 +3,12 @@ import psutil
 
 from cubestat.metrics.base_metric import base_metric
 from cubestat.metrics.registry import cubestat_metric
-from cubestat.common import CPUMode
+from cubestat.common import DisplayMode
+
+class CPUMode(DisplayMode):
+    all = 'all'
+    by_cluster = 'by_cluster'
+    by_core = 'by_core'
 
 def auto_cpu_mode() -> CPUMode:
      return CPUMode.all if os.cpu_count() < 40 else CPUMode.by_cluster

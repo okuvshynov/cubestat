@@ -1,6 +1,11 @@
-from cubestat.common import PowerMode, label10
+from cubestat.common import DisplayMode, label10
 from cubestat.metrics.base_metric import base_metric
 from cubestat.metrics.registry import cubestat_metric
+
+class PowerMode(DisplayMode):
+    combined = 'combined'
+    all = 'all'
+    off = 'off'
 
 @cubestat_metric('darwin')
 class macos_power_metric(base_metric):

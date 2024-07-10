@@ -1,9 +1,14 @@
 import subprocess
 from importlib.util import find_spec
 
-from cubestat.common import GPUMode
+from cubestat.common import DisplayMode
 from cubestat.metrics.base_metric import base_metric
 from cubestat.metrics.registry import cubestat_metric
+
+class GPUMode(DisplayMode):
+    collapsed = 'collapsed'
+    load_only = 'load_only'
+    load_and_vram = 'load_and_vram'
 
 class gpu_metric(base_metric):
     def pre(self, title):
