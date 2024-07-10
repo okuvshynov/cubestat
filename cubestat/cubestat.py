@@ -234,7 +234,7 @@ class Horizon:
         t = Thread(target=self.platform.loop, daemon=True, args=[self.do_read])
         t.start()
         self.stdscr.keypad(True)
-        curses.mousemask(1)
+        #curses.mousemask(1)
         hotkeys = [(m.hotkey(), m) for m in self.metrics.values() if m.hotkey()]
         while True:
             self.render()
@@ -282,11 +282,11 @@ class Horizon:
                 with self.lock:
                     self.view = self.view.prev()
                     self.settings_changed = True
-            if key == curses.KEY_MOUSE:
-                _, mx, my, _, _ = curses.getmouse()
-                with self.lock:
-                    self.selection = mx
-                    self.settings_changed = True
+            #if key == curses.KEY_MOUSE:
+            #    _, mx, my, _, _ = curses.getmouse()
+            #    with self.lock:
+            #        self.selection = mx
+            #        self.settings_changed = True
 
 def start(stdscr, platform, args):
     h = Horizon(stdscr, platform, args)
