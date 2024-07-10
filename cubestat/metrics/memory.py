@@ -9,31 +9,7 @@ class RAMMode(DisplayMode):
     percent = 'percent'
     all  = 'all'
 
-@cubestat_metric('linux')
 class ram_metric(base_metric):
-    def read(self, _context):
-        return {'RAM used %': psutil.virtual_memory().percent}
-    
-    def pre(self, title):
-        return True, ''
-    
-    def format(self, title, values, idxs):
-        return 100.0, [f'{values[i]:3.0f}%' for i in idxs]
-
-    @classmethod
-    def key(cls):
-        return 'ram'
-
-@cubestat_metric('darwin')
-class ram_metric_ex(base_metric):
-    def read(self, _context):
-        vm = psutil.virtual_memory()
-        return {
-            'RAM used %' : vm.percent,
-            'RAM used'   : vm.used,
-            'RAM wired'  : vm.wired,
-        }
-
     def configure(self, _conf):
         self.mode = RAMMode.all
         return self
@@ -55,4 +31,32 @@ class ram_metric_ex(base_metric):
 
     @classmethod
     def key(cls):
-        return 'ram_abs'
+        return 'ram'
+
+@cubestat_metric('darwin')
+class ram_metric_macos(ram_metric):
+    def read(self, _context):
+        vm = psutil.virtual_memory()
+        return {
+            'RAM used %' : vm.percent,
+            'RAM used'   : vm.used,
+            'RAM wired'  : vm.wired,
+        }
+
+@cubestat_metric('linux')
+class ram_metric_linux(ram_metric):
+    def __init__(self):
+        # how to get metric from meminfo data
+        self.rows = {
+            'RAM used %' : lambda mi: 100.0 * (mi['MemTotal'] - mi['MemAvailable']) / mi['MemTotal'],
+            'RAM used'   : lambda mi: mi['MemTotal'] - mi['MemAvailable'],
+            'RAM mapped' : lambda mi: mi['Mapped'],
+        }
+
+    def read(self, _context):
+        meminfo = {}
+        with open('/proc/meminfo', 'r') as f:
+            for line in f:
+                key, value = line.split(':', 1)
+                meminfo[key.strip()] = int(value.split()[0]) * 1024
+        return {k: fn(meminfo) for k, fn in self.rows.items()}
