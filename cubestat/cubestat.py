@@ -89,12 +89,12 @@ class Horizon:
         except:
             pass
     
-    def max_val(self, group_name, data_slice):
-        max_value, _ = self.metrics[group_name].format(data_slice, [-1])
+    def max_val(self, group_name, title, data_slice):
+        max_value, _ = self.metrics[group_name].format(title, data_slice, [-1])
         return max_value
     
-    def format_value(self, group_name, data_slice, idx):
-        _, values = self.metrics[group_name].format(data_slice, [idx])
+    def format_value(self, group_name, title, data_slice, idx):
+        _, values = self.metrics[group_name].format(title, data_slice, [idx])
         return f'{values[0]}' if self.view != ViewMode.off else ''
     
     def get_col(self, ago):
@@ -108,11 +108,11 @@ class Horizon:
             curr_line = curr_line[:str_pos - len(time_str)] + time_str + "|" + curr_line[str_pos + 1:]
         return curr_line
     
-    def vertical_val(self, group_name, at, data_slice, curr_line):
+    def vertical_val(self, group_name, title, at, data_slice, curr_line):
         if at >= len(data_slice):
             return curr_line
         data_index = - at - 1
-        v = self.format_value(group_name, data_slice, data_index)
+        v = self.format_value(group_name, title, data_slice, data_index)
         str_pos = self.get_col(at)
         if str_pos > len(v):
             curr_line = curr_line[:str_pos - len(v)] + v + "|" + curr_line[str_pos + 1:]
@@ -171,7 +171,7 @@ class Horizon:
                     index = max(0, data_length - chart_width)
                     data_slice = list(itertools.islice(series, index, min(index + chart_width, data_length)))
 
-                    max_value = self.max_val(group_name, data_slice)
+                    max_value = self.max_val(group_name, title, data_slice)
 
                     # render the rest of title row
                     #
@@ -182,11 +182,11 @@ class Horizon:
                     curr_line = base_line
                     if self.view != ViewMode.off:
                         for ago in range(0, self.cols, self.timeline_interval):
-                            curr_line = self.vertical_val(group_name, ago, data_slice, curr_line)
+                            curr_line = self.vertical_val(group_name, title, ago, data_slice, curr_line)
                             if self.view != ViewMode.all:
                                 break
                         if self.selection is not None:
-                            curr_line = self.vertical_val(group_name, self.get_col(self.selection), data_slice, curr_line)
+                            curr_line = self.vertical_val(group_name, title, self.get_col(self.selection), data_slice, curr_line)
                     title_filling = curr_line[len(title_str):-len(topright_border)]
                     self.write_string(row, len(title_str), title_filling)
                     self.write_string(row, self.cols - len(topright_border), topright_border)

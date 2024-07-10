@@ -15,7 +15,7 @@ class base_metric(ABC):
         pass
 
     @abstractmethod
-    def format(self, values, idxs):
+    def format(self, title, values, idxs):
         pass
 
     @classmethod

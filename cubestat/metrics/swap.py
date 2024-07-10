@@ -12,7 +12,7 @@ class swap_metric(base_metric):
             return False, ''
         return True, ''
 
-    def format(self, values, idxs):
+    def format(self, title, values, idxs):
         return label2(values, [(1024 * 1024, 'MB'), (1024, 'KB'), (1, 'Bytes')], idxs)
 
     @classmethod

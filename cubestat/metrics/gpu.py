@@ -20,7 +20,7 @@ class gpu_metric(base_metric):
             return True, '  '
         return True, ''
     
-    def format(self, values, idxs):
+    def format(self, title, values, idxs):
         return 100.0, [f'{values[i]:3.0f}%' for i in idxs]
 
     def configure(self, conf):

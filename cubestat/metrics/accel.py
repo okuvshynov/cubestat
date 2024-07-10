@@ -37,7 +37,7 @@ class ane_metric(base_metric):
     def pre(self, title):
         return True, ''
     
-    def format(self, values, idxs):
+    def format(self, title, values, idxs):
         return 100.0, [f'{values[i]:3.0f}%' for i in idxs]
 
     @classmethod

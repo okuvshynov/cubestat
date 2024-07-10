@@ -30,7 +30,7 @@ class macos_power_metric(base_metric):
         self.mode = conf.power
         return self
 
-    def format(self, values, idxs):
+    def format(self, title, values, idxs):
         return label10(values, [(1000 * 1000, 'kW'), (1000, 'W'), (1, 'mW')], idxs)
 
     @classmethod
