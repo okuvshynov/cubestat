@@ -11,7 +11,7 @@ class CPUMode(DisplayMode):
     by_core = 'by_core'
 
 def auto_cpu_mode() -> CPUMode:
-     return CPUMode.all if os.cpu_count() < 40 else CPUMode.by_cluster
+     return CPUMode.all if os.cpu_count() < 20 else CPUMode.by_cluster
 
 class cpu_metric(base_metric):
     def pre(self, title):

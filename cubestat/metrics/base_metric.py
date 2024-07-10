@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 
 from cubestat.common import SimpleMode
 
+# This seems like a 'metric set' rather than metric. 
 class base_metric(ABC):
     ###########################################################################
     # abstract methods each metric needs to implement
