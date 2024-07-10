@@ -1,7 +1,10 @@
 import math
 from enum import Enum
 
-class EnumLoop(Enum):
+class DisplayMode(Enum):
+    def __str__(self):
+        return self.value
+
     def next(self):
         values = list(self.__class__)
         return values[(values.index(self) + 1) % len(values)]
@@ -10,33 +13,9 @@ class EnumLoop(Enum):
         values = list(self.__class__)
         return values[(values.index(self) + len(values) - 1) % len(values)]
     
-class EnumStr(Enum):
-    def __str__(self):
-        return self.value
-
-class CPUMode(EnumLoop, EnumStr):
-    all = 'all'
-    by_cluster = 'by_cluster'
-    by_core = 'by_core'
-
-class SimpleMode(EnumLoop, EnumStr):
+class SimpleMode(DisplayMode):
     show = 'show'
     hide = 'hide'
-
-class GPUMode(EnumLoop, EnumStr):
-    collapsed = 'collapsed'
-    load_only = 'load_only'
-    load_and_vram = 'load_and_vram'
-
-class PowerMode(EnumLoop, EnumStr):
-    combined = 'combined'
-    all = 'all'
-    off = 'off'
-
-class ViewMode(EnumLoop, EnumStr):
-    off = "off"
-    one = "one"
-    all = "all"
 
 # buckets is a list of factor/label, e.g. [(1024*1024, 'Mb'), (1024, 'Kb'), (1, 'b')]
 def format_measurement(curr, mx, buckets):

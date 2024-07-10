@@ -3,10 +3,15 @@ import psutil
 
 from cubestat.metrics.base_metric import base_metric
 from cubestat.metrics.registry import cubestat_metric
-from cubestat.common import CPUMode
+from cubestat.common import DisplayMode
+
+class CPUMode(DisplayMode):
+    all = 'all'
+    by_cluster = 'by_cluster'
+    by_core = 'by_core'
 
 def auto_cpu_mode() -> CPUMode:
-     return CPUMode.all if os.cpu_count() < 40 else CPUMode.by_cluster
+     return CPUMode.all if os.cpu_count() < 20 else CPUMode.by_cluster
 
 class cpu_metric(base_metric):
     def pre(self, title):
@@ -19,7 +24,7 @@ class cpu_metric(base_metric):
         else:
             return True, ''
 
-    def format(self, values, idxs):
+    def format(self, title, values, idxs):
         return 100.0, [f'{values[i]:3.0f}%' for i in idxs]
 
     def configure(self, conf):
