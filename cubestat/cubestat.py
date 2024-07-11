@@ -15,7 +15,7 @@ from cubestat.platforms.linux import LinuxPlatform
 from cubestat.platforms.macos import MacOSPlatform
 
 from cubestat.common import DisplayMode
-from cubestat.colors import get_scheme, prepare_cells
+from cubestat.colors import get_theme, prepare_cells, ColorTheme
 
 from cubestat.metrics.registry import get_metrics, metrics_configure_argparse
 from cubestat.metrics import cpu, gpu, memory, accel, swap, network, disk, power
@@ -53,6 +53,7 @@ class Horizon:
         self.horizontal_shift = 0
 
         self.view = ViewMode.one
+        self.theme = ColorTheme.col
 
         self.refresh_ms = args.refresh_ms
         self.metrics = get_metrics(args)
@@ -202,7 +203,7 @@ class Horizon:
                     #
                     # ╔ GPU util %............................................................................:  4% ╗
                     # ╚ ▁▁▁  ▁    ▁▆▅▄ ▁▁▁      ▂ ▇▃▃▂█▃▇▁▃▂▁▁▂▁▁▃▃▂▁▂▄▄▁▂▆▁▃▁▂▃▁▁▁▂▂▂▂▂▂▁▁▃▂▂▁▂▁▃▄▃ ▁▁▃▁▄▂▃▂▂▂▃▃▅▅ ╝
-                    cells = self.cells[get_scheme(group_name)]
+                    cells = self.cells[get_theme(group_name, self.theme)]
                     scaler = len(cells) / max_value
                     col = self.cols - (len(data_slice) + len(self.spacing)) - 2
                     for v in data_slice:
@@ -234,7 +235,6 @@ class Horizon:
         t = Thread(target=self.platform.loop, daemon=True, args=[self.do_read])
         t.start()
         self.stdscr.keypad(True)
-        #curses.mousemask(1)
         hotkeys = [(m.hotkey(), m) for m in self.metrics.values() if m.hotkey()]
         while True:
             self.render()
@@ -282,11 +282,14 @@ class Horizon:
                 with self.lock:
                     self.view = self.view.prev()
                     self.settings_changed = True
-            #if key == curses.KEY_MOUSE:
-            #    _, mx, my, _, _ = curses.getmouse()
-            #    with self.lock:
-            #        self.selection = mx
-            #        self.settings_changed = True
+            if key == ord('t'):
+                with self.lock:
+                    self.theme = self.theme.next()
+                    self.settings_changed = True
+            if key == ord('T'):
+                with self.lock:
+                    self.theme = self.theme.prev()
+                    self.settings_changed = True
 
 def start(stdscr, platform, args):
     h = Horizon(stdscr, platform, args)

@@ -143,11 +143,9 @@ Example notebook: [colab example](https://colab.research.google.com/drive/1EUOXG
 ## TODO
 * monochrome colors
 * nvidia higher resolution - fixing missed spikes
-* joint scale for IO
+* optional joint scale within metric group
 * better colors for dark background
 * per network interface util
-* memory usage -- different view?  
-* multi-column layout for large instances (e.g. with 100+ cores)
 * show help
 * storing history
 * all of https://github.com/okuvshynov/cubestat/issues
