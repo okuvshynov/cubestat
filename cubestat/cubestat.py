@@ -48,8 +48,8 @@ class Horizon:
         self.snapshots_rendered = 0
         self.settings_changed = False
         self.platform = platform
-        self.vertical_shift   = 0
-        self.horizontal_shift = 0
+        self.v_shift = 0
+        self.h_shift = 0
 
         self.view = ViewMode.one
         self.theme = ColorTheme.col
@@ -66,8 +66,8 @@ class Horizon:
 
         with self.lock:
             self.snapshots_observed += 1
-            if self.horizontal_shift > 0:
-                self.horizontal_shift += 1
+            if self.h_shift > 0:
+                self.h_shift += 1
 
     def write_string(self, row, col, s, color=0):
         if col + len(s) > self.cols:
@@ -96,7 +96,7 @@ class Horizon:
     
     def vertical_time(self, at, curr_line):
         str_pos = self.get_col(at)
-        time_s = (self.refresh_ms * (at + self.horizontal_shift)) / 1000.0
+        time_s = (self.refresh_ms * (at + self.h_shift)) / 1000.0
         time_str = f'-{time_s:.2f}s'
         if str_pos > len(time_str):
             curr_line = curr_line[:str_pos - len(time_str)] + time_str + "|" + curr_line[str_pos + 1:]
@@ -111,6 +111,12 @@ class Horizon:
         if str_pos > len(v):
             curr_line = curr_line[:str_pos - len(v)] + v + "|" + curr_line[str_pos + 1:]
         return curr_line
+
+    def get_slice(self, series, indent):
+        data_length = len(series) - self.h_shift if self.h_shift > 0 else len(series)
+        chart_width = self.cols - 2 * len(self.spacing) - 2 - len(indent)
+        index = max(0, data_length - chart_width)
+        return list(itertools.islice(series, index, min(index + chart_width, data_length)))
 
     def render(self):
         with self.lock:
@@ -137,7 +143,7 @@ class Horizon:
                     if self.view != ViewMode.all:
                         break
             
-            skip = self.vertical_shift
+            skip = self.v_shift
             for group_name, group in self.data.items():
                 for title, series in group.items():
                     show, indent = self.metrics[group_name].pre(title)
@@ -157,14 +163,7 @@ class Horizon:
                     self.write_string(row, 0, title_str)
                     self.write_string(row + 1, 0, f'{indent}╚')
 
-                    # data slice size
-                    data_length = len(series) - self.horizontal_shift if self.horizontal_shift > 0 else len(series)
-                    
-                    # chart area width
-                    chart_width = self.cols - 2 * len(self.spacing) - 2 - len(indent)
-                    index = max(0, data_length - chart_width)
-                    data_slice = list(itertools.islice(series, index, min(index + chart_width, data_length)))
-
+                    data_slice = self.get_slice(series, indent)
                     max_value = self.max_val(group_name, title, data_slice)
 
                     # render the rest of title row
@@ -241,27 +240,27 @@ class Horizon:
                         self.settings_changed = True
             if key == curses.KEY_UP:
                 with self.lock:
-                    if self.vertical_shift > 0:
-                        self.vertical_shift -= 1
+                    if self.v_shift > 0:
+                        self.v_shift -= 1
                         self.settings_changed = True
             if key == curses.KEY_DOWN:
                 with self.lock:
-                    self.vertical_shift += 1
+                    self.v_shift += 1
                     self.settings_changed = True
             if key == curses.KEY_LEFT:
                 with self.lock:
-                    if self.horizontal_shift + 1 < self.snapshots_observed:
-                        self.horizontal_shift += 1
+                    if self.h_shift + 1 < self.snapshots_observed:
+                        self.h_shift += 1
                         self.settings_changed = True
             if key == curses.KEY_RIGHT:
                 with self.lock:
-                    if self.horizontal_shift > 0:
-                        self.horizontal_shift -= 1
+                    if self.h_shift > 0:
+                        self.h_shift -= 1
                         self.settings_changed = True
             if key == ord('0'):
                 with self.lock:
-                    if self.horizontal_shift > 0:
-                        self.horizontal_shift = 0
+                    if self.h_shift > 0:
+                        self.h_shift = 0
                         self.settings_changed = True
             if key == ord('v'):
                 with self.lock:
