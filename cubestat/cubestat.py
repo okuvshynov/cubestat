@@ -5,7 +5,6 @@ import collections
 import curses
 import itertools
 import logging
-import os
 import sys
 
 from math import floor
@@ -58,8 +57,6 @@ class Horizon:
         self.refresh_ms = args.refresh_ms
         self.metrics = get_metrics(args)
 
-        self.selection = None
-
     def do_read(self, context):
         for group, metric in self.metrics.items():
             datapoint = metric.read(context)
@@ -73,8 +70,6 @@ class Horizon:
                 self.horizontal_shift += 1
 
     def write_string(self, row, col, s, color=0):
-        if row < 0 or row >= self.rows or col < 0:
-            return
         if col + len(s) > self.cols:
             s = s[:self.cols - col]
         try:
@@ -83,8 +78,6 @@ class Horizon:
             pass
 
     def write_char(self, row, col, chr, color=0):
-        if row < 0 or row >= self.rows or col < 0 or col >= self.cols:
-            return
         try:
             self.stdscr.addch(row, col, chr, color)
         except:
@@ -186,8 +179,6 @@ class Horizon:
                             curr_line = self.vertical_val(group_name, title, ago, data_slice, curr_line)
                             if self.view != ViewMode.all:
                                 break
-                        if self.selection is not None:
-                            curr_line = self.vertical_val(group_name, title, self.get_col(self.selection), data_slice, curr_line)
                     title_filling = curr_line[len(title_str):-len(topright_border)]
                     self.write_string(row, len(title_str), title_filling)
                     self.write_string(row, self.cols - len(topright_border), topright_border)
@@ -223,8 +214,6 @@ class Horizon:
                 curr_line = base_line
                 for ago in range(0, self.cols, self.timeline_interval):
                     curr_line = self.vertical_time(ago, curr_line)
-                if self.selection is not None:
-                    curr_line = self.vertical_time(self.get_col(self.selection), curr_line)
                 curr_line = curr_line[len(self.spacing) + 1:  - len(self.spacing) - 1]
 
                 self.write_string(row, 0, f"╚{self.spacing}{curr_line}{self.spacing}╝")
