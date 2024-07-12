@@ -1,6 +1,6 @@
 import psutil
 
-from cubestat.common import SimpleMode, RateReader, label2
+from cubestat.common import SimpleMode, RateReader, label_bytes_per_sec
 from cubestat.metrics.base_metric import base_metric
 from cubestat.metrics.registry import cubestat_metric
 
@@ -11,7 +11,7 @@ class disk_metric(base_metric):
         return True, ''
     
     def format(self, title, values, idxs):
-        return label2(values, [(1024 * 1024, 'MB/s'), (1024, 'KB/s'), (1, 'Bytes/s')], idxs)
+        return label_bytes_per_sec(values, idxs)
 
     @classmethod
     def key(cls):

@@ -1,4 +1,3 @@
-# various ML accelerators, for now supports apple's NE
 import subprocess
 from cubestat.metrics.base_metric import base_metric
 from cubestat.metrics.registry import cubestat_metric

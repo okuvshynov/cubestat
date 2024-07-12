@@ -4,7 +4,7 @@ import subprocess
 
 from cubestat.metrics.base_metric import base_metric
 from cubestat.metrics.registry import cubestat_metric
-from cubestat.common import SimpleMode, label2
+from cubestat.common import SimpleMode, label_bytes
 
 class swap_metric(base_metric):
     def pre(self, title):
@@ -13,7 +13,7 @@ class swap_metric(base_metric):
         return True, ''
 
     def format(self, title, values, idxs):
-        return label2(values, [(1024 * 1024, 'MB'), (1024, 'KB'), (1, 'Bytes')], idxs)
+        return label_bytes(values, idxs)
 
     @classmethod
     def key(cls):

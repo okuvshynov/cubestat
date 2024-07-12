@@ -45,3 +45,11 @@ class RateReader:
         res = (value - self.last[key]) / self.interval_s
         self.last[key] = value
         return res
+
+def label_bytes(values, idxs):
+    buckets = [(1024 ** 5, 'PB'), (1024 ** 4, 'TB'), (1024 ** 3, 'GB'), (1024 ** 2, 'MB'), (1024, 'KB'), (1, 'Bytes')]
+    return label2(values, buckets, idxs)
+
+def label_bytes_per_sec(values, idxs):
+    buckets = [(1024 ** 5, 'PB/s'), (1024 ** 4, 'TB/s'), (1024 ** 3, 'GB/s'), (1024 ** 2, 'MB/s'), (1024, 'KB/s'), (1, 'Bytes/s')]
+    return label2(values, buckets, idxs)

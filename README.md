@@ -142,11 +142,11 @@ Example notebook: [colab example](https://colab.research.google.com/drive/1EUOXG
 
 ## TODO
 
+- [ ] add 'help' for each metric
+- [ ] unit tests
 - [x] memory modes - more details (cache/etc), absolute values rather than %, mmap handling
 - [ ] optional joint scale within metric group
 - [ ] nvidia GPU - probing vs momentary load to avoid missing spikes
-- [ ] add 'help' for each metric
-- [ ] unit tests
 - [ ] support AMD GPUs
 - [ ] rent on vast.ai
 - [ ] support remote monitoring

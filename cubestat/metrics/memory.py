@@ -2,7 +2,7 @@ import psutil
 
 from cubestat.metrics.base_metric import base_metric
 from cubestat.metrics.registry import cubestat_metric
-from cubestat.common import label2
+from cubestat.common import label_bytes
 from cubestat.common import DisplayMode
 
 class RAMMode(DisplayMode):
@@ -27,7 +27,7 @@ class ram_metric(base_metric):
     def format(self, title, values, idxs):
         if title == 'RAM used %':
             return 100.0, [f'{values[i]:3.0f}%' for i in idxs]
-        return label2(values, [(1024 ** 3, 'GB'), (1024 ** 2, 'MB'), (1024, 'KB'), (1, 'Bytes')], idxs)
+        return label_bytes(values, idxs)
 
     @classmethod
     def key(cls):
