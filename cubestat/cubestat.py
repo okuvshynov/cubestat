@@ -195,14 +195,12 @@ class Horizon:
                     # ╚ ▁▁▁  ▁    ▁▆▅▄ ▁▁▁      ▂ ▇▃▃▂█▃▇▁▃▂▁▁▂▁▁▃▃▂▁▂▄▄▁▂▆▁▃▁▂▃▁▁▁▂▂▂▂▂▂▁▁▃▂▂▁▂▁▃▄▃ ▁▁▃▁▄▂▃▂▂▂▃▃▅▅ ╝
                     cells = self.cells[get_theme(group_name, self.theme)]
                     scaler = len(cells) / max_value
-                    col = self.cols - (len(data_slice) + len(self.spacing)) - 2
-                    for v in data_slice:
-                        col += 1
-                        cell_index = floor(v * scaler)
+                    col_start = self.cols - (len(data_slice) + len(self.spacing)) - 2
+
+                    for col, v in enumerate(data_slice, start=col_start):
+                        cell_index = min(floor(v * scaler), len(cells) - 1)
                         if cell_index <= 0:
                             continue
-                        if cell_index >= len(cells):
-                            cell_index = len(cells) - 1
                         chr, color_pair = cells[cell_index]
                         self.write_char(row + 1, col, chr, curses.color_pair(color_pair))
 
