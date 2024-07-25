@@ -40,42 +40,26 @@ or
 ## Usage
 
 ```
-cubestat [-h] [--refresh_ms REFRESH_MS]
-                [--buffer_size BUFFER_SIZE]
-                [--cpu {all,by_cluster,by_core}]
-                [--gpu {collapsed,load_only,load_and_vram}]
+usage: cubestat [-h] [--refresh_ms REFRESH_MS] [--buffer_size BUFFER_SIZE] [--view {off,one,all}] [--cpu {all,by_cluster,by_core}] [--gpu {collapsed,load_only,load_and_vram}] [--swap {show,hide}] [--network {show,hide}] [--disk {show,hide}]
                 [--power {combined,all,off}]
-                [--color {red,green,blue,pink,olive,navy,blue_dark,purple,mixed,dark}]
-                [--view {off,one,all}] [--disk {show,hide}]
-                [--swap {show,hide}] [--network {show,hide}]
 
 options:
   -h, --help            show this help message and exit
   --refresh_ms REFRESH_MS, -i REFRESH_MS
                         Update frequency, milliseconds
   --buffer_size BUFFER_SIZE
-                        How many datapoints to store. Having it larger
-                        than screen width is a good idea as terminal
-                        window can be resized
+                        How many datapoints to store. Having it larger than screen width is a good idea as terminal window can be resized
+  --view {off,one,all}  legend/values/time mode. Can be toggled by pressing v.
   --cpu {all,by_cluster,by_core}
-                        CPU mode - showing all cores, only cumulative by
-                        cluster or both. Can be toggled by pressing c.
+                        CPU mode - showing all cores, only cumulative by cluster or both. Can be toggled by pressing c.
   --gpu {collapsed,load_only,load_and_vram}
-                        GPU mode - hidden, showing all GPUs load, or
-                        showing load and vram usage. Can be toggled by
-                        pressing g.
-  --power {combined,all,off}
-                        Power mode - off, showing breakdown CPU/GPU/ANE
-                        load, or showing combined usage. Can be toggled
-                        by pressing p.
-  --color {red,green,blue,pink,olive,navy,blue_dark,purple,mixed,dark}
-  --view {off,one,all}  legend/values/time mode. Can be toggled by
-                        pressing v.
-  --disk {show,hide}    Show disk read/write. Can be toggled by pressing
-                        d.
+                        GPU mode - hidden, showing all GPUs load, or showing load and vram usage. Can be toggled by pressing g.
   --swap {show,hide}    Show swap . Can be toggled by pressing s.
   --network {show,hide}
                         Show network io. Can be toggled by pressing n.
+  --disk {show,hide}    Show disk read/write. Can be toggled by pressing d.
+  --power {combined,all,off}
+                        Power mode - off, showing breakdown CPU/GPU/ANE load, or showing combined usage. Can be toggled by pressing p.
 ```
 
 Interactive commands:
