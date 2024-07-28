@@ -15,6 +15,7 @@ from cubestat.platforms.macos import MacOSPlatform
 
 from cubestat.common import DisplayMode
 from cubestat.colors import get_theme, prepare_cells, ColorTheme
+from cubestat.input import InputHandler
 
 from cubestat.metrics.registry import get_metrics, metrics_configure_argparse
 from cubestat.metrics import cpu, gpu, memory, accel, swap, network, disk, power
@@ -56,6 +57,8 @@ class Horizon:
 
         self.refresh_ms = args.refresh_ms
         self.metrics = get_metrics(args)
+
+        self.input_handler = InputHandler(self)
 
     def do_read(self, context):
         for group, metric in self.metrics.items():
@@ -221,61 +224,9 @@ class Horizon:
         t = Thread(target=self.platform.loop, daemon=True, args=[self.do_read])
         t.start()
         self.stdscr.keypad(True)
-        hotkeys = [(m.hotkey(), m) for m in self.metrics.values() if m.hotkey()]
         while True:
             self.render()
-            key = self.stdscr.getch()
-            if key == ord('q') or key == ord('Q'):
-                exit(0)
-            for k, metric in hotkeys:
-                if key == ord(k):
-                    with self.lock:
-                        metric.mode = metric.mode.next()
-                        self.settings_changed = True
-                if key == ord(k.upper()):
-                    with self.lock:
-                        metric.mode = metric.mode.prev()
-                        self.settings_changed = True
-            if key == curses.KEY_UP:
-                with self.lock:
-                    if self.v_shift > 0:
-                        self.v_shift -= 1
-                        self.settings_changed = True
-            if key == curses.KEY_DOWN:
-                with self.lock:
-                    self.v_shift += 1
-                    self.settings_changed = True
-            if key == curses.KEY_LEFT:
-                with self.lock:
-                    if self.h_shift + 1 < self.snapshots_observed:
-                        self.h_shift += 1
-                        self.settings_changed = True
-            if key == curses.KEY_RIGHT:
-                with self.lock:
-                    if self.h_shift > 0:
-                        self.h_shift -= 1
-                        self.settings_changed = True
-            if key == ord('0'):
-                with self.lock:
-                    if self.h_shift > 0:
-                        self.h_shift = 0
-                        self.settings_changed = True
-            if key == ord('v'):
-                with self.lock:
-                    self.view = self.view.next()
-                    self.settings_changed = True
-            if key == ord('V'):
-                with self.lock:
-                    self.view = self.view.prev()
-                    self.settings_changed = True
-            if key == ord('t'):
-                with self.lock:
-                    self.theme = self.theme.next()
-                    self.settings_changed = True
-            if key == ord('T'):
-                with self.lock:
-                    self.theme = self.theme.prev()
-                    self.settings_changed = True
+            self.input_handler.handle_input()
 
 def start(stdscr, platform, args):
     h = Horizon(stdscr, platform, args)
