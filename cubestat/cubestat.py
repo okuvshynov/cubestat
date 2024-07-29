@@ -26,7 +26,7 @@ class ViewMode(DisplayMode):
 class Cubestat:
     def __init__(self, stdscr, args):
         self.screen = Screen(stdscr)
-        self.timeline_interval = 20 # chars
+        self.ruler_interval = 20 # chars
 
         self.lock = Lock()
 
@@ -58,31 +58,34 @@ class Cubestat:
             if self.h_shift > 0:
                 self.h_shift += 1
 
-    def max_val(self, group_name, title, data_slice):
-        max_value, _ = self.metrics[group_name].format(title, data_slice, [-1])
+    def max_val(self, metric, title, data_slice):
+        max_value, _ = metric.format(title, data_slice, [-1])
         return max_value
     
-    def format_value(self, group_name, title, data_slice, idx):
-        _, values = self.metrics[group_name].format(title, data_slice, [idx])
+    def format_value(self, metric, title, data_slice, idx):
+        _, values = metric.format(title, data_slice, [idx])
         return f'{values[0]}' if self.view != ViewMode.off else ''
-    
-    def inject_to_string(self, string, at, val):
-        pos = self.screen.cols - 1 - len(self.screen.spacing) - 1 - at
-        if pos > len(val):
-            return string[:pos - len(val)] + val + "|" + string[pos + 1:]
-        return string
     
     def vertical_time(self, at, curr_line):
         time_s = (self.refresh_ms * (at + self.h_shift)) / 1000.0
         time_str = f'-{time_s:.2f}s'
-        return self.inject_to_string(curr_line, at, time_str)
+        return self.screen.inject_to_string(curr_line, at, time_str)
     
-    def vertical_val(self, group_name, title, at, data_slice, curr_line):
+    def vertical_val(self, metric, title, at, data_slice, curr_line):
         if at >= len(data_slice):
             return curr_line
         data_index = - at - 1
-        v = self.format_value(group_name, title, data_slice, data_index)
-        return self.inject_to_string(curr_line, at, v)
+        v = self.format_value(metric, title, data_slice, data_index)
+        return self.screen.inject_to_string(curr_line, at, v)
+
+    def _ruler(self, ruler, cols, metric, title, data):
+        if self.view == ViewMode.off:
+            return ruler
+        for ago in range(0, cols, self.ruler_interval):
+            ruler = self.vertical_val(metric, title, ago, data, ruler)
+            if self.view != ViewMode.all:
+                break
+        return ruler
 
     def render(self):
         with self.lock:
@@ -93,7 +96,6 @@ class Cubestat:
                 return
         
         self.screen.render_start()
-
         cols = self.screen.cols
 
         base_line = "." * cols
@@ -101,8 +103,9 @@ class Cubestat:
         row = 0
         with self.lock:
             skip = self.v_shift
-            for group_name, title, series in self.data_manager.data_gen():
-                show, indent = self.metrics[group_name].pre(title)
+            for metric_name, title, series in self.data_manager.data_gen():
+                metric = self.metrics[metric_name]
+                show, indent = metric.pre(title)
 
                 if not show:
                     continue
@@ -112,17 +115,12 @@ class Cubestat:
                     continue
 
                 data_slice = self.data_manager.get_slice(series, indent, self.h_shift, cols, self.screen.spacing)
-                max_value = self.max_val(group_name, title, data_slice)
-                theme     = get_theme(group_name, self.theme)
 
-                curr_line = base_line
-                if self.view != ViewMode.off:
-                    for ago in range(0, cols, self.timeline_interval):
-                        curr_line = self.vertical_val(group_name, title, ago, data_slice, curr_line)
-                        if self.view != ViewMode.all:
-                            break
-                
-                self.screen.render_legend(indent, title, curr_line, row)
+                ruler = self._ruler(base_line, cols, metric, title, data_slice)
+                self.screen.render_legend(indent, title, ruler, row)
+
+                max_value = self.max_val(metric, title, data_slice)
+                theme     = get_theme(metric_name, self.theme)
                 self.screen.render_chart(theme, max_value, data_slice, row)
 
                 row += 2
@@ -130,9 +128,9 @@ class Cubestat:
             self.settings_changed   = False
             if self.view != ViewMode.off:
                 curr_line = base_line
-                for ago in range(0, cols, self.timeline_interval):
+                for ago in range(0, cols, self.ruler_interval):
                     curr_line = self.vertical_time(ago, curr_line)
-                curr_line = curr_line[len(self.screen.spacing) + 1:  - len(self.screen.spacing) - 1]
+                self.screen.render_time(curr_line, row)
         self.screen.render_done()
 
     def loop(self, platform):

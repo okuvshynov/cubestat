@@ -59,4 +59,14 @@ class Screen:
             self.write_char(row + 1, col, char, curses.color_pair(color_pair))
 
     def render_time(self, time_line, row):
-        self.write_string(row, 0, f"╚{self.spacing}{time_line}{self.spacing}╝")
+        border_size = 1 + len(self.spacing)
+        if len(time_line) > 2 * border_size:
+            time_line = time_line[border_size: -border_size]
+            self.write_string(row, 0, f"╚{self.spacing}{time_line}{self.spacing}╝")
+
+    def inject_to_string(self, string, at, val):
+        pos = self.cols - 1 - len(self.spacing) - 1 - at
+        if pos > len(val):
+            return string[:pos - len(val)] + val + "|" + string[pos + 1:]
+        return string
+    

@@ -2,7 +2,6 @@ from abc import ABC, abstractmethod
 
 from cubestat.common import SimpleMode
 
-# This seems like a 'metric set' rather than metric. 
 # TODO: make this one metric_set or metric_group.
 # each individual metric would be able to pick the implementation 
 # for formatting, etc.
