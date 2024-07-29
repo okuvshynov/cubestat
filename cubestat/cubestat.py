@@ -8,7 +8,7 @@ from math import floor
 from threading import Thread, Lock
 
 from cubestat.common import DisplayMode
-from cubestat.colors import get_theme, prepare_cells, ColorTheme
+from cubestat.colors import get_theme, ColorTheme
 from cubestat.input import InputHandler
 from cubestat.data import DataManager
 from cubestat.screen import Screen
@@ -26,11 +26,8 @@ class ViewMode(DisplayMode):
 class Cubestat:
     def __init__(self, stdscr, args):
         self.screen = Screen(stdscr)
-        self.spacing = ' '
         self.filling = '.'
         self.timeline_interval = 20 # chars
-
-        self.cells = prepare_cells()
 
         self.lock = Lock()
 
@@ -70,11 +67,8 @@ class Cubestat:
         _, values = self.metrics[group_name].format(title, data_slice, [idx])
         return f'{values[0]}' if self.view != ViewMode.off else ''
     
-    def get_col(self, ago):
-        return self.screen.cols - 1 - len(self.spacing) - 1 - ago
-
     def inject_to_string(self, string, at, val):
-        pos = self.get_col(at)
+        pos = self.screen.cols - 1 - len(self.screen.spacing) - 1 - at
         if pos > len(val):
             return string[:pos - len(val)] + val + "|" + string[pos + 1:]
         return string
@@ -122,54 +116,20 @@ class Cubestat:
                     skip -= 1
                     continue
 
-                # render title and left border, for example
-                #
-                # ╔ GPU util %
-                # ╚
-                title_str = f'{indent}╔{self.spacing}{title}'
-                self.screen.write_string(row, 0, title_str)
-                self.screen.write_string(row + 1, 0, f'{indent}╚')
-
-                data_slice = self.data_manager.get_slice(series, indent, self.h_shift, cols, self.spacing)
+                data_slice = self.data_manager.get_slice(series, indent, self.h_shift, cols, self.screen.spacing)
                 max_value = self.max_val(group_name, title, data_slice)
 
-                # render the rest of title row
-                #
-                # ╔ GPU util %............................................................................:  4% ╗
-                # ╚
-                
-                topright_border = f"{self.spacing}╗"
                 curr_line = base_line
                 if self.view != ViewMode.off:
                     for ago in range(0, cols, self.timeline_interval):
                         curr_line = self.vertical_val(group_name, title, ago, data_slice, curr_line)
                         if self.view != ViewMode.all:
                             break
-                title_filling = curr_line[len(title_str):-len(topright_border)]
-                self.screen.write_string(row, len(title_str), title_filling)
-                self.screen.write_string(row, cols - len(topright_border), topright_border)
+                
+                self.screen.render_legend(indent, title, curr_line, row)
 
-                # render the right border
-                #
-                # ╔ GPU util %............................................................................:  4% ╗
-                # ╚                                                                                             ╝
-                border = f'{self.spacing}╝'
-                self.screen.write_string(row + 1, cols - len(border), border)
-
-                # Render the chart itself
-                #
-                # ╔ GPU util %............................................................................:  4% ╗
-                # ╚ ▁▁▁  ▁    ▁▆▅▄ ▁▁▁      ▂ ▇▃▃▂█▃▇▁▃▂▁▁▂▁▁▃▃▂▁▂▄▄▁▂▆▁▃▁▂▃▁▁▁▂▂▂▂▂▂▁▁▃▂▂▁▂▁▃▄▃ ▁▁▃▁▄▂▃▂▂▂▃▃▅▅ ╝
-                cells = self.cells[get_theme(group_name, self.theme)]
-                scaler = len(cells) / max_value
-                col_start = cols - (len(data_slice) + len(self.spacing)) - 1
-
-                for col, v in enumerate(data_slice, start=col_start):
-                    cell_index = min(floor(v * scaler), len(cells) - 1)
-                    if cell_index <= 0:
-                        continue
-                    chr, color_pair = cells[cell_index]
-                    self.screen.write_char(row + 1, col, chr, curses.color_pair(color_pair))
+                theme = get_theme(group_name, self.theme)
+                self.screen.render_chart(theme, max_value, data_slice, row)
 
                 row += 2
             self.snapshots_rendered = self.snapshots_observed
@@ -178,10 +138,8 @@ class Cubestat:
                 curr_line = base_line
                 for ago in range(0, cols, self.timeline_interval):
                     curr_line = self.vertical_time(ago, curr_line)
-                curr_line = curr_line[len(self.spacing) + 1:  - len(self.spacing) - 1]
-
-                self.screen.write_string(row, 0, f"╚{self.spacing}{curr_line}{self.spacing}╝")
-
+                curr_line = curr_line[len(self.screen.spacing) + 1:  - len(self.screen.spacing) - 1]
+                self.screen.write_string(row, 0, f"╚{self.screen.spacing}{curr_line}{self.screen.spacing}╝")
         self.screen.render_done()
 
     def loop(self, platform):
