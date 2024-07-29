@@ -35,10 +35,16 @@ class Screen:
     def render_done(self):
         self.stdscr.refresh()
 
-    def render_legend(self, indent, title, filling_line, row):
+    def ruler(self, ruler, items):
+        for idx, value in items:
+            ruler = self.inject_to_string(ruler, idx, value)
+        return ruler
+
+    def render_ruler(self, indent, title, base_ruler, items, row):
+        ruler = self.ruler(base_ruler, items)
         title_str = f'{indent}╔{self.spacing}{title}'
         topright_border = f"{self.spacing}╗"
-        title_filling = filling_line[len(title_str):-len(topright_border)]
+        title_filling = ruler[len(title_str):-len(topright_border)]
         bottomright_border = f'{self.spacing}╝'
         self.write_string(row, 0, title_str)
         self.write_string(row, len(title_str), title_filling)
@@ -58,11 +64,12 @@ class Screen:
             char, color_pair = cells[cell_index]
             self.write_char(row + 1, col, char, curses.color_pair(color_pair))
 
-    def render_time(self, time_line, row):
+    def render_time(self, base_ruler, ruler_times, row):
+        ruler = self.ruler(base_ruler, ruler_times)
         border_size = 1 + len(self.spacing)
-        if len(time_line) > 2 * border_size:
-            time_line = time_line[border_size: -border_size]
-            self.write_string(row, 0, f"╚{self.spacing}{time_line}{self.spacing}╝")
+        if len(ruler) > 2 * border_size:
+            ruler = ruler[border_size: -border_size]
+            self.write_string(row, 0, f"╚{self.spacing}{ruler}{self.spacing}╝")
 
     def inject_to_string(self, string, at, val):
         pos = self.cols - 1 - len(self.spacing) - 1 - at

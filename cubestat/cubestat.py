@@ -40,6 +40,7 @@ class Cubestat:
         self.theme = ColorTheme.col
 
         self.refresh_ms = args.refresh_ms
+        self.step_s  = args.refresh_ms / 1000.0
         self.metrics = get_metrics(args)
 
         self.input_handler = InputHandler(self)
@@ -61,31 +62,16 @@ class Cubestat:
     def max_val(self, metric, title, data_slice):
         max_value, _ = metric.format(title, data_slice, [-1])
         return max_value
-    
-    def format_value(self, metric, title, data_slice, idx):
-        _, values = metric.format(title, data_slice, [idx])
-        return f'{values[0]}' if self.view != ViewMode.off else ''
-    
-    def vertical_time(self, at, curr_line):
-        time_s = (self.refresh_ms * (at + self.h_shift)) / 1000.0
-        time_str = f'-{time_s:.2f}s'
-        return self.screen.inject_to_string(curr_line, at, time_str)
-    
-    def vertical_val(self, metric, title, at, data_slice, curr_line):
-        if at >= len(data_slice):
-            return curr_line
-        data_index = - at - 1
-        v = self.format_value(metric, title, data_slice, data_index)
-        return self.screen.inject_to_string(curr_line, at, v)
 
-    def _ruler(self, ruler, cols, metric, title, data):
+    def _ruler_values(self, metric, title, idxs, data):
         if self.view == ViewMode.off:
-            return ruler
-        for ago in range(0, cols, self.ruler_interval):
-            ruler = self.vertical_val(metric, title, ago, data, ruler)
-            if self.view != ViewMode.all:
-                break
-        return ruler
+            return []
+        idxs = [idx for idx in idxs if idx < len(data)]
+        data_indices  = [-idx - 1 for idx in idxs]
+        _, formatted_values = metric.format(title, data, data_indices)
+        if self.view == ViewMode.one and len(idxs) > 1:
+            idxs = idxs[:1]
+        return list(zip(idxs, formatted_values))
 
     def render(self):
         with self.lock:
@@ -97,8 +83,10 @@ class Cubestat:
         
         self.screen.render_start()
         cols = self.screen.cols
+        
+        ruler_indices = list(range(0, cols, self.ruler_interval))
 
-        base_line = "." * cols
+        base_ruler = "." * cols
 
         row = 0
         with self.lock:
@@ -115,9 +103,8 @@ class Cubestat:
                     continue
 
                 data_slice = self.data_manager.get_slice(series, indent, self.h_shift, cols, self.screen.spacing)
-
-                ruler = self._ruler(base_line, cols, metric, title, data_slice)
-                self.screen.render_legend(indent, title, ruler, row)
+                ruler_values = self._ruler_values(metric, title, ruler_indices, data_slice)
+                self.screen.render_ruler(indent, title, base_ruler, ruler_values, row)
 
                 max_value = self.max_val(metric, title, data_slice)
                 theme     = get_theme(metric_name, self.theme)
@@ -127,10 +114,8 @@ class Cubestat:
             self.snapshots_rendered = self.snapshots_observed
             self.settings_changed   = False
             if self.view != ViewMode.off:
-                curr_line = base_line
-                for ago in range(0, cols, self.ruler_interval):
-                    curr_line = self.vertical_time(ago, curr_line)
-                self.screen.render_time(curr_line, row)
+                ruler_times = [(i, f'-{(self.step_s * (i + self.h_shift)):.2f}s') for i in ruler_indices]
+                self.screen.render_time(base_ruler, ruler_times, row)
         self.screen.render_done()
 
     def loop(self, platform):
