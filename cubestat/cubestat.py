@@ -128,17 +128,10 @@ class Horizon:
         # ╔ GPU util %............................................................................:  4% ╗
         # ╚ ▁▁▁  ▁    ▁▆▅▄ ▁▁▁      ▂ ▇▃▃▂█▃▇▁▃▂▁▁▂▁▁▃▃▂▁▂▄▄▁▂▆▁▃▁▂▃▁▁▁▂▂▂▂▂▂▁▁▃▂▂▁▂▁▃▄▃ ▁▁▃▁▄▂▃▂▂▂▃▃▅▅ ╝
 
-        base_fill = ['.'] * self.cols
-        base_line = "".join(base_fill)
+        base_line = "." * self.cols
 
         row = 0
         with self.lock:
-            if self.view != ViewMode.off:
-                for ago in range(0, self.cols, self.timeline_interval):
-                    base_fill[self.get_col(ago)] = '|'
-                    if self.view != ViewMode.all:
-                        break
-            
             skip = self.v_shift
             for group_name, title, series in self.data_manager.data_gen():
                 show, indent = self.metrics[group_name].pre(title)
@@ -190,7 +183,7 @@ class Horizon:
                 # ╚ ▁▁▁  ▁    ▁▆▅▄ ▁▁▁      ▂ ▇▃▃▂█▃▇▁▃▂▁▁▂▁▁▃▃▂▁▂▄▄▁▂▆▁▃▁▂▃▁▁▁▂▂▂▂▂▂▁▁▃▂▂▁▂▁▃▄▃ ▁▁▃▁▄▂▃▂▂▂▃▃▅▅ ╝
                 cells = self.cells[get_theme(group_name, self.theme)]
                 scaler = len(cells) / max_value
-                col_start = self.cols - (len(data_slice) + len(self.spacing)) - 2
+                col_start = self.cols - (len(data_slice) + len(self.spacing)) - 1
 
                 for col, v in enumerate(data_slice, start=col_start):
                     cell_index = min(floor(v * scaler), len(cells) - 1)
