@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 import argparse
-import collections
 import curses
 import logging
 
@@ -24,7 +23,7 @@ class ViewMode(DisplayMode):
     one = "one"
     all = "all"
 
-class Horizon:
+class Cubestat:
     def __init__(self, stdscr, args):
         self.screen = Screen(stdscr)
         self.spacing = ' '
@@ -73,24 +72,24 @@ class Horizon:
     
     def get_col(self, ago):
         return self.screen.cols - 1 - len(self.spacing) - 1 - ago
+
+    def inject_to_string(self, string, at, val):
+        pos = self.get_col(at)
+        if pos > len(val):
+            return string[:pos - len(val)] + val + "|" + string[pos + 1:]
+        return string
     
     def vertical_time(self, at, curr_line):
-        str_pos = self.get_col(at)
         time_s = (self.refresh_ms * (at + self.h_shift)) / 1000.0
         time_str = f'-{time_s:.2f}s'
-        if str_pos > len(time_str):
-            curr_line = curr_line[:str_pos - len(time_str)] + time_str + "|" + curr_line[str_pos + 1:]
-        return curr_line
+        return self.inject_to_string(curr_line, at, time_str)
     
     def vertical_val(self, group_name, title, at, data_slice, curr_line):
         if at >= len(data_slice):
             return curr_line
         data_index = - at - 1
         v = self.format_value(group_name, title, data_slice, data_index)
-        str_pos = self.get_col(at)
-        if str_pos > len(v):
-            curr_line = curr_line[:str_pos - len(v)] + v + "|" + curr_line[str_pos + 1:]
-        return curr_line
+        return self.inject_to_string(curr_line, at, v)
 
     def render(self):
         with self.lock:
@@ -194,7 +193,7 @@ class Horizon:
             self.input_handler.handle_input()
 
 def start(stdscr, platform, args):
-    h = Horizon(stdscr, args)
+    h = Cubestat(stdscr, args)
     h.loop(platform)
 
 def main():
