@@ -6,7 +6,7 @@ class InputHandler:
         self.hotkeys = [(m.hotkey(), m) for m in self.horizon.metrics.values() if m.hotkey()]
 
     def handle_input(self):
-        key = self.horizon.stdscr.getch()
+        key = self.horizon.screen.stdscr.getch()
         if key == ord('q') or key == ord('Q'):
             exit(0)
         for k, metric in self.hotkeys:

@@ -12,6 +12,7 @@ from cubestat.common import DisplayMode
 from cubestat.colors import get_theme, prepare_cells, ColorTheme
 from cubestat.input import InputHandler
 from cubestat.data import DataManager
+from cubestat.screen import Screen
 
 from cubestat.platforms.factory import get_platform
 
@@ -24,26 +25,19 @@ class ViewMode(DisplayMode):
     all = "all"
 
 class Horizon:
-    def __init__(self, stdscr, platform, args):
-        stdscr.nodelay(False)
-        stdscr.timeout(50)
-        curses.curs_set(0)
-        curses.start_color()
-        curses.use_default_colors()
-
+    def __init__(self, stdscr, args):
+        self.screen = Screen(stdscr)
         self.spacing = ' '
         self.filling = '.'
         self.timeline_interval = 20 # chars
 
         self.cells = prepare_cells()
-        self.stdscr = stdscr
 
         self.lock = Lock()
 
         self.snapshots_observed = 0
         self.snapshots_rendered = 0
         self.settings_changed = False
-        self.platform = platform
         self.v_shift = 0
         self.h_shift = 0
 
@@ -69,20 +63,6 @@ class Horizon:
             if self.h_shift > 0:
                 self.h_shift += 1
 
-    def write_string(self, row, col, s, color=0):
-        if col + len(s) > self.cols:
-            s = s[:self.cols - col]
-        try:
-            self.stdscr.addstr(row, col, s, color)
-        except:
-            pass
-
-    def write_char(self, row, col, chr, color=0):
-        try:
-            self.stdscr.addch(row, col, chr, color)
-        except:
-            pass
-    
     def max_val(self, group_name, title, data_slice):
         max_value, _ = self.metrics[group_name].format(title, data_slice, [-1])
         return max_value
@@ -92,7 +72,7 @@ class Horizon:
         return f'{values[0]}' if self.view != ViewMode.off else ''
     
     def get_col(self, ago):
-        return self.cols - 1 - len(self.spacing) - 1 - ago
+        return self.screen.cols - 1 - len(self.spacing) - 1 - ago
     
     def vertical_time(self, at, curr_line):
         str_pos = self.get_col(at)
@@ -119,14 +99,16 @@ class Horizon:
                 exit(0)
             if self.snapshots_observed == self.snapshots_rendered and not self.settings_changed:
                 return
-        self.stdscr.erase()
-        self.rows, self.cols = self.stdscr.getmaxyx()
+        
+        self.screen.render_start()
+
+        cols = self.screen.cols
 
         # Each chart takes two lines, with format roughly
         # ╔ GPU util %............................................................................:  4% ╗
         # ╚ ▁▁▁  ▁    ▁▆▅▄ ▁▁▁      ▂ ▇▃▃▂█▃▇▁▃▂▁▁▂▁▁▃▃▂▁▂▄▄▁▂▆▁▃▁▂▃▁▁▁▂▂▂▂▂▂▁▁▃▂▂▁▂▁▃▄▃ ▁▁▃▁▄▂▃▂▂▂▃▃▅▅ ╝
 
-        base_line = "." * self.cols
+        base_line = "." * cols
 
         row = 0
         with self.lock:
@@ -146,10 +128,10 @@ class Horizon:
                 # ╔ GPU util %
                 # ╚
                 title_str = f'{indent}╔{self.spacing}{title}'
-                self.write_string(row, 0, title_str)
-                self.write_string(row + 1, 0, f'{indent}╚')
+                self.screen.write_string(row, 0, title_str)
+                self.screen.write_string(row + 1, 0, f'{indent}╚')
 
-                data_slice = self.data_manager.get_slice(series, indent, self.h_shift, self.cols, self.spacing)
+                data_slice = self.data_manager.get_slice(series, indent, self.h_shift, cols, self.spacing)
                 max_value = self.max_val(group_name, title, data_slice)
 
                 # render the rest of title row
@@ -160,20 +142,20 @@ class Horizon:
                 topright_border = f"{self.spacing}╗"
                 curr_line = base_line
                 if self.view != ViewMode.off:
-                    for ago in range(0, self.cols, self.timeline_interval):
+                    for ago in range(0, cols, self.timeline_interval):
                         curr_line = self.vertical_val(group_name, title, ago, data_slice, curr_line)
                         if self.view != ViewMode.all:
                             break
                 title_filling = curr_line[len(title_str):-len(topright_border)]
-                self.write_string(row, len(title_str), title_filling)
-                self.write_string(row, self.cols - len(topright_border), topright_border)
+                self.screen.write_string(row, len(title_str), title_filling)
+                self.screen.write_string(row, cols - len(topright_border), topright_border)
 
                 # render the right border
                 #
                 # ╔ GPU util %............................................................................:  4% ╗
                 # ╚                                                                                             ╝
                 border = f'{self.spacing}╝'
-                self.write_string(row + 1, self.cols - len(border), border)
+                self.screen.write_string(row + 1, cols - len(border), border)
 
                 # Render the chart itself
                 #
@@ -181,39 +163,39 @@ class Horizon:
                 # ╚ ▁▁▁  ▁    ▁▆▅▄ ▁▁▁      ▂ ▇▃▃▂█▃▇▁▃▂▁▁▂▁▁▃▃▂▁▂▄▄▁▂▆▁▃▁▂▃▁▁▁▂▂▂▂▂▂▁▁▃▂▂▁▂▁▃▄▃ ▁▁▃▁▄▂▃▂▂▂▃▃▅▅ ╝
                 cells = self.cells[get_theme(group_name, self.theme)]
                 scaler = len(cells) / max_value
-                col_start = self.cols - (len(data_slice) + len(self.spacing)) - 1
+                col_start = cols - (len(data_slice) + len(self.spacing)) - 1
 
                 for col, v in enumerate(data_slice, start=col_start):
                     cell_index = min(floor(v * scaler), len(cells) - 1)
                     if cell_index <= 0:
                         continue
                     chr, color_pair = cells[cell_index]
-                    self.write_char(row + 1, col, chr, curses.color_pair(color_pair))
+                    self.screen.write_char(row + 1, col, chr, curses.color_pair(color_pair))
 
                 row += 2
             self.snapshots_rendered = self.snapshots_observed
             self.settings_changed   = False
             if self.view != ViewMode.off:
                 curr_line = base_line
-                for ago in range(0, self.cols, self.timeline_interval):
+                for ago in range(0, cols, self.timeline_interval):
                     curr_line = self.vertical_time(ago, curr_line)
                 curr_line = curr_line[len(self.spacing) + 1:  - len(self.spacing) - 1]
 
-                self.write_string(row, 0, f"╚{self.spacing}{curr_line}{self.spacing}╝")
+                self.screen.write_string(row, 0, f"╚{self.spacing}{curr_line}{self.spacing}╝")
 
-        self.stdscr.refresh()
+        self.screen.render_done()
 
-    def loop(self):
-        t = Thread(target=self.platform.loop, daemon=True, args=[self.do_read])
+    def loop(self, platform):
+        t = Thread(target=platform.loop, daemon=True, args=[self.do_read])
         t.start()
-        self.stdscr.keypad(True)
+        self.screen.stdscr.keypad(True)
         while True:
             self.render()
             self.input_handler.handle_input()
 
 def start(stdscr, platform, args):
-    h = Horizon(stdscr, platform, args)
-    h.loop()
+    h = Horizon(stdscr, args)
+    h.loop(platform)
 
 def main():
     logging.basicConfig(filename='/tmp/cubestat.log', level=logging.INFO)
