@@ -3,7 +3,6 @@
 import argparse
 import collections
 import curses
-import itertools
 import logging
 import sys
 
@@ -16,6 +15,7 @@ from cubestat.platforms.macos import MacOSPlatform
 from cubestat.common import DisplayMode
 from cubestat.colors import get_theme, prepare_cells, ColorTheme
 from cubestat.input import InputHandler
+from cubestat.data import DataManager
 
 from cubestat.metrics.registry import get_metrics, metrics_configure_argparse
 from cubestat.metrics import cpu, gpu, memory, accel, swap, network, disk, power
@@ -41,9 +41,6 @@ class Horizon:
         self.stdscr = stdscr
 
         self.lock = Lock()
-        init_series = lambda: collections.deque(maxlen=args.buffer_size)
-        init_group  = lambda: collections.defaultdict(init_series)
-        self.data   = collections.defaultdict(init_group)
 
         self.snapshots_observed = 0
         self.snapshots_rendered = 0
@@ -59,15 +56,17 @@ class Horizon:
         self.metrics = get_metrics(args)
 
         self.input_handler = InputHandler(self)
+        self.data_manager  = DataManager(args.buffer_size)
 
     def do_read(self, context):
+        updates = []
         for group, metric in self.metrics.items():
             datapoint = metric.read(context)
             for title, value in datapoint.items():
-                with self.lock:
-                    self.data[group][title].append(value)
+                updates.append((group, title, value))
 
         with self.lock:
+            self.data_manager.update(updates)
             self.snapshots_observed += 1
             if self.h_shift > 0:
                 self.h_shift += 1
@@ -115,12 +114,6 @@ class Horizon:
             curr_line = curr_line[:str_pos - len(v)] + v + "|" + curr_line[str_pos + 1:]
         return curr_line
 
-    def get_slice(self, series, indent):
-        data_length = len(series) - self.h_shift if self.h_shift > 0 else len(series)
-        chart_width = self.cols - 2 * len(self.spacing) - 2 - len(indent)
-        index = max(0, data_length - chart_width)
-        return list(itertools.islice(series, index, min(index + chart_width, data_length)))
-
     def render(self):
         with self.lock:
             if self.snapshots_rendered > self.snapshots_observed:
@@ -147,67 +140,66 @@ class Horizon:
                         break
             
             skip = self.v_shift
-            for group_name, group in self.data.items():
-                for title, series in group.items():
-                    show, indent = self.metrics[group_name].pre(title)
+            for group_name, title, series in self.data_manager.data_gen():
+                show, indent = self.metrics[group_name].pre(title)
 
-                    if not show:
+                if not show:
+                    continue
+                
+                if skip > 0:
+                    skip -= 1
+                    continue
+
+                # render title and left border, for example
+                #
+                # ╔ GPU util %
+                # ╚
+                title_str = f'{indent}╔{self.spacing}{title}'
+                self.write_string(row, 0, title_str)
+                self.write_string(row + 1, 0, f'{indent}╚')
+
+                data_slice = self.data_manager.get_slice(series, indent, self.h_shift, self.cols, self.spacing)
+                max_value = self.max_val(group_name, title, data_slice)
+
+                # render the rest of title row
+                #
+                # ╔ GPU util %............................................................................:  4% ╗
+                # ╚
+                
+                topright_border = f"{self.spacing}╗"
+                curr_line = base_line
+                if self.view != ViewMode.off:
+                    for ago in range(0, self.cols, self.timeline_interval):
+                        curr_line = self.vertical_val(group_name, title, ago, data_slice, curr_line)
+                        if self.view != ViewMode.all:
+                            break
+                title_filling = curr_line[len(title_str):-len(topright_border)]
+                self.write_string(row, len(title_str), title_filling)
+                self.write_string(row, self.cols - len(topright_border), topright_border)
+
+                # render the right border
+                #
+                # ╔ GPU util %............................................................................:  4% ╗
+                # ╚                                                                                             ╝
+                border = f'{self.spacing}╝'
+                self.write_string(row + 1, self.cols - len(border), border)
+
+                # Render the chart itself
+                #
+                # ╔ GPU util %............................................................................:  4% ╗
+                # ╚ ▁▁▁  ▁    ▁▆▅▄ ▁▁▁      ▂ ▇▃▃▂█▃▇▁▃▂▁▁▂▁▁▃▃▂▁▂▄▄▁▂▆▁▃▁▂▃▁▁▁▂▂▂▂▂▂▁▁▃▂▂▁▂▁▃▄▃ ▁▁▃▁▄▂▃▂▂▂▃▃▅▅ ╝
+                cells = self.cells[get_theme(group_name, self.theme)]
+                scaler = len(cells) / max_value
+                col_start = self.cols - (len(data_slice) + len(self.spacing)) - 2
+
+                for col, v in enumerate(data_slice, start=col_start):
+                    cell_index = min(floor(v * scaler), len(cells) - 1)
+                    if cell_index <= 0:
                         continue
-                    
-                    if skip > 0:
-                        skip -= 1
-                        continue
+                    chr, color_pair = cells[cell_index]
+                    self.write_char(row + 1, col, chr, curses.color_pair(color_pair))
 
-                    # render title and left border, for example
-                    #
-                    # ╔ GPU util %
-                    # ╚
-                    title_str = f'{indent}╔{self.spacing}{title}'
-                    self.write_string(row, 0, title_str)
-                    self.write_string(row + 1, 0, f'{indent}╚')
-
-                    data_slice = self.get_slice(series, indent)
-                    max_value = self.max_val(group_name, title, data_slice)
-
-                    # render the rest of title row
-                    #
-                    # ╔ GPU util %............................................................................:  4% ╗
-                    # ╚
-                    
-                    topright_border = f"{self.spacing}╗"
-                    curr_line = base_line
-                    if self.view != ViewMode.off:
-                        for ago in range(0, self.cols, self.timeline_interval):
-                            curr_line = self.vertical_val(group_name, title, ago, data_slice, curr_line)
-                            if self.view != ViewMode.all:
-                                break
-                    title_filling = curr_line[len(title_str):-len(topright_border)]
-                    self.write_string(row, len(title_str), title_filling)
-                    self.write_string(row, self.cols - len(topright_border), topright_border)
-
-                    # render the right border
-                    #
-                    # ╔ GPU util %............................................................................:  4% ╗
-                    # ╚                                                                                             ╝
-                    border = f'{self.spacing}╝'
-                    self.write_string(row + 1, self.cols - len(border), border)
-
-                    # Render the chart itself
-                    #
-                    # ╔ GPU util %............................................................................:  4% ╗
-                    # ╚ ▁▁▁  ▁    ▁▆▅▄ ▁▁▁      ▂ ▇▃▃▂█▃▇▁▃▂▁▁▂▁▁▃▃▂▁▂▄▄▁▂▆▁▃▁▂▃▁▁▁▂▂▂▂▂▂▁▁▃▂▂▁▂▁▃▄▃ ▁▁▃▁▄▂▃▂▂▂▃▃▅▅ ╝
-                    cells = self.cells[get_theme(group_name, self.theme)]
-                    scaler = len(cells) / max_value
-                    col_start = self.cols - (len(data_slice) + len(self.spacing)) - 2
-
-                    for col, v in enumerate(data_slice, start=col_start):
-                        cell_index = min(floor(v * scaler), len(cells) - 1)
-                        if cell_index <= 0:
-                            continue
-                        chr, color_pair = cells[cell_index]
-                        self.write_char(row + 1, col, chr, curses.color_pair(color_pair))
-
-                    row += 2
+                row += 2
             self.snapshots_rendered = self.snapshots_observed
             self.settings_changed   = False
             if self.view != ViewMode.off:
