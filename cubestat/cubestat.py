@@ -26,7 +26,6 @@ class ViewMode(DisplayMode):
 class Cubestat:
     def __init__(self, stdscr, args):
         self.screen = Screen(stdscr)
-        self.filling = '.'
         self.timeline_interval = 20 # chars
 
         self.lock = Lock()
@@ -96,10 +95,6 @@ class Cubestat:
         self.screen.render_start()
 
         cols = self.screen.cols
-
-        # Each chart takes two lines, with format roughly
-        # ╔ GPU util %............................................................................:  4% ╗
-        # ╚ ▁▁▁  ▁    ▁▆▅▄ ▁▁▁      ▂ ▇▃▃▂█▃▇▁▃▂▁▁▂▁▁▃▃▂▁▂▄▄▁▂▆▁▃▁▂▃▁▁▁▂▂▂▂▂▂▁▁▃▂▂▁▂▁▃▄▃ ▁▁▃▁▄▂▃▂▂▂▃▃▅▅ ╝
 
         base_line = "." * cols
 
