@@ -4,18 +4,16 @@ import argparse
 import collections
 import curses
 import logging
-import sys
 
 from math import floor
 from threading import Thread, Lock
-
-from cubestat.platforms.linux import LinuxPlatform
-from cubestat.platforms.macos import MacOSPlatform
 
 from cubestat.common import DisplayMode
 from cubestat.colors import get_theme, prepare_cells, ColorTheme
 from cubestat.input import InputHandler
 from cubestat.data import DataManager
+
+from cubestat.platforms.factory import get_platform
 
 from cubestat.metrics.registry import get_metrics, metrics_configure_argparse
 from cubestat.metrics import cpu, gpu, memory, accel, swap, network, disk, power
@@ -226,11 +224,7 @@ def main():
 
     metrics_configure_argparse(parser)
     args = parser.parse_args()
-    if sys.platform == "darwin":
-        curses.wrapper(start, MacOSPlatform(args.refresh_ms), args)
-    if sys.platform == "linux" or sys.platform == "linux2":
-        curses.wrapper(start, LinuxPlatform(args.refresh_ms), args)
-    logging.fatal(f'platform {sys.platform} is not supported yet.')
+    curses.wrapper(start, get_platform(args.refresh_ms), args)
 
 if __name__ == '__main__':
     main()
