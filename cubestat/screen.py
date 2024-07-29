@@ -58,3 +58,5 @@ class Screen:
             char, color_pair = cells[cell_index]
             self.write_char(row + 1, col, char, curses.color_pair(color_pair))
 
+    def render_time(self, time_line, row):
+        self.write_string(row, 0, f"╚{self.spacing}{time_line}{self.spacing}╝")

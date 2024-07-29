@@ -118,6 +118,7 @@ class Cubestat:
 
                 data_slice = self.data_manager.get_slice(series, indent, self.h_shift, cols, self.screen.spacing)
                 max_value = self.max_val(group_name, title, data_slice)
+                theme     = get_theme(group_name, self.theme)
 
                 curr_line = base_line
                 if self.view != ViewMode.off:
@@ -127,8 +128,6 @@ class Cubestat:
                             break
                 
                 self.screen.render_legend(indent, title, curr_line, row)
-
-                theme = get_theme(group_name, self.theme)
                 self.screen.render_chart(theme, max_value, data_slice, row)
 
                 row += 2
@@ -139,7 +138,6 @@ class Cubestat:
                 for ago in range(0, cols, self.timeline_interval):
                     curr_line = self.vertical_time(ago, curr_line)
                 curr_line = curr_line[len(self.screen.spacing) + 1:  - len(self.screen.spacing) - 1]
-                self.screen.write_string(row, 0, f"╚{self.screen.spacing}{curr_line}{self.screen.spacing}╝")
         self.screen.render_done()
 
     def loop(self, platform):

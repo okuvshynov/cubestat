@@ -39,6 +39,9 @@ class InputHandler:
                     self.horizon.settings_changed = True
         if key == ord('0'):
             with self.horizon.lock:
+                if self.horizon.v_shift > 0:
+                    self.horizon.v_shift = 0
+                    self.horizon.settings_changed = True
                 if self.horizon.h_shift > 0:
                     self.horizon.h_shift = 0
                     self.horizon.settings_changed = True
