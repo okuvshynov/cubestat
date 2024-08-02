@@ -3,6 +3,7 @@ from math import floor
 
 from cubestat.colors import prepare_cells
 
+
 class Screen:
     def __init__(self, stdscr):
         self.stdscr = stdscr
@@ -19,13 +20,13 @@ class Screen:
             s = s[:self.cols - col]
         try:
             self.stdscr.addstr(row, col, s, color)
-        except:
+        except curses.error:
             pass
 
     def write_char(self, row, col, chr, color=0):
         try:
             self.stdscr.addch(row, col, chr, color)
-        except:
+        except curses.error:
             pass
 
     def render_start(self):
@@ -76,4 +77,3 @@ class Screen:
         if pos > len(val):
             return string[:pos - len(val)] + val + "|" + string[pos + 1:]
         return string
-    

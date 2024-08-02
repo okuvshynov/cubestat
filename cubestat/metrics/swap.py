@@ -6,6 +6,7 @@ from cubestat.metrics.base_metric import base_metric
 from cubestat.metrics.registry import cubestat_metric
 from cubestat.common import SimpleMode, label_bytes
 
+
 class swap_metric(base_metric):
     def pre(self, title):
         if self.mode == SimpleMode.hide:
@@ -29,6 +30,7 @@ class swap_metric(base_metric):
 
     def hotkey(self):
         return 's'
+
 
 @cubestat_metric('darwin')
 class macos_swap_metric(swap_metric):
@@ -57,6 +59,7 @@ class macos_swap_metric(swap_metric):
         except:
             logging.error("unable to get swap stats.")
         return res
+
 
 @cubestat_metric('linux')
 class linux_swap_metric(swap_metric):

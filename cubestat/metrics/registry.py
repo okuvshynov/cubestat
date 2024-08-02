@@ -2,6 +2,7 @@ import sys
 
 _metrics = []
 
+
 def cubestat_metric(*args):
     def decorator(cls):
         if any(sys.platform.startswith(platform) for platform in args):
@@ -10,9 +11,11 @@ def cubestat_metric(*args):
         return cls
     return decorator
 
+
 def metrics_configure_argparse(parser):
     for _, metric_cls in _metrics:
         metric_cls.configure_argparse(parser)
+
 
 def get_metrics(args):
     return {
@@ -20,3 +23,5 @@ def get_metrics(args):
         for key, cls in _metrics
     }
 
+# to run the annotations and register metrics
+from cubestat.metrics import cpu, gpu, memory, accel, swap, network, disk, power

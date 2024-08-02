@@ -11,6 +11,7 @@ class CPUMode(DisplayMode):
     by_cluster = 'by_cluster'
     by_core = 'by_core'
 
+
 def auto_cpu_mode() -> CPUMode:
     return CPUMode.all if os.cpu_count() < 20 else CPUMode.by_cluster
 
@@ -44,13 +45,14 @@ class cpu_metric(base_metric):
     def configure_argparse(cls, parser):
         parser.add_argument('--cpu', type=CPUMode, default=auto_cpu_mode(), choices=list(CPUMode), help='CPU mode - showing all cores, only cumulative by cluster or both. Can be toggled by pressing c.')
 
+
 @cubestat_metric('linux')
 class psutil_cpu_metric(cpu_metric):
     def read(self, _context):
         self.cpu_clusters = []
         cpu_load = psutil.cpu_percent(percpu=True)
         res = {}
-        
+
         cluster_title = f'[{len(cpu_load)}] Total CPU Util, %'
         self.cpu_clusters.append(cluster_title)
         total_load = 0.0

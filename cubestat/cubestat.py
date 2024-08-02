@@ -15,7 +15,6 @@ from cubestat.screen import Screen
 from cubestat.platforms.factory import get_platform
 
 from cubestat.metrics.registry import get_metrics, metrics_configure_argparse
-from cubestat.metrics import cpu, gpu, memory, accel, swap, network, disk, power
 
 
 class ViewMode(DisplayMode):
