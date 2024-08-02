@@ -10,6 +10,7 @@ channels = 512
 n = 8
 layers = 30
 
+
 class Convs(nn.Module):
     def __init__(self, channels, layers):
         super(Convs, self).__init__()
@@ -19,7 +20,8 @@ class Convs(nn.Module):
 
     def forward(self, x):
         return self.blocks(x)
-    
+
+
 class TestModel(nn.Module):
     def __init__(self):
         super(TestModel, self).__init__()
@@ -30,6 +32,7 @@ class TestModel(nn.Module):
             nn.Flatten(),
             nn.LogSoftmax(dim=1)
         )
+
     def forward(self, x):
         return self.action(x)
 
@@ -76,4 +79,3 @@ if __name__ == "__main__":
     ms_per_sample = 1000.0 * duration / total_ranked
 
     print(f'{batch_size},{duration:.3f},{total_ranked},{ms_per_sample:.3f}')
-

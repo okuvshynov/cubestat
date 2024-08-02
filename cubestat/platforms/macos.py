@@ -6,11 +6,11 @@ class MacOSPlatform:
     def __init__(self, interval_ms) -> None:
         cmd = ['sudo', 'powermetrics', '-f', 'plist', '-i', str(interval_ms), '-s', 'cpu_power,gpu_power,ane_power,network,disk']
         self.powermetrics = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        # getting first line here to allow user to enter sudo credentials before 
+        # getting first line here to allow user to enter sudo credentials before
         # curses initialization.
         self.firstline = self.powermetrics.stdout.readline()
         self.platform = 'macos'
-    
+
     def loop(self, do_read_cb):
         buf = bytearray()
         buf.extend(self.firstline)

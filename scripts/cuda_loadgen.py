@@ -8,6 +8,7 @@ if torch.cuda.device_count() < 2:
     print("This script requires at least two GPUs")
     exit()
 
+
 # Set up a simple neural network model
 class SimpleModel(nn.Module):
     def __init__(self):
@@ -16,6 +17,7 @@ class SimpleModel(nn.Module):
 
     def forward(self, x):
         return self.fc(x)
+
 
 # Create model and wrap it with DataParallel to utilize multiple GPUs
 model = SimpleModel().cuda()

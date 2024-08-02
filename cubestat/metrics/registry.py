@@ -23,5 +23,6 @@ def get_metrics(args):
         for key, cls in _metrics
     }
 
+
 # to run the annotations and register metrics
 from cubestat.metrics import cpu, gpu, memory, accel, swap, network, disk, power

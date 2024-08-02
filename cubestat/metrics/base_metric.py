@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 
 from cubestat.common import SimpleMode
 
+
 # TODO: make this one metric_set or metric_group.
 # each individual metric would be able to pick the implementation
 # for formatting, etc.
@@ -44,7 +45,7 @@ class base_metric(ABC):
     def configure_argparse(cls, parser):
         pass
 
-    # help message to be used for this metric. 
+    # help message to be used for this metric.
     @classmethod
     def help(self):
         return None

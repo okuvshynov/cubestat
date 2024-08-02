@@ -66,6 +66,7 @@ class psutil_cpu_metric(cpu_metric):
 
         return res
 
+
 @cubestat_metric('darwin')
 class macos_cpu_metric(cpu_metric):
     def read(self, context):
@@ -85,4 +86,3 @@ class macos_cpu_metric(cpu_metric):
             res[cluster_title] = 100.0 - 100.0 * idle_cluster / total_cluster
 
         return res
-

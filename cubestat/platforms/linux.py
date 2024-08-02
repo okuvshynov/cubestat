@@ -1,9 +1,10 @@
 import time
 
+
 class LinuxPlatform:
     def __init__(self, interval_ms):
         self.interval_ms = interval_ms
-        self.platform    = 'linux'
+        self.platform = 'linux'
 
     def loop(self, do_read_cb):
         # TODO: should this be monotonic?

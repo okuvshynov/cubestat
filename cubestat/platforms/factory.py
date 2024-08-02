@@ -1,7 +1,9 @@
+import logging
 import sys
 
 from cubestat.platforms.linux import LinuxPlatform
 from cubestat.platforms.macos import MacOSPlatform
+
 
 def get_platform(refresh_ms):
     if sys.platform == "darwin":

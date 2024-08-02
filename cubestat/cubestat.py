@@ -142,5 +142,6 @@ def main():
     args = parser.parse_args()
     curses.wrapper(start, get_platform(args.refresh_ms), args)
 
+
 if __name__ == '__main__':
     main()
