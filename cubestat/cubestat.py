@@ -4,7 +4,6 @@ import argparse
 import curses
 import logging
 
-from math import floor
 from threading import Thread, Lock
 
 from cubestat.common import DisplayMode
@@ -83,9 +82,7 @@ class Cubestat:
         
         self.screen.render_start()
         cols = self.screen.cols
-        
         ruler_indices = list(range(0, cols, self.ruler_interval))
-
         base_ruler = "." * cols
 
         row = 0
@@ -104,6 +101,7 @@ class Cubestat:
 
                 data_slice = self.data_manager.get_slice(series, indent, self.h_shift, cols, self.screen.spacing)
                 ruler_values = self._ruler_values(metric, title, ruler_indices, data_slice)
+
                 self.screen.render_ruler(indent, title, base_ruler, ruler_values, row)
 
                 max_value = self.max_val(metric, title, data_slice)
