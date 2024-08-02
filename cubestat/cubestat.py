@@ -17,15 +17,17 @@ from cubestat.platforms.factory import get_platform
 from cubestat.metrics.registry import get_metrics, metrics_configure_argparse
 from cubestat.metrics import cpu, gpu, memory, accel, swap, network, disk, power
 
+
 class ViewMode(DisplayMode):
     off = "off"
     one = "one"
     all = "all"
 
+
 class Cubestat:
     def __init__(self, stdscr, args):
         self.screen = Screen(stdscr)
-        self.ruler_interval = 20 # chars
+        self.ruler_interval = 20  # chars
 
         self.lock = Lock()
 
@@ -39,11 +41,11 @@ class Cubestat:
         self.theme = ColorTheme.col
 
         self.refresh_ms = args.refresh_ms
-        self.step_s  = args.refresh_ms / 1000.0
+        self.step_s = args.refresh_ms / 1000.0
         self.metrics = get_metrics(args)
 
         self.input_handler = InputHandler(self)
-        self.data_manager  = DataManager(args.buffer_size)
+        self.data_manager = DataManager(args.buffer_size)
 
     def do_read(self, context):
         updates = []
@@ -66,7 +68,7 @@ class Cubestat:
         if self.view == ViewMode.off:
             return []
         idxs = [idx for idx in idxs if idx < len(data)]
-        data_indices  = [-idx - 1 for idx in idxs]
+        data_indices = [-idx - 1 for idx in idxs]
         _, formatted_values = metric.format(title, data, data_indices)
         if self.view == ViewMode.one and len(idxs) > 1:
             idxs = idxs[:1]
@@ -79,7 +81,7 @@ class Cubestat:
                 exit(0)
             if self.snapshots_observed == self.snapshots_rendered and not self.settings_changed:
                 return
-        
+
         self.screen.render_start()
         cols = self.screen.cols
         ruler_indices = list(range(0, cols, self.ruler_interval))
@@ -94,7 +96,7 @@ class Cubestat:
 
                 if not show:
                     continue
-                
+
                 if skip > 0:
                     skip -= 1
                     continue
@@ -105,12 +107,12 @@ class Cubestat:
                 self.screen.render_ruler(indent, title, base_ruler, ruler_values, row)
 
                 max_value = self.max_val(metric, title, data_slice)
-                theme     = get_theme(metric_name, self.theme)
+                theme = get_theme(metric_name, self.theme)
                 self.screen.render_chart(theme, max_value, data_slice, row)
 
                 row += 2
             self.snapshots_rendered = self.snapshots_observed
-            self.settings_changed   = False
+            self.settings_changed = False
             if self.view != ViewMode.off:
                 ruler_times = [(i, f'-{(self.step_s * (i + self.h_shift)):.2f}s') for i in ruler_indices]
                 self.screen.render_time(base_ruler, ruler_times, row)
@@ -124,9 +126,11 @@ class Cubestat:
             self.render()
             self.input_handler.handle_input()
 
+
 def start(stdscr, platform, args):
     h = Cubestat(stdscr, args)
     h.loop(platform)
+
 
 def main():
     logging.basicConfig(filename='/tmp/cubestat.log', level=logging.INFO)

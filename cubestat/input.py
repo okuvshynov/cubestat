@@ -1,5 +1,6 @@
 import curses
 
+
 class InputHandler:
     def __init__(self, horizon):
         self.horizon = horizon
