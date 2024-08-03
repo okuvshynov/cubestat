@@ -13,6 +13,7 @@ class DataManager:
 
         self.data = collections.defaultdict(init_group)
 
+    # TODO: UI-related things should be moved out of here
     def get_slice(self, series, indent, h_shift, cols, spacing):
         data_length = len(series) - h_shift if h_shift > 0 else len(series)
         chart_width = cols - 2 * len(spacing) - 2 - len(indent)
