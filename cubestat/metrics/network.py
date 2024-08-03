@@ -2,7 +2,7 @@ import psutil
 
 from cubestat.common import SimpleMode, RateReader, label_bytes_per_sec
 from cubestat.metrics.base_metric import base_metric
-from cubestat.metrics.registry import cubestat_metric
+from cubestat.metrics_registry import cubestat_metric
 
 
 class network_metric(base_metric):
@@ -28,7 +28,13 @@ class network_metric(base_metric):
 
     @classmethod
     def configure_argparse(cls, parser):
-        parser.add_argument('--network', type=SimpleMode, default=SimpleMode.show, choices=list(SimpleMode), help="Show network io. Can be toggled by pressing n.")
+        parser.add_argument(
+            '--network',
+            type=SimpleMode,
+            default=SimpleMode.show,
+            choices=list(SimpleMode),
+            help='Show network io. Hotkey: "n"'
+        )
 
 
 @cubestat_metric('darwin')

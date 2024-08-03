@@ -1,7 +1,7 @@
 import psutil
 
 from cubestat.metrics.base_metric import base_metric
-from cubestat.metrics.registry import cubestat_metric
+from cubestat.metrics_registry import cubestat_metric
 from cubestat.common import label_bytes
 from cubestat.common import DisplayMode
 

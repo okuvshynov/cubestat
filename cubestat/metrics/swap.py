@@ -3,7 +3,7 @@ import re
 import subprocess
 
 from cubestat.metrics.base_metric import base_metric
-from cubestat.metrics.registry import cubestat_metric
+from cubestat.metrics_registry import cubestat_metric
 from cubestat.common import SimpleMode, label_bytes
 
 
@@ -22,7 +22,13 @@ class swap_metric(base_metric):
 
     @classmethod
     def configure_argparse(cls, parser):
-        parser.add_argument('--swap', type=SimpleMode, default=SimpleMode.show, choices=list(SimpleMode), help="Show swap . Can be toggled by pressing s.")
+        parser.add_argument(
+            '--swap',
+            type=SimpleMode,
+            default=SimpleMode.show,
+            choices=list(SimpleMode),
+            help='swap show/hide. Hotkey: "s"'
+        )
 
     def configure(self, conf):
         self.mode = conf.swap
@@ -54,10 +60,18 @@ class macos_swap_metric(swap_metric):
         res = {}
         try:
             swap_stats = subprocess.run(["sysctl", "vm.swapusage"], capture_output=True, text=True)
+            swap_stats.check_returncode()  # Raise CalledProcessError if exit status is non-zero
             tokens = swap_stats.stdout.strip().split(' ')
+            if len(tokens) < 8:
+                raise IndexError("Invalid sysctl output")
             res['swap used'] = self._parse_memstr(tokens[7])
-        except:
-            logging.error("unable to get swap stats.")
+        except subprocess.CalledProcessError as e:
+            logging.error(f"sysctl command failed: {e}")
+        except IndexError as e:
+            logging.error(f"Invalid sysctl output: {e}")
+        except Exception as e:
+            logging.error(f"Unexpected error: {e}")
+
         return res
 
 

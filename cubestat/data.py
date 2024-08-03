@@ -4,8 +4,13 @@ import itertools
 
 class DataManager:
     def __init__(self, buffer_size):
-        init_series = lambda: collections.deque(maxlen=buffer_size)
-        init_group = lambda: collections.defaultdict(init_series)
+
+        def init_series():
+            return collections.deque(maxlen=buffer_size)
+
+        def init_group():
+            return collections.defaultdict(init_series)
+
         self.data = collections.defaultdict(init_group)
 
     def get_slice(self, series, indent, h_shift, cols, spacing):

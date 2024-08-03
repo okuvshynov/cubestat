@@ -2,7 +2,7 @@ import os
 import psutil
 
 from cubestat.metrics.base_metric import base_metric
-from cubestat.metrics.registry import cubestat_metric
+from cubestat.metrics_registry import cubestat_metric
 from cubestat.common import DisplayMode
 
 
@@ -43,7 +43,13 @@ class cpu_metric(base_metric):
 
     @classmethod
     def configure_argparse(cls, parser):
-        parser.add_argument('--cpu', type=CPUMode, default=auto_cpu_mode(), choices=list(CPUMode), help='CPU mode - showing all cores, only cumulative by cluster or both. Can be toggled by pressing c.')
+        parser.add_argument(
+            '--cpu',
+            type=CPUMode,
+            default=auto_cpu_mode(),
+            choices=list(CPUMode),
+            help='Select CPU mode: all cores, cumulative by cluster, or both. Hotkey: "c".'
+        )
 
 
 @cubestat_metric('linux')

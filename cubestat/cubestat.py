@@ -14,7 +14,7 @@ from cubestat.screen import Screen
 
 from cubestat.platforms.factory import get_platform
 
-from cubestat.metrics.registry import get_metrics, metrics_configure_argparse
+from cubestat.metrics_registry import get_metrics, metrics_configure_argparse
 
 
 class ViewMode(DisplayMode):
@@ -134,9 +134,20 @@ def start(stdscr, platform, args):
 def main():
     logging.basicConfig(filename='/tmp/cubestat.log', level=logging.INFO)
     parser = argparse.ArgumentParser("cubestat")
-    parser.add_argument('--refresh_ms', '-i', type=int, default=1000, help='Update frequency, milliseconds')
-    parser.add_argument('--buffer_size', type=int, default=500, help='How many datapoints to store. Having it larger than screen width is a good idea as terminal window can be resized')
-    parser.add_argument('--view', type=ViewMode, default=ViewMode.one, choices=list(ViewMode), help='legend/values/time mode. Can be toggled by pressing v.')
+    parser.add_argument(
+        '--refresh_ms', '-i', type=int, default=1000,
+        help='Update frequency (milliseconds)'
+    )
+
+    parser.add_argument(
+        '--buffer_size', type=int, default=500,
+        help='Number of datapoints to store. Consider setting it larger than the screen width to accommodate window resizing.'
+    )
+
+    parser.add_argument(
+        '--view', type=ViewMode, default=ViewMode.one, choices=list(ViewMode),
+        help='Display mode (legend, values, time). Hotkey: "v".'
+    )
 
     metrics_configure_argparse(parser)
     args = parser.parse_args()

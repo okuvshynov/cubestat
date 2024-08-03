@@ -1,6 +1,6 @@
 from cubestat.common import DisplayMode, label10
 from cubestat.metrics.base_metric import base_metric
-from cubestat.metrics.registry import cubestat_metric
+from cubestat.metrics_registry import cubestat_metric
 
 
 class PowerMode(DisplayMode):
@@ -44,4 +44,10 @@ class macos_power_metric(base_metric):
 
     @classmethod
     def configure_argparse(cls, parser):
-        parser.add_argument('--power', type=PowerMode, default=PowerMode.combined, choices=list(PowerMode), help='Power mode - off, showing breakdown CPU/GPU/ANE load, or showing combined usage. Can be toggled by pressing p.')
+        parser.add_argument(
+            '--power',
+            type=PowerMode,
+            default=PowerMode.combined,
+            choices=list(PowerMode),
+            help='Power: hidden, CPU/GPU/ANE breakdown, or combined usage. Hotkey: "p"'
+        )

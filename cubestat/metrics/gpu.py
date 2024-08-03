@@ -3,7 +3,7 @@ from importlib.util import find_spec
 
 from cubestat.common import DisplayMode
 from cubestat.metrics.base_metric import base_metric
-from cubestat.metrics.registry import cubestat_metric
+from cubestat.metrics_registry import cubestat_metric
 
 
 class GPUMode(DisplayMode):
@@ -38,7 +38,13 @@ class gpu_metric(base_metric):
 
     @classmethod
     def configure_argparse(cls, parser):
-        parser.add_argument('--gpu', type=GPUMode, default=GPUMode.load_only, choices=list(GPUMode), help='GPU mode - hidden, showing all GPUs load, or showing load and vram usage. Can be toggled by pressing g.')
+        parser.add_argument(
+            '--gpu',
+            type=GPUMode,
+            default=GPUMode.load_only,
+            choices=list(GPUMode),
+            help='GPU mode - hidden, load, or load and vram usage. Hotkey: "g"'
+        )
 
 
 @cubestat_metric('linux')
