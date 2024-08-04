@@ -118,8 +118,7 @@ class Cubestat:
         self.screen.render_done()
 
     def loop(self, platform):
-        t = Thread(target=platform.loop, daemon=True, args=[self.do_read])
-        t.start()
+        Thread(target=platform.loop, daemon=True, args=(self.do_read,)).start()
         self.screen.stdscr.keypad(True)
         while True:
             self.render()
