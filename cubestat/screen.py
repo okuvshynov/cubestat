@@ -77,3 +77,6 @@ class Screen:
         if pos > len(val):
             return string[:pos - len(val)] + val + "|" + string[pos + 1:]
         return string
+
+    def chart_width(self, indent):
+        return self.cols - 2 * len(self.spacing) - len(indent) - 2

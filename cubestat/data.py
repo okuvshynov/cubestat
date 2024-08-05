@@ -14,9 +14,8 @@ class DataManager:
         self.data = collections.defaultdict(init_group)
 
     # TODO: UI-related things should be moved out of here
-    def get_slice(self, series, indent, h_shift, cols, spacing):
+    def get_slice(self, series, h_shift, chart_width):
         data_length = len(series) - h_shift if h_shift > 0 else len(series)
-        chart_width = cols - 2 * len(spacing) - 2 - len(indent)
         index = max(0, data_length - chart_width)
         return list(itertools.islice(series, index, min(index + chart_width, data_length)))
 

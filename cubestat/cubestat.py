@@ -100,7 +100,8 @@ class Cubestat:
                     skip -= 1
                     continue
 
-                data_slice = self.data_manager.get_slice(series, indent, self.h_shift, cols, self.screen.spacing)
+                chart_width = self.screen.chart_width(indent)
+                data_slice = self.data_manager.get_slice(series, self.h_shift, chart_width)
                 ruler_values = self._ruler_values(metric, title, ruler_indices, data_slice)
 
                 self.screen.render_ruler(indent, title, base_ruler, ruler_values, row)

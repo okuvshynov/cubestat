@@ -27,23 +27,19 @@ class TestDataManager(unittest.TestCase):
         buffer_size = 10
         dm = DataManager(buffer_size)
         series = collections.deque([1, 2, 3, 4, 5, 6, 7, 8, 9, 10], maxlen=buffer_size)
-        indent = "  "
         h_shift = 2
-        cols = 20
-        spacing = " "
+        width = 14
         expected_slice = [1, 2, 3, 4, 5, 6, 7, 8]
-        self.assertEqual(dm.get_slice(series, indent, h_shift, cols, spacing), expected_slice)
+        self.assertEqual(dm.get_slice(series, h_shift, width), expected_slice)
 
     def test_get_slice_shift(self):
         buffer_size = 10
         dm = DataManager(buffer_size)
         series = collections.deque([1, 2, 3, 4, 5, 6, 7, 8, 9, 10], maxlen=buffer_size)
-        indent = "  "
         h_shift = 2
-        cols = 10
-        spacing = " "
+        width = 4
         expected_slice = [5, 6, 7, 8]
-        self.assertEqual(dm.get_slice(series, indent, h_shift, cols, spacing), expected_slice)
+        self.assertEqual(dm.get_slice(series, h_shift, width), expected_slice)
 
     def test_data_gen(self):
         buffer_size = 10
