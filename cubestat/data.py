@@ -13,7 +13,7 @@ class DataManager:
 
         self.data = collections.defaultdict(init_group)
 
-    # TODO: UI-related things should be moved out of here
+    # Returns a slice of data row which will be visible on the screen
     def get_slice(self, series, h_shift, chart_width):
         data_length = len(series) - h_shift if h_shift > 0 else len(series)
         index = max(0, data_length - chart_width)

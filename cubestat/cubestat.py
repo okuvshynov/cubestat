@@ -46,7 +46,7 @@ class Cubestat:
         self.input_handler = InputHandler(self)
         self.data_manager = DataManager(args.buffer_size)
 
-    def do_read(self, context):
+    def do_read(self, context) -> None:
         updates = []
         for group, metric in self.metrics.items():
             datapoint = metric.read(context)
@@ -59,11 +59,11 @@ class Cubestat:
             if self.h_shift > 0:
                 self.h_shift += 1
 
-    def max_val(self, metric, title, data_slice):
+    def max_val(self, metric, title: str, data_slice: list) -> float:
         max_value, _ = metric.format(title, data_slice, [-1])
         return max_value
 
-    def _ruler_values(self, metric, title, idxs, data):
+    def _ruler_values(self, metric, title: str, idxs: list, data: list) -> list:
         if self.view == ViewMode.off:
             return []
         idxs = [idx for idx in idxs if idx < len(data)]
@@ -73,7 +73,7 @@ class Cubestat:
             idxs = idxs[:1]
         return list(zip(idxs, formatted_values))
 
-    def render(self):
+    def render(self) -> None:
         with self.lock:
             if self.snapshots_rendered > self.snapshots_observed:
                 logging.fatal('self.snapshots_rendered > self.snapshots_observed')
