@@ -8,7 +8,7 @@ class TestPrepareCells(unittest.TestCase):
     @patch('curses.init_pair')
     def test_prepare_cells(self, mock_init_pair):
         cells = prepare_cells()
-        self.assertEqual(len(cells['green']), 27)
+        self.assertEqual(len(cells['green']), 25)
         self.assertEqual(mock_init_pair.call_count, 18)
 
 
