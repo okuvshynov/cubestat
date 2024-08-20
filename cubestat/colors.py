@@ -36,9 +36,10 @@ def prepare_cells():
     colorpair = 1
     for name, colors in colors_ansi256.items():
         cells[name] = []
-        for fg, bg in zip(colors[1:], colors[:-1]):
+        for i, (fg, bg) in enumerate(zip(colors[1:], colors[:-1])):
             curses.init_pair(colorpair, fg, bg)
-            cells[name].extend((chr, colorpair) for chr in chrs)
+            j = 0 if i == 0 else 1
+            cells[name].extend((chr, colorpair) for chr in chrs[j:])
             colorpair += 1
     return cells
 
