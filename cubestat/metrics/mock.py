@@ -1,5 +1,5 @@
 from cubestat.metrics.base_metric import base_metric
-from cubestat.metrics.registry import cubestat_metric
+from cubestat.metrics_registry import cubestat_metric
 
 @cubestat_metric('darwin')
 class mock_metric(base_metric):
