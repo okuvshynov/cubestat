@@ -2,3 +2,4 @@ dist/**
 cubestat.egg-info/**
 **/__pycache__/**
 build/**
+*.swp
