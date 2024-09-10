@@ -1,4 +1,5 @@
 import curses
+import logging
 
 from cubestat.common import DisplayMode
 
@@ -30,18 +31,26 @@ light_colormap = {
 }
 
 
-def prepare_cells():
+def mono_cells():
     chrs = [' ', '▁', '▂', '▃', '▄', '▅', '▆', '▇', '█']
-    cells = {}
-    colorpair = 1
-    for name, colors in colors_ansi256.items():
-        cells[name] = []
-        for i, (fg, bg) in enumerate(zip(colors[1:], colors[:-1])):
+    return [(c, 0) for c in chrs]
+
+
+def cells_for_colorscheme(colors, colorpair):
+    chrs = [' ', '▁', '▂', '▃', '▄', '▅', '▆', '▇', '█']
+    res = []
+    for i, (fg, bg) in enumerate(zip(colors[1:], colors[:-1])):
+        try:
             curses.init_pair(colorpair, fg, bg)
-            j = 0 if i == 0 else 1
-            cells[name].extend((chr, colorpair) for chr in chrs[j:])
-            colorpair += 1
-    return cells
+        except curses.error:
+            logging.error('curses.init_pair returned error.')
+            logging.error('Consider setting up 256 colors terminal:')
+            logging.error('  export TERM=xterm-256color')
+            return None, colorpair
+        j = 0 if i == 0 else 1
+        res.extend((chr, colorpair) for chr in chrs[j:])
+        colorpair += 1
+    return res, colorpair
 
 
 def get_theme(metric, color_mode):
@@ -51,3 +60,20 @@ def get_theme(metric, color_mode):
         ColorTheme.col:  light_colormap.get(metric, 'green')
     }
     return res[color_mode]
+
+
+class Colorschemes:
+    def __init__(self):
+        self.schemes = {}
+        colorpair = 1
+        for name, colors in colors_ansi256.items():
+            cells, colorpair = cells_for_colorscheme(colors, colorpair)
+            if cells is not None:
+                self.schemes[name] = cells
+        self.schemes['mono'] = mono_cells()
+
+    def get_cells(self, name):
+        if name in self.schemes:
+            return self.schemes[name]
+        logging.error(f'requested colorscheme {name}.')
+        return self.schemes['mono']

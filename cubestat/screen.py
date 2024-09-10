@@ -1,7 +1,7 @@
 import curses
 from math import floor
 
-from cubestat.colors import prepare_cells
+from cubestat.colors import Colorschemes
 
 
 class Screen:
@@ -13,7 +13,7 @@ class Screen:
         curses.start_color()
         curses.use_default_colors()
         self.spacing = ' '
-        self.cells = prepare_cells()
+        self.colors = Colorschemes()
 
     def write_string(self, row, col, s, color=0):
         if col + len(s) > self.cols:
@@ -54,7 +54,7 @@ class Screen:
         self.write_string(row + 1, self.cols - len(bottomright_border), bottomright_border)
 
     def render_chart(self, theme, max_value, data, row):
-        cells = self.cells[theme]
+        cells = self.colors.get_cells(theme)
         scaler = len(cells) / max_value
         col_start = self.cols - (len(data) + len(self.spacing)) - 1
 

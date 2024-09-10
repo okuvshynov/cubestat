@@ -1,4 +1,4 @@
-from cubestat.colors import prepare_cells
+from cubestat.colors import Colorschemes
 
 from unittest.mock import patch
 import unittest
@@ -7,8 +7,8 @@ import unittest
 class TestPrepareCells(unittest.TestCase):
     @patch('curses.init_pair')
     def test_prepare_cells(self, mock_init_pair):
-        cells = prepare_cells()
-        self.assertEqual(len(cells['green']), 25)
+        colors = Colorschemes()
+        self.assertEqual(len(colors.schemes['green']), 25)
         self.assertEqual(mock_init_pair.call_count, 18)
 
 
