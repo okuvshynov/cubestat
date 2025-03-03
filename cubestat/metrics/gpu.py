@@ -56,7 +56,7 @@ class nvidia_gpu_metric(gpu_metric):
             subprocess.check_output('nvidia-smi')
             nvspec = find_spec('pynvml')
             if nvspec is not None:
-                from pynvml.smi import nvidia_smi
+                from pynvml_utils import nvidia_smi
                 self.nvsmi = nvidia_smi.getInstance()
                 self.has_nvidia = True
         except Exception:

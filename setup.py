@@ -10,6 +10,7 @@ setup(
     packages=find_packages(),
     install_requires=[
         'psutil>=5.9.5',
+        'pynvml>=12.0.0'
     ],
     extras_require={
         'cuda': ['pynvml'],
