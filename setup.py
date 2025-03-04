@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='cubestat',
-    version='0.3.1',
+    version='0.3.2',
     author='Oleksandr Kuvshynov',
     author_email='okuvshynov@gmail.com',
     description='Horizon chart in terminal for system monitoring',
@@ -10,11 +10,8 @@ setup(
     packages=find_packages(),
     install_requires=[
         'psutil>=5.9.5',
-        'pynvml>=12.0.0'
+        'pynvml>=12.0.0',
     ],
-    extras_require={
-        'cuda': ['pynvml'],
-    },
     url='https://github.com/okuvshynov/cubestat',
     entry_points={
         'console_scripts': [
