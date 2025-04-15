@@ -120,13 +120,60 @@ Example notebook: [colab example](https://colab.research.google.com/drive/1EUOXG
 ![colab cubestat](static/colab_cubestat.png)
 
 ## Dependencies
-* Python 3.?+
+* Python 3.8+
 * psutil 5.9.5+
 * [optional] pynvml for NVIDIA cards monitoring
+
+## Development
+
+### Installation for Development
+
+```bash
+# Clone the repository
+git clone https://github.com/okuvshynov/cubestat.git
+cd cubestat
+
+# Install in development mode
+pip install -e .
+# Or with NVIDIA GPU support
+pip install -e .[cuda]
+
+# Install development dependencies
+pip install -r requirements-dev.txt
+
+# Set up pre-commit hooks
+pre-commit install
+```
+
+### Running Tests
+
+```bash
+# Run all tests
+python -m unittest discover
+
+# Run a specific test
+python -m unittest cubestat.tests.test_data_manager
+```
+
+### Checking Types
+
+```bash
+# Run mypy for type checking
+mypy cubestat
+```
+
+### Linting
+
+```bash
+# Run ruff for linting
+ruff check cubestat
+```
 
 ## TODO
 
 - [ ] add 'help' for each metric
+- [x] type hints (in progress)
+- [x] better error handling and logging (in progress)
 - [ ] unit tests
 - [x] memory modes - more details (cache/etc), absolute values rather than %, mmap handling
 - [ ] optional joint scale within metric group

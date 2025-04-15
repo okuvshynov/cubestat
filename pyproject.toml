@@ -1,0 +1,53 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cubestat"
+version = "0.3.4"
+authors = [
+    {name = "Oleksandr Kuvshynov", email = "okuvshynov@gmail.com"},
+]
+description = "Horizon chart in terminal for system monitoring"
+readme = "README.md"
+requires-python = ">=3.8"
+license = {file = "LICENSE"}
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "psutil>=5.9.5",
+    "pynvml>=12.0.0",
+]
+
+[project.scripts]
+cubestat = "cubestat.cubestat:main"
+
+[project.optional-dependencies]
+cuda = ["pynvml>=12.0.0"]
+dev = [
+    "mypy>=1.5.1",
+    "ruff>=0.0.292",
+    "pytest>=7.4.2",
+]
+
+[tool.mypy]
+python_version = "3.8"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+
+[tool.ruff]
+line-length = 100
+target-version = "py38"
+select = ["E", "F", "I"]
+ignore = []
+
+[tool.ruff.isort]
+known-first-party = ["cubestat"]
+
+[tool.pytest]
+testpaths = ["cubestat/tests"]
