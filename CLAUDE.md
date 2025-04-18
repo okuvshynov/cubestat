@@ -11,6 +11,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Lint: `ruff check cubestat`
 - Format: `ruff format cubestat`
 
+## Documentation
+For detailed implementation reference, see the `/ref` directory:
+- [Architecture Overview](/ref/Architecture.md) - System architecture and component interactions
+- [Core Components](/ref/Core%20Components.md) - Details on core modules and their functionality
+- [Metrics Documentation](/ref/Metrics.md) - Information about available metrics and implementation
+- [Platform Support](/ref/Platforms.md) - Platform-specific implementation details
+- [Development Guide](/ref/Development%20Guide.md) - Guide for contributors
+
 ## Code Style
 - File/function/variable naming: snake_case (e.g., `data_manager.py`, `get_metrics`)
 - Class naming: CamelCase for primary classes (e.g., `DataManager`), snake_case for metrics 
