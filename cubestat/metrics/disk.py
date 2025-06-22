@@ -64,7 +64,7 @@ class disk_metric(base_metric):
 class MacOSDiskMetric(MetricAdapter):
     def __init__(self):
         collector_cls = collector_registry.get_collector('disk', 'darwin')
-        presenter_cls = presenter_registry.get_presenter('disk')
+        presenter_cls = presenter_registry.get('disk')
         if not collector_cls or not presenter_cls:
             raise RuntimeError("Disk collector or presenter not found")
         super().__init__(collector_cls(), presenter_cls())
@@ -76,7 +76,7 @@ class MacOSDiskMetric(MetricAdapter):
     @classmethod
     def configure_argparse(cls, parser):
         # Delegate to presenter's configure_argparse
-        presenter_cls = presenter_registry.get_presenter('disk')
+        presenter_cls = presenter_registry.get('disk')
         if presenter_cls:
             presenter_cls.configure_argparse(parser)
 
@@ -85,7 +85,7 @@ class MacOSDiskMetric(MetricAdapter):
 class LinuxDiskMetric(MetricAdapter):
     def __init__(self):
         collector_cls = collector_registry.get_collector('disk', 'linux')
-        presenter_cls = presenter_registry.get_presenter('disk')
+        presenter_cls = presenter_registry.get('disk')
         if not collector_cls or not presenter_cls:
             raise RuntimeError("Disk collector or presenter not found")
         super().__init__(collector_cls(), presenter_cls())
@@ -97,6 +97,6 @@ class LinuxDiskMetric(MetricAdapter):
     @classmethod
     def configure_argparse(cls, parser):
         # Delegate to presenter's configure_argparse
-        presenter_cls = presenter_registry.get_presenter('disk')
+        presenter_cls = presenter_registry.get('disk')
         if presenter_cls:
             presenter_cls.configure_argparse(parser)
