@@ -35,14 +35,15 @@ class macos_power_metric(PowerMetricAdapter):
         super().__init__(collector, presenter)
 
 
-@cubestat_metric("linux")
-class linux_power_metric(PowerMetricAdapter):
-    """Linux power metric using new collector/presenter architecture."""
-
-    def __init__(self):
-        collector = collector_registry.get_instance("linux", "power")
-        presenter = presenter_registry.get_instance("power")
-        super().__init__(collector, presenter)
+# Linux power metric disabled - power data not available on Linux systems
+# @cubestat_metric("linux")
+# class linux_power_metric(PowerMetricAdapter):
+#     """Linux power metric using new collector/presenter architecture."""
+# 
+#     def __init__(self):
+#         collector = collector_registry.get_instance("linux", "power")
+#         presenter = presenter_registry.get_instance("power")
+#         super().__init__(collector, presenter)
 
 
 # Keep old implementation commented for reference
