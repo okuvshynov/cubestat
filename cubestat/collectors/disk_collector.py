@@ -32,8 +32,13 @@ class LinuxDiskCollector(DiskCollector):
     def __init__(self):
         self.rate_reader = None
     
-    def configure(self, config: Dict[str, Any]) -> 'LinuxDiskCollector':
-        self.rate_reader = RateReader(config.get('refresh_ms', 200))
+    def configure(self, config) -> 'LinuxDiskCollector':
+        # Handle both Dict and Namespace objects
+        if hasattr(config, 'get'):
+            refresh_ms = config.get('refresh_ms', 200)
+        else:
+            refresh_ms = getattr(config, 'refresh_ms', 200)
+        self.rate_reader = RateReader(refresh_ms)
         return self
     
     def collect(self, context: Dict[str, Any]) -> Dict[str, float]:
