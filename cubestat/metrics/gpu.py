@@ -285,12 +285,11 @@ class AMDGPUHandler(GPUHandler):
             for i in range(device_count):
                 try:
                     # Get GPU utilization percentage
-                    gpu_util = self.rocml.smi_get_device_busy_percent(i)
+                    gpu_util = self.rocml.smi_get_device_utilization(i)
                     
                     # Get memory usage information
-                    memory_info = self.rocml.smi_get_device_memory_usage(i)
-                    mem_used = memory_info["used"]
-                    mem_total = memory_info["total"]
+                    mem_used = self.rocml.smi_get_device_memory_used(i)
+                    mem_total = self.rocml.smi_get_device_memory_total(i)
                     
                     prefix = self.get_vendor_prefix()
                     res[f"{prefix} GPU {i} util %"] = float(gpu_util)
