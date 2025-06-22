@@ -15,20 +15,26 @@ import torch.optim as optim
 from torch.nn.parallel import DataParallel
 
 
-class SimpleModel(nn.Module):
-    """Simple neural network model for generating GPU load."""
+class GPULoadModel(nn.Module):
+    """Neural network model designed to generate significant GPU load."""
     
-    def __init__(self, size=1000):
-        super(SimpleModel, self).__init__()
-        self.fc1 = nn.Linear(size, size)
-        self.fc2 = nn.Linear(size, size)
-        self.fc3 = nn.Linear(size, size)
-        self.relu = nn.ReLU()
+    def __init__(self, size=2048, num_layers=8):
+        super(GPULoadModel, self).__init__()
+        layers = []
+        for i in range(num_layers):
+            layers.append(nn.Linear(size, size))
+            layers.append(nn.ReLU())
+            layers.append(nn.Dropout(0.1))
+        self.network = nn.Sequential(*layers)
+        self.final = nn.Linear(size, size)
     
     def forward(self, x):
-        x = self.relu(self.fc1(x))
-        x = self.relu(self.fc2(x))
-        return self.fc3(x)
+        # Multiple passes to increase computation
+        for _ in range(3):
+            x = self.network(x)
+            # Add some matrix multiplication operations
+            x = torch.matmul(x.unsqueeze(-1), x.unsqueeze(-2)).mean(dim=-1)
+        return self.final(x)
 
 
 def get_gpu_info():
@@ -47,8 +53,8 @@ def get_gpu_info():
     return gpu_info
 
 
-def generate_load(gpu_ids=None, duration=60, batch_size=64, model_size=1000, 
-                  memory_fraction=0.5, iterations_per_second=10):
+def generate_load(gpu_ids=None, duration=60, batch_size=128, model_size=2048, 
+                  memory_fraction=0.5, iterations_per_second=0):
     """Generate load on specified GPUs.
     
     Args:
@@ -82,8 +88,8 @@ def generate_load(gpu_ids=None, duration=60, batch_size=64, model_size=1000,
     # Set the primary device
     torch.cuda.set_device(gpu_ids[0])
     
-    # Create model
-    model = SimpleModel(model_size).cuda(gpu_ids[0])
+    # Create model with more compute-intensive operations
+    model = GPULoadModel(model_size, num_layers=12).cuda(gpu_ids[0])
     
     # Use DataParallel if multiple GPUs
     if len(gpu_ids) > 1:
@@ -107,7 +113,13 @@ def generate_load(gpu_ids=None, duration=60, batch_size=64, model_size=1000,
     input_data = torch.randn(batch_size, model_size).cuda(gpu_ids[0])
     target_data = torch.randn(batch_size, model_size).cuda(gpu_ids[0])
     criterion = nn.MSELoss()
-    optimizer = optim.SGD(model.parameters(), lr=0.001)
+    optimizer = optim.Adam(model.parameters(), lr=0.001)
+    
+    # Warm up GPU
+    print("Warming up GPU...")
+    for _ in range(5):
+        with torch.no_grad():
+            _ = model(input_data)
     
     # Run load generation
     print(f"\nGenerating load for {duration} seconds...")
@@ -121,18 +133,33 @@ def generate_load(gpu_ids=None, duration=60, batch_size=64, model_size=1000,
         while True:
             iter_start = time.time()
             
-            # Forward and backward pass
-            optimizer.zero_grad()
-            outputs = model(input_data)
-            loss = criterion(outputs, target_data)
-            loss.backward()
-            optimizer.step()
+            # Multiple forward and backward passes per iteration to increase load
+            for _ in range(3):
+                optimizer.zero_grad()
+                outputs = model(input_data)
+                loss = criterion(outputs, target_data)
+                loss.backward()
+                optimizer.step()
+                
+                # Add some extra GPU operations
+                with torch.no_grad():
+                    extra_computation = torch.matmul(input_data, input_data.T)
+                    _ = torch.softmax(extra_computation, dim=-1)
             
             # Print progress
             iteration += 1
             elapsed = time.time() - start_time
-            if iteration % iterations_per_second == 0:
-                print(f"Time: {elapsed:.1f}s, Iteration: {iteration}, Loss: {loss.item():.4f}")
+            
+            # Print every second or every 10 iterations, whichever is more frequent
+            if (iterations_per_second > 0 and iteration % max(1, iterations_per_second // 10) == 0) or \
+               (iterations_per_second == 0 and iteration % 10 == 0):
+                gpu_util = ""
+                if hasattr(torch.cuda, 'utilization'):
+                    try:
+                        gpu_util = f", GPU util: {torch.cuda.utilization()}%"
+                    except:
+                        pass
+                print(f"Time: {elapsed:.1f}s, Iteration: {iteration}, Loss: {loss.item():.4f}{gpu_util}")
             
             # Check if we should stop
             if elapsed >= duration:
@@ -160,13 +187,13 @@ def main():
                         help='GPU IDs to use (e.g., --gpus 0 1). Default: all GPUs')
     parser.add_argument('--duration', type=int, default=60,
                         help='Duration in seconds')
-    parser.add_argument('--batch-size', type=int, default=64,
+    parser.add_argument('--batch-size', type=int, default=128,
                         help='Batch size for the model')
-    parser.add_argument('--model-size', type=int, default=1000,
+    parser.add_argument('--model-size', type=int, default=2048,
                         help='Size of model layers')
     parser.add_argument('--memory-fraction', type=float, default=0.5,
                         help='Fraction of GPU memory to use (0-1)')
-    parser.add_argument('--iterations-per-second', type=int, default=10,
+    parser.add_argument('--iterations-per-second', type=int, default=0,
                         help='Target iterations per second (0 for max speed)')
     parser.add_argument('--list-gpus', action='store_true',
                         help='List available GPUs and exit')
