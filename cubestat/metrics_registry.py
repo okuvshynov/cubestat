@@ -5,6 +5,50 @@ import sys
 _metrics = []
 
 
+class CollectorRegistry:
+    def __init__(self):
+        self._collectors = {}
+    
+    def register(self, platform):
+        def decorator(cls):
+            collector_id = cls.collector_id()
+            if collector_id not in self._collectors:
+                self._collectors[collector_id] = {}
+            self._collectors[collector_id][platform] = cls
+            return cls
+        return decorator
+    
+    def get_collector(self, collector_id, platform):
+        if collector_id in self._collectors:
+            # Try exact platform match first
+            if platform in self._collectors[collector_id]:
+                return self._collectors[collector_id][platform]
+            # Try platform prefix match
+            for plat, cls in self._collectors[collector_id].items():
+                if platform.startswith(plat):
+                    return cls
+        return None
+
+
+collector_registry = CollectorRegistry()
+
+
+class PresenterRegistry:
+    def __init__(self):
+        self._presenters = {}
+    
+    def register(self, presenter_cls):
+        key = presenter_cls.key()
+        self._presenters[key] = presenter_cls
+        return presenter_cls
+    
+    def get_presenter(self, key):
+        return self._presenters.get(key)
+
+
+presenter_registry = PresenterRegistry()
+
+
 def cubestat_metric(*args):
     def decorator(cls):
         if any(sys.platform.startswith(platform) for platform in args):
@@ -38,3 +82,7 @@ def import_submodules(package_name):
 
 # Import all submodules of cubestat.metrics
 import_submodules("cubestat.metrics")
+
+# Import collectors and presenters
+import_submodules("cubestat.collectors")
+import_submodules("cubestat.presenters")
