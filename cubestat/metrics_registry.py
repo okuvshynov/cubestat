@@ -28,6 +28,10 @@ class CollectorRegistry:
                 if platform.startswith(plat):
                     return cls
         return None
+    
+    def get_instance(self, platform, collector_id):
+        collector_cls = self.get_collector(collector_id, platform)
+        return collector_cls() if collector_cls else None
 
 
 collector_registry = CollectorRegistry()
@@ -42,8 +46,12 @@ class PresenterRegistry:
         self._presenters[key] = presenter_cls
         return presenter_cls
     
-    def get_presenter(self, key):
+    def get(self, key):
         return self._presenters.get(key)
+    
+    def get_instance(self, key):
+        presenter_cls = self._presenters.get(key)
+        return presenter_cls() if presenter_cls else None
 
 
 presenter_registry = PresenterRegistry()
