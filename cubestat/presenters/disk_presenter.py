@@ -1,5 +1,5 @@
 from argparse import ArgumentParser
-from typing import List, Optional, Sequence, Tuple
+from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 from cubestat.common import SimpleMode, label_bytes_per_sec
 from cubestat.metrics_registry import presenter_registry
@@ -54,3 +54,16 @@ class DiskPresenter(BasePresenter):
         else:
             self.mode = mode_value
         return self
+
+    def process_data(self, raw_data: Dict[str, Any]) -> Dict[str, float]:
+        """Convert collector data to display format with proper titles."""
+        result = {}
+
+        # Map collector keys to display titles
+        if "disk_read" in raw_data:
+            result["disk read"] = raw_data["disk_read"]
+
+        if "disk_write" in raw_data:
+            result["disk write"] = raw_data["disk_write"]
+
+        return result

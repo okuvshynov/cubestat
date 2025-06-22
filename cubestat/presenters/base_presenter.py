@@ -49,3 +49,8 @@ class BasePresenter(ABC):
         """Configure the presenter instance."""
         self.mode = SimpleMode.show
         return self
+    
+    @abstractmethod
+    def process_data(self, raw_data: Dict[str, Any]) -> Dict[str, float]:
+        """Convert collector data to display format with proper titles."""
+        pass
