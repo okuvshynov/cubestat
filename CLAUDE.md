@@ -11,23 +11,49 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Lint: `ruff check cubestat`
 - Format: `ruff format cubestat`
 
-## Documentation
-For detailed implementation reference, see the `/ref` directory:
-- [Architecture Overview](/ref/Architecture.md) - System architecture and component interactions
-- [Core Components](/ref/Core%20Components.md) - Details on core modules and their functionality
-- [Metrics Documentation](/ref/Metrics.md) - Information about available metrics and implementation
-- [Platform Support](/ref/Platforms.md) - Platform-specific implementation details
-- [Development Guide](/ref/Development%20Guide.md) - Guide for contributors
-
 ## Code Style
 - File/function/variable naming: snake_case (e.g., `data_manager.py`, `get_metrics`)
 - Class naming: CamelCase for primary classes (e.g., `DataManager`), snake_case for metrics 
 - Add type hints to all new code and when refactoring existing code
 - Imports: standard library first, then project imports
-- Prefer inheritance for metrics (extend `base_metric.BaseMetric`)
+- **Metrics Architecture**: Use collector/presenter pattern (see Architecture section below)
 - Platform-specific implementations in separate modules
 - Error handling: Use try/except blocks with specific exceptions and logging
 - Documentation: Add docstrings in Google style format to all functions and classes
 - Logging: Use the logging module instead of print statements
 - Support cross-platform (macOS, Linux) when implementing features
 - Main entry point is `cubestat.cubestat:main`
+
+## Architecture
+
+### Collector/Presenter Pattern
+New metrics should follow the collector/presenter architecture:
+
+**Collectors** (`cubestat/collectors/`):
+- Responsible for data collection from system APIs
+- Platform-specific implementations (e.g., `MacOSCPUCollector`, `LinuxCPUCollector`)
+- Return standardized data format
+- Handle platform differences (psutil vs system context vs /proc files)
+
+**Presenters** (`cubestat/presenters/`):
+- Handle UI concerns: display modes, formatting, filtering
+- Process collector data into display format
+- Manage hotkeys and command-line arguments
+- Platform-agnostic display logic
+
+**Metric Adapters** (`cubestat/metrics/`):
+- Bridge between new architecture and existing metric system
+- Coordinate collector and presenter
+- Maintain backward compatibility with hotkey system
+
+### Example Structure
+```
+cubestat/collectors/memory_collector.py   # Data collection
+cubestat/presenters/memory_presenter.py   # UI/formatting  
+cubestat/metrics/memory.py                # Coordination
+```
+
+### Platform-Specific Guidelines
+- **macOS-only metrics** (power, accel): No Linux implementation to avoid confusion
+- **Cross-platform metrics** (CPU, memory, network): Platform-specific collectors
+- **Graceful degradation**: Clear absence better than misleading zero values
