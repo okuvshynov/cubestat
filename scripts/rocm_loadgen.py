@@ -1,18 +1,23 @@
 #!/usr/bin/env python3
-"""GPU load generator for testing cubestat GPU monitoring.
+"""AMD GPU load generator for testing cubestat GPU monitoring.
 
-This script generates artificial load on GPUs to test monitoring functionality.
-Works with single or multiple GPUs.
+This script generates artificial load on AMD GPUs using ROCm/PyTorch.
+Works with single or multiple AMD GPUs.
 """
 
 import argparse
 import sys
 import time
 
-import torch
-import torch.nn as nn
-import torch.optim as optim
-from torch.nn.parallel import DataParallel
+try:
+    import torch
+    import torch.nn as nn
+    import torch.optim as optim
+    from torch.nn.parallel import DataParallel
+except ImportError:
+    print("PyTorch for ROCm is not installed.")
+    print("Install with: pip install torch --index-url https://download.pytorch.org/whl/rocm5.4.2")
+    sys.exit(1)
 
 
 class GPULoadModel(nn.Module):
@@ -38,7 +43,7 @@ class GPULoadModel(nn.Module):
 
 
 def get_gpu_info():
-    """Get information about available GPUs."""
+    """Get information about available AMD GPUs."""
     if not torch.cuda.is_available():
         return []
     
@@ -55,7 +60,7 @@ def get_gpu_info():
 
 def generate_load(gpu_ids=None, duration=60, batch_size=128, model_size=2048, 
                   memory_fraction=0.5, iterations_per_second=0):
-    """Generate load on specified GPUs.
+    """Generate load on specified AMD GPUs.
     
     Args:
         gpu_ids: List of GPU IDs to use (None for all GPUs)
@@ -67,7 +72,8 @@ def generate_load(gpu_ids=None, duration=60, batch_size=128, model_size=2048,
     """
     gpu_info = get_gpu_info()
     if not gpu_info:
-        print("No CUDA GPUs available!")
+        print("No AMD GPUs available!")
+        print("Make sure ROCm is properly installed and PyTorch can detect your AMD GPUs.")
         return
     
     # Determine which GPUs to use
@@ -80,7 +86,7 @@ def generate_load(gpu_ids=None, duration=60, batch_size=128, model_size=2048,
             print(f"Invalid GPU IDs: {invalid_ids}. Available GPUs: 0-{len(gpu_info)-1}")
             return
     
-    print(f"Using GPU(s): {gpu_ids}")
+    print(f"Using AMD GPU(s): {gpu_ids}")
     for gid in gpu_ids:
         info = gpu_info[gid]
         print(f"  GPU {gid}: {info['name']} ({info['memory']} GB)")
@@ -94,7 +100,7 @@ def generate_load(gpu_ids=None, duration=60, batch_size=128, model_size=2048,
     # Use DataParallel if multiple GPUs
     if len(gpu_ids) > 1:
         model = DataParallel(model, device_ids=gpu_ids)
-        print(f"Using DataParallel across {len(gpu_ids)} GPUs")
+        print(f"Using DataParallel across {len(gpu_ids)} AMD GPUs")
     
     # Allocate memory to reach target memory usage
     dummy_tensors = []  # Keep references to prevent garbage collection
@@ -153,13 +159,7 @@ def generate_load(gpu_ids=None, duration=60, batch_size=128, model_size=2048,
             # Print every second or every 10 iterations, whichever is more frequent
             if (iterations_per_second > 0 and iteration % max(1, iterations_per_second // 10) == 0) or \
                (iterations_per_second == 0 and iteration % 10 == 0):
-                gpu_util = ""
-                if hasattr(torch.cuda, 'utilization'):
-                    try:
-                        gpu_util = f", GPU util: {torch.cuda.utilization()}%"
-                    except:
-                        pass
-                print(f"Time: {elapsed:.1f}s, Iteration: {iteration}, Loss: {loss.item():.4f}{gpu_util}")
+                print(f"Time: {elapsed:.1f}s, Iteration: {iteration}, Loss: {loss.item():.4f}")
             
             # Check if we should stop
             if elapsed >= duration:
@@ -180,7 +180,7 @@ def generate_load(gpu_ids=None, duration=60, batch_size=128, model_size=2048,
 
 def main():
     parser = argparse.ArgumentParser(
-        description='Generate load on GPUs for testing monitoring tools',
+        description='Generate load on AMD GPUs for testing monitoring tools',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
     parser.add_argument('--gpus', type=int, nargs='+', default=None,
@@ -200,18 +200,19 @@ def main():
     
     args = parser.parse_args()
     
-    # Check for CUDA availability
+    # Check for CUDA availability (ROCm provides CUDA-compatible interface)
     if not torch.cuda.is_available():
-        print("CUDA is not available. Please check your PyTorch installation.")
+        print("ROCm/CUDA is not available. Please check your PyTorch ROCm installation.")
+        print("Install with: pip install torch --index-url https://download.pytorch.org/whl/rocm5.4.2")
         sys.exit(1)
     
     # List GPUs if requested
     if args.list_gpus:
         gpu_info = get_gpu_info()
         if not gpu_info:
-            print("No CUDA GPUs found")
+            print("No AMD GPUs found")
         else:
-            print("Available GPUs:")
+            print("Available AMD GPUs:")
             for info in gpu_info:
                 print(f"  GPU {info['index']}: {info['name']} ({info['memory']} GB)")
         return

@@ -42,10 +42,19 @@ def cells_for_colorscheme(colors, colorpair):
     for i, (fg, bg) in enumerate(zip(colors[1:], colors[:-1])):
         try:
             curses.init_pair(colorpair, fg, bg)
-        except curses.error:
-            logging.error('curses.init_pair returned error.')
-            logging.error('Consider setting up 256 colors terminal:')
-            logging.error('  export TERM=xterm-256color')
+        except (curses.error, ValueError) as e:
+            if isinstance(e, ValueError) and "Color number" in str(e):
+                # Don't spam logs for each color attempt
+                if i == 0:  # Only log once on first failure
+                    logging.warning(
+                        f'Terminal supports only {curses.COLORS} colors (256 needed for colors).'
+                    )
+                    logging.info('Falling back to monochrome mode.')
+                    logging.info('For color support, try: export TERM=xterm-256color')
+            else:
+                logging.error('curses.init_pair returned error.')
+                logging.error('Consider setting up 256 colors terminal:')
+                logging.error('  export TERM=xterm-256color')
             return None, colorpair
         j = 0 if i == 0 else 1
         res.extend((chr, colorpair) for chr in chrs[j:])
@@ -65,12 +74,28 @@ def get_theme(metric, color_mode):
 class Colorschemes:
     def __init__(self):
         self.schemes = {}
+        self.fallback_to_mono = False
         colorpair = 1
+        
+        # Try to initialize color schemes
         for name, colors in colors_ansi256.items():
             cells, colorpair = cells_for_colorscheme(colors, colorpair)
             if cells is not None:
                 self.schemes[name] = cells
+            else:
+                # If any color scheme fails, use monochrome for all
+                self.fallback_to_mono = True
+                break
+        
+        # Always add monochrome scheme
         self.schemes['mono'] = mono_cells()
+        
+        # If color initialization failed, use only monochrome
+        if self.fallback_to_mono:
+            logging.info('Using monochrome mode due to terminal limitations.')
+            for name in colors_ansi256.keys():
+                if name != 'mono':
+                    self.schemes[name] = mono_cells()
 
     def get_cells(self, name):
         if name in self.schemes:
