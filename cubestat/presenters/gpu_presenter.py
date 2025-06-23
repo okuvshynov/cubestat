@@ -30,17 +30,7 @@ class GPUPresenter(BasePresenter):
 
     def configure(self, config) -> "GPUPresenter":
         """Configure GPU display mode."""
-        # Handle both Dict and Namespace objects
-        if hasattr(config, "get"):
-            mode_value = config.get("gpu", GPUMode.load_only)
-        else:
-            mode_value = getattr(config, "gpu", GPUMode.load_only)
-
-        # Ensure we have a proper GPUMode enum, not a string
-        if isinstance(mode_value, str):
-            self.mode = GPUMode(mode_value)
-        else:
-            self.mode = mode_value
+        self.mode = getattr(config, "gpu", GPUMode.load_only)
         return self
 
     def pre(self, title: str) -> Tuple[bool, str]:
@@ -75,15 +65,9 @@ class GPUPresenter(BasePresenter):
         )
 
     def process_data(self, raw_data: Dict[str, Any]) -> Dict[str, float]:
-        """Convert collector data to display format with proper titles."""
-        # With the transformer architecture, this should receive data that's
-        # already been transformed back to the expected format
-
-        # Extract metadata
+        """Process GPU data from transformer."""
+        # Extract GPU count for display filtering
         self.n_gpus = raw_data.get("_n_gpus", 0)
-
-        # The transformer should have already converted all the keys to the
-        # display format, so just filter out the private metadata keys
-        result = {k: v for k, v in raw_data.items() if not k.startswith("_")}
-
-        return result
+        
+        # Filter out metadata keys
+        return {k: v for k, v in raw_data.items() if not k.startswith("_")}

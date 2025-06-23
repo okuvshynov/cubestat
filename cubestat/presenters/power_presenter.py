@@ -28,17 +28,7 @@ class PowerPresenter(BasePresenter):
         return "power"
 
     def configure(self, config) -> "PowerPresenter":
-        # Handle both Dict and Namespace objects
-        if hasattr(config, "get"):
-            mode_value = config.get("power", PowerMode.combined)
-        else:
-            mode_value = getattr(config, "power", PowerMode.combined)
-
-        # Ensure we have a proper PowerMode enum, not a string
-        if isinstance(mode_value, str):
-            self.mode = PowerMode(mode_value)  # type: ignore
-        else:
-            self.mode = mode_value  # type: ignore
+        self.mode = getattr(config, "power", PowerMode.combined)
         return self
 
     def pre(self, title: str) -> Tuple[bool, str]:

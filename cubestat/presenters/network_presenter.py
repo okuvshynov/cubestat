@@ -22,17 +22,7 @@ class NetworkPresenter(BasePresenter):
         return "network"
 
     def configure(self, config) -> "NetworkPresenter":
-        # Handle both Dict and Namespace objects
-        if hasattr(config, "get"):
-            mode_value = config.get("network", SimpleMode.show)
-        else:
-            mode_value = getattr(config, "network", SimpleMode.show)
-
-        # Ensure we have a proper SimpleMode enum, not a string
-        if isinstance(mode_value, str):
-            self.mode = SimpleMode(mode_value)
-        else:
-            self.mode = mode_value
+        self.mode = getattr(config, "network", SimpleMode.show)
         return self
 
     def pre(self, _title: str) -> Tuple[bool, str]:
