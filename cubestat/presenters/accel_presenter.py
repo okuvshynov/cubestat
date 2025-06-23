@@ -47,7 +47,11 @@ class AccelPresenter(BasePresenter):
         """Convert collector data to display format."""
         result = {}
 
-        # Map collector keys to display titles
+        # Handle standardized metric names (from collector)
+        if "accel.ane.utilization.percent" in raw_data:
+            result["ANE util %"] = raw_data["accel.ane.utilization.percent"]
+
+        # Legacy support for transformer-converted names (during migration)
         if "ane_utilization" in raw_data:
             result["ANE util %"] = raw_data["ane_utilization"]
 

@@ -53,7 +53,11 @@ class SwapPresenter(BasePresenter):
         """Convert collector data to display format with proper titles."""
         result = {}
 
-        # Map collector keys to display titles
+        # Handle standardized metric names (from collector)
+        if "swap.total.used.bytes" in raw_data:
+            result["swap used"] = raw_data["swap.total.used.bytes"]
+
+        # Legacy support for transformer-converted names (during migration)
         if "used_bytes" in raw_data:
             result["swap used"] = raw_data["used_bytes"]
 

@@ -35,5 +35,19 @@ class MockPresenter(BasePresenter):
 
     def process_data(self, raw_data: Dict[str, Any]) -> Dict[str, float]:
         """Process mock data from transformer."""
-        # Filter out metadata keys
-        return {k: v for k, v in raw_data.items() if not k.startswith("_")}
+        result = {}
+
+        # Handle standardized metric names (from collector)
+        if "mock.test.value.count" in raw_data:
+            result["mock"] = raw_data["mock.test.value.count"]
+
+        # Legacy support for transformer-converted names (during migration)
+        if "mock" in raw_data:
+            result["mock"] = raw_data["mock"]
+
+        # Filter out metadata keys and pass through other values
+        for k, v in raw_data.items():
+            if not k.startswith("_") and k not in result:
+                result[k] = v
+
+        return result
