@@ -14,9 +14,6 @@ class DiskPresenter(BasePresenter):
     def key(cls) -> str:
         return "disk"
 
-    @classmethod
-    def collector_id(cls) -> str:
-        return "disk"
 
     def hotkey(self) -> Optional[str]:
         return "d"

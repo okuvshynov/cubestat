@@ -17,9 +17,6 @@ class AccelPresenter(BasePresenter):
     def key(cls) -> str:
         return "accel"
 
-    @classmethod
-    def collector_id(cls) -> str:
-        return "accel"
 
     def configure(self, config) -> "AccelPresenter":
         # ANE metric doesn't have configurable modes, always shown

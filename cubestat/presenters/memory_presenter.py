@@ -22,9 +22,6 @@ class MemoryPresenter(BasePresenter):
     def key(cls) -> str:
         return "memory"
 
-    @classmethod
-    def collector_id(cls) -> str:
-        return "memory"
 
     def configure(self, config) -> "MemoryPresenter":
         self.mode = getattr(config, "memory", RAMMode.all)

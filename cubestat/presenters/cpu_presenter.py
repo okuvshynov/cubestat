@@ -30,9 +30,6 @@ class CPUPresenter(BasePresenter):
     def key(cls) -> str:
         return "cpu"
 
-    @classmethod
-    def collector_id(cls) -> str:
-        return "cpu"
 
     def configure(self, config) -> "CPUPresenter":
         self.mode = getattr(config, "cpu", auto_cpu_mode())

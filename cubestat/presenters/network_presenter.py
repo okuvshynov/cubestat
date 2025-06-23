@@ -17,9 +17,6 @@ class NetworkPresenter(BasePresenter):
     def key(cls) -> str:
         return "network"
 
-    @classmethod
-    def collector_id(cls) -> str:
-        return "network"
 
     def configure(self, config) -> "NetworkPresenter":
         self.mode = getattr(config, "network", SimpleMode.show)

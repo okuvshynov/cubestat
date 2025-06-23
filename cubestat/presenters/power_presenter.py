@@ -23,9 +23,6 @@ class PowerPresenter(BasePresenter):
     def key(cls) -> str:
         return "power"
 
-    @classmethod
-    def collector_id(cls) -> str:
-        return "power"
 
     def configure(self, config) -> "PowerPresenter":
         self.mode = getattr(config, "power", PowerMode.combined)

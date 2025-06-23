@@ -30,11 +30,6 @@ class BasePresenter(ABC):
         """Return the key that identifies this presenter."""
         pass
     
-    @classmethod
-    @abstractmethod
-    def collector_id(cls) -> str:
-        """ID of the collector this presenter uses."""
-        pass
     
     def hotkey(self) -> Optional[str]:
         """Return the hotkey for toggling display mode."""

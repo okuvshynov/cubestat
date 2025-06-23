@@ -13,9 +13,6 @@ class MockPresenter(BasePresenter):
     def key(cls) -> str:
         return "mock"
 
-    @classmethod
-    def collector_id(cls) -> str:
-        return "mock"
 
     def pre(self, title: str) -> Tuple[bool, str]:
         """Mock metric is always hidden (for testing only)."""

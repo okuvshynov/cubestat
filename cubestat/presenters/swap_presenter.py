@@ -17,9 +17,6 @@ class SwapPresenter(BasePresenter):
     def key(cls) -> str:
         return "swap"
 
-    @classmethod
-    def collector_id(cls) -> str:
-        return "swap"
 
     def configure(self, config) -> "SwapPresenter":
         self.mode = getattr(config, "swap", SimpleMode.show)

@@ -24,9 +24,6 @@ class GPUPresenter(BasePresenter):
     def key(cls) -> str:
         return "gpu"
 
-    @classmethod
-    def collector_id(cls) -> str:
-        return "gpu"
 
     def configure(self, config) -> "GPUPresenter":
         """Configure GPU display mode."""
