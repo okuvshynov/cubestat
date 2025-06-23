@@ -11,13 +11,15 @@ class BaseCollector(ABC):
     
     @abstractmethod
     def collect(self, context: Dict[str, Any]) -> Dict[str, float]:
-        """Collect raw metric data.
+        """Collect metric data.
         
         Args:
             context: Platform-specific context data
             
         Returns:
-            Dictionary mapping metric names to values
+            Dictionary mapping metric names to values.
+            New collectors should return standardized names (e.g., "memory.system.total.used.percent").
+            Legacy collectors may return old names (e.g., "used_percent").
         """
         pass
     

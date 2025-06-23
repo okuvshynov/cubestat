@@ -82,18 +82,29 @@ class CPUPresenter(BasePresenter):
 
     def process_data(self, raw_data: Dict[str, Any]) -> Dict[str, float]:
         """Convert collector data to display format."""
-        self.cpu_clusters = []
-        result = {}
+        # Check if this is new flat format (from transformer) or old cluster format
+        if "clusters" in raw_data:
+            # Old format with clusters - convert to flat format
+            self.cpu_clusters = []
+            result = {}
 
-        for cluster in raw_data["clusters"]:
-            # Add cluster total
-            cluster_title = f"[{len(cluster.cpus)}] {cluster.name} total CPU util %"
-            self.cpu_clusters.append(cluster_title)
-            result[cluster_title] = cluster.total_utilization
+            for cluster in raw_data["clusters"]:
+                # Add cluster total
+                cluster_title = f"[{len(cluster.cpus)}] {cluster.name} total CPU util %"
+                self.cpu_clusters.append(cluster_title)
+                result[cluster_title] = cluster.total_utilization
 
-            # Add individual CPUs
-            for cpu in cluster.cpus:
-                cpu_title = f"{cluster.name} CPU {cpu['cpu']} util %"
-                result[cpu_title] = cpu["utilization"]
+                # Add individual CPUs
+                for cpu in cluster.cpus:
+                    cpu_title = f"{cluster.name} CPU {cpu['cpu']} util %"
+                    result[cpu_title] = cpu["utilization"]
 
-        return result
+            return result
+        else:
+            # New flat format (from transformer) - extract cluster info and return as-is
+            self.cpu_clusters = []
+            for key in raw_data.keys():
+                if "total CPU util %" in key:
+                    self.cpu_clusters.append(key)
+            
+            return raw_data

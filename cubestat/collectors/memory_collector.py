@@ -21,25 +21,15 @@ class MacOSMemoryCollector(MemoryCollector):
     def collect(self, context: Dict[str, Any]) -> Dict[str, float]:
         vm = psutil.virtual_memory()
         return {
-            "used_percent": vm.percent,
-            "used_bytes": vm.used,
-            "wired_bytes": vm.wired,
+            "memory.system.total.used.percent": vm.percent,
+            "memory.system.total.used.bytes": vm.used,
+            "memory.system.wired.bytes": vm.wired,
         }
 
 
 @collector_registry.register("linux")
 class LinuxMemoryCollector(MemoryCollector):
     """Linux-specific memory collector reading /proc/meminfo."""
-
-    def __init__(self):
-        # Define how to calculate metrics from meminfo data
-        self.calculations = {
-            "used_percent": lambda mi: 100.0
-            * (mi["MemTotal"] - mi["MemAvailable"])
-            / mi["MemTotal"],
-            "used_bytes": lambda mi: mi["MemTotal"] - mi["MemAvailable"],
-            "mapped_bytes": lambda mi: mi["Mapped"],
-        }
 
     def collect(self, context: Dict[str, Any]) -> Dict[str, float]:
         meminfo = {}
@@ -48,4 +38,10 @@ class LinuxMemoryCollector(MemoryCollector):
                 key, value = line.split(":", 1)
                 meminfo[key.strip()] = int(value.split()[0]) * 1024
 
-        return {key: calc(meminfo) for key, calc in self.calculations.items()}
+        return {
+            "memory.system.total.used.percent": 100.0
+            * (meminfo["MemTotal"] - meminfo["MemAvailable"])
+            / meminfo["MemTotal"],
+            "memory.system.total.used.bytes": meminfo["MemTotal"] - meminfo["MemAvailable"],
+            "memory.system.mapped.bytes": meminfo["Mapped"],
+        }

@@ -40,7 +40,7 @@ or
 ## Usage
 
 ```
-usage: cubestat [-h] [--refresh_ms REFRESH_MS] [--buffer_size BUFFER_SIZE] [--view {off,one,all}] [--cpu {all,by_cluster,by_core}] [--gpu {collapsed,load_only,load_and_vram}] [--swap {show,hide}] [--network {show,hide}] [--disk {show,hide}]
+usage: cubestat [-h] [--refresh_ms REFRESH_MS] [--buffer_size BUFFER_SIZE] [--view {off,one,all}] [--csv] [--cpu {all,by_cluster,by_core}] [--gpu {collapsed,load_only,load_and_vram}] [--swap {show,hide}] [--network {show,hide}] [--disk {show,hide}]
                 [--power {combined,all,off}]
 
 options:
@@ -50,6 +50,7 @@ options:
   --buffer_size BUFFER_SIZE
                         How many datapoints to store. Having it larger than screen width is a good idea as terminal window can be resized
   --view {off,one,all}  legend/values/time mode. Can be toggled by pressing v.
+  --csv                 Export metrics in CSV format to stdout (bypasses TUI)
   --cpu {all,by_cluster,by_core}
                         CPU mode - showing all cores, only cumulative by cluster or both. Can be toggled by pressing c.
   --gpu {collapsed,load_only,load_and_vram}
@@ -74,6 +75,65 @@ Interactive commands:
 * UP/DOWN - scroll the lines in case there are more cores;
 * LEFT/RIGHT - scroll left/right. Autorefresh is paused when user scrolled to non-latest position. To resume autorefresh either scroll back to the right or press '0';
 * 0 - reset horizontal scroll, continue autorefresh.
+
+## CSV Export Mode
+
+cubestat supports CSV export for integration with monitoring systems, scripts, and data analysis tools:
+
+```bash
+# Basic CSV export
+cubestat --csv
+
+# Save to file
+cubestat --csv > system_metrics.csv
+
+# Custom refresh rate
+cubestat --csv --refresh_ms 500
+
+# Pipe to monitoring system
+cubestat --csv | monitoring_ingester
+```
+
+### CSV Output Format
+
+The CSV output uses standardized, hierarchical metric names that are self-documenting:
+
+```csv
+timestamp,metric,value
+1750693377.593887,cpu.performance.0.core.0.utilization.percent,26.7591
+1750693377.593887,cpu.efficiency.0.core.4.utilization.percent,12.3456
+1750693377.593887,memory.system.total.used.percent,78.5
+1750693377.593887,gpu.apple.0.utilization.percent,45.2
+1750693377.593887,power.component.cpu.consumption.watts,2.34
+1750693377.593887,network.total.rx.bytes_per_sec,1048576
+1750693377.593887,disk.total.write.bytes_per_sec,2097152
+```
+
+### Integration Examples
+
+**InfluxDB:**
+```bash
+cubestat --csv | while IFS=, read timestamp metric value; do
+  curl -X POST "http://localhost:8086/write?db=system" \
+    --data-binary "$metric value=$value $timestamp"
+done
+```
+
+**Prometheus Pushgateway:**
+```bash
+cubestat --csv | awk -F, '
+NR>1 { gsub(/\./, "_", $2); print $2" "$3 }' | \
+curl --data-binary @- http://localhost:9091/metrics/job/cubestat
+```
+
+**Simple Analysis:**
+```bash
+# Get average CPU utilization
+cubestat --csv | grep "cpu.*utilization" | awk -F, '{sum+=$3; count++} END {print sum/count}'
+
+# Monitor memory usage
+cubestat --csv | grep "memory.system.total.used.percent" | tail -f
+```
 
 ## Notes and examples
 

@@ -46,17 +46,17 @@ class MacOSSwapCollector(SwapCollector):
             if len(tokens) < 8:
                 raise IndexError("Invalid sysctl output")
             
-            return {"used_bytes": self._parse_memstr(tokens[7])}
+            return {"swap.total.used.bytes": self._parse_memstr(tokens[7])}
             
         except subprocess.CalledProcessError as e:
             logging.error(f"sysctl command failed: {e}")
-            return {"used_bytes": 0.0}
+            return {"swap.total.used.bytes": 0.0}
         except (IndexError, ValueError) as e:
             logging.error(f"Invalid sysctl output: {e}")
-            return {"used_bytes": 0.0}
+            return {"swap.total.used.bytes": 0.0}
         except Exception as e:
             logging.error(f"Unexpected error collecting swap data: {e}")
-            return {"used_bytes": 0.0}
+            return {"swap.total.used.bytes": 0.0}
 
 
 @collector_registry.register("linux")
@@ -80,11 +80,11 @@ class LinuxSwapCollector(SwapCollector):
 
             # Convert from KB to bytes and calculate used
             used_bytes = 1024 * float(swap_total - swap_free)
-            return {"used_bytes": used_bytes}
+            return {"swap.total.used.bytes": used_bytes}
             
         except (OSError, IOError, ValueError) as e:
             logging.error(f"Error reading swap data: {e}")
-            return {"used_bytes": 0.0}
+            return {"swap.total.used.bytes": 0.0}
         except Exception as e:
             logging.error(f"Unexpected error collecting swap data: {e}")
-            return {"used_bytes": 0.0}
+            return {"swap.total.used.bytes": 0.0}

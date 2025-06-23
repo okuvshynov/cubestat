@@ -1,5 +1,4 @@
 from argparse import ArgumentParser
-from typing import Any, Dict
 
 from cubestat.metrics.metric_adapter import MetricAdapter
 from cubestat.metrics_registry import collector_registry, cubestat_metric, presenter_registry
@@ -7,11 +6,6 @@ from cubestat.metrics_registry import collector_registry, cubestat_metric, prese
 
 class GPUMetricAdapter(MetricAdapter):
     """GPU metric adapter handling multi-vendor GPU data processing."""
-
-    def read(self, context: Dict[str, Any]) -> Dict[str, float]:
-        """Read GPU data and convert to display format."""
-        raw_data = self.collector.collect(context)
-        return self.presenter.process_data(raw_data)
 
     @classmethod
     def key(cls) -> str:
@@ -23,8 +17,6 @@ class GPUMetricAdapter(MetricAdapter):
         presenter_cls = presenter_registry.get("gpu")
         if presenter_cls:
             presenter_cls.configure_argparse(parser)
-
-
 
 
 @cubestat_metric("linux")

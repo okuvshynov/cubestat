@@ -33,36 +33,52 @@ class CPUCollector(BaseCollector):
 class LinuxCPUCollector(CPUCollector):
     """Linux-specific CPU collector using psutil."""
 
-    def collect(self, context: Dict[str, Any]) -> Dict[str, Any]:
+    def collect(self, context: Dict[str, Any]) -> Dict[str, float]:
         cpu_load = psutil.cpu_percent(percpu=True)
-
-        # Create a single cluster for all CPUs
-        cpus = []
+        
+        result = {}
+        
+        # Add individual core metrics
         for i, utilization in enumerate(cpu_load):
-            cpus.append({"cpu": i, "utilization": utilization})
-
-        cluster = CPUCluster("CPU", cpus)
-
-        return {"clusters": [cluster], "total_cpus": len(cpu_load)}
+            result[f"cpu.cpu.0.core.{i}.utilization.percent"] = utilization
+        
+        # Add cluster total (average of all cores)
+        cluster_total = sum(cpu_load) / len(cpu_load) if cpu_load else 0.0
+        result["cpu.cpu.0.total.utilization.percent"] = cluster_total
+        
+        # Add total CPU count
+        result["cpu.total.count"] = len(cpu_load)
+        
+        return result
 
 
 @collector_registry.register("darwin")
 class MacOSCPUCollector(CPUCollector):
     """macOS-specific CPU collector using system context."""
 
-    def collect(self, context: Dict[str, Any]) -> Dict[str, Any]:
-        clusters = []
+    def collect(self, context: Dict[str, Any]) -> Dict[str, float]:
+        result = {}
         total_cpus = 0
 
-        for cluster_data in context["processor"]["clusters"]:
-            cpus = []
+        for cluster_index, cluster_data in enumerate(context["processor"]["clusters"]):
+            cluster_name = cluster_data["name"].lower()  # "Performance" -> "performance"
+            cluster_utilizations = []
+            
             for cpu_data in cluster_data["cpus"]:
-                cpus.append(
-                    {"cpu": cpu_data["cpu"], "utilization": 100.0 - 100.0 * cpu_data["idle_ratio"]}
-                )
+                core_id = cpu_data["cpu"]
+                utilization = 100.0 - 100.0 * cpu_data["idle_ratio"]
+                
+                # Individual core metric
+                result[f"cpu.{cluster_name}.{cluster_index}.core.{core_id}.utilization.percent"] = utilization
+                cluster_utilizations.append(utilization)
+                total_cpus += 1
+            
+            # Cluster total (average of cores in this cluster)
+            if cluster_utilizations:
+                cluster_total = sum(cluster_utilizations) / len(cluster_utilizations)
+                result[f"cpu.{cluster_name}.{cluster_index}.total.utilization.percent"] = cluster_total
 
-            cluster = CPUCluster(cluster_data["name"], cpus)
-            clusters.append(cluster)
-            total_cpus += len(cpus)
-
-        return {"clusters": clusters, "total_cpus": total_cpus}
+        # Total CPU count
+        result["cpu.total.count"] = total_cpus
+        
+        return result

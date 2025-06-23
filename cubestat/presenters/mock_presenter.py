@@ -38,10 +38,11 @@ class MockPresenter(BasePresenter):
 
     def process_data(self, raw_data: Dict[str, Any]) -> Dict[str, float]:
         """Convert collector data to display format with proper titles."""
-        result = {}
+        # With the transformer architecture, this should receive data that's
+        # already been transformed back to the expected format
 
-        # Map collector keys to display titles
-        if "mock_value" in raw_data:
-            result["mock"] = raw_data["mock_value"]
+        # The transformer should have already converted all the keys to the
+        # display format, so just filter out the private metadata keys
+        result = {k: v for k, v in raw_data.items() if not k.startswith("_")}
 
         return result

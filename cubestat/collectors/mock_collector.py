@@ -23,7 +23,7 @@ class MacOSMockCollector(MockCollector):
         """Generate mock data with incrementing counter."""
         value = self.counter
         self.counter += 1.0
-        return {"mock_value": value}
+        return {"mock.test.value.count": value}
 
 
 @collector_registry.register("linux")
@@ -37,4 +37,4 @@ class LinuxMockCollector(MockCollector):
         """Generate mock data with incrementing counter."""
         value = self.counter
         self.counter += 1.0
-        return {"mock_value": value}
+        return {"mock.test.value.count": value}
