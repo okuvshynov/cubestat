@@ -34,7 +34,7 @@ class MacOSAccelCollector(AccelCollector):
 
         # Identify the model to get ANE scaler
         brand_str = subprocess.check_output(["sysctl", "-n", "machdep.cpu.brand_string"], text=True)
-        ane_scaler = 15500  # default to M2
+        ane_scaler = 15500.0  # default to M2
 
         for k, v in ane_power_scalers.items():
             if k in brand_str:
@@ -53,4 +53,4 @@ class MacOSAccelCollector(AccelCollector):
         # Calculate ANE utilization as percentage
         ane_util_percent = 100.0 * ane_power / self.ane_scaler
 
-        return {"ane_utilization": ane_util_percent}
+        return {"accel.ane.utilization.percent": ane_util_percent}
