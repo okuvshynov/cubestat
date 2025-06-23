@@ -4,25 +4,28 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple
 from cubestat.collectors.base_collector import BaseCollector
 from cubestat.metrics.base_metric import base_metric
 from cubestat.presenters.base_presenter import BasePresenter
+from cubestat.transformers import TUITransformer, MetricTransformer
 
 
 class MetricAdapter(base_metric):
     """Adapter to use new collector/presenter architecture with existing metric system."""
 
-    def __init__(self, collector: BaseCollector, presenter: BasePresenter):
+    def __init__(self, collector: BaseCollector, presenter: BasePresenter, 
+                 transformer: Optional[MetricTransformer] = None):
         self.collector = collector
         self.presenter = presenter
+        self.transformer = transformer or TUITransformer()
 
     def read(self, context: Dict[str, Any]) -> Dict[str, float]:
-        """Read data using the collector."""
-        raw_data = self.collector.collect(context)
-        # Map collector output to expected format
-        result = {}
-        for key, value in raw_data.items():
-            # Convert underscores to spaces for display
-            display_key = key.replace("_", " ")
-            result[display_key] = value
-        return result
+        """Read data using the collector and transform for TUI."""
+        # Collector now returns standardized metric names
+        standardized_data = self.collector.collect(context)
+        
+        # Transform to TUI format for presenter
+        tui_data = self.transformer.transform(standardized_data)
+        
+        # Process through presenter
+        return self.presenter.process_data(tui_data)
 
     def pre(self, title: str) -> Tuple[bool, str]:
         """Delegate to presenter."""
