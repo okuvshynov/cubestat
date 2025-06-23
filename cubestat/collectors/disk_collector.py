@@ -20,8 +20,8 @@ class MacOSDiskCollector(DiskCollector):
     
     def collect(self, context: Dict[str, Any]) -> Dict[str, float]:
         return {
-            'disk_read': context['disk']['rbytes_per_s'],
-            'disk_write': context['disk']['wbytes_per_s']
+            'disk.total.read.bytes_per_sec': context['disk']['rbytes_per_s'],
+            'disk.total.write.bytes_per_sec': context['disk']['wbytes_per_s']
         }
 
 
@@ -44,6 +44,6 @@ class LinuxDiskCollector(DiskCollector):
     def collect(self, context: Dict[str, Any]) -> Dict[str, float]:
         disk_io = psutil.disk_io_counters()
         return {
-            'disk_read': self.rate_reader.next('disk_read', disk_io.read_bytes),
-            'disk_write': self.rate_reader.next('disk_write', disk_io.write_bytes)
+            'disk.total.read.bytes_per_sec': self.rate_reader.next('disk_read', disk_io.read_bytes),
+            'disk.total.write.bytes_per_sec': self.rate_reader.next('disk_write', disk_io.write_bytes)
         }

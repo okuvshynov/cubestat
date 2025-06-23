@@ -23,8 +23,8 @@ class MacOSNetworkCollector(NetworkCollector):
         """Collect network rates from macOS system context."""
         network_data = context.get("network", {})
         return {
-            "rx_bytes_per_sec": network_data.get("ibyte_rate", 0.0),
-            "tx_bytes_per_sec": network_data.get("obyte_rate", 0.0),
+            "network.total.rx.bytes_per_sec": network_data.get("ibyte_rate", 0.0),
+            "network.total.tx.bytes_per_sec": network_data.get("obyte_rate", 0.0),
         }
 
 
@@ -52,6 +52,6 @@ class LinuxNetworkCollector(NetworkCollector):
 
         net_io = psutil.net_io_counters()
         return {
-            "rx_bytes_per_sec": self.rate_reader.next("network_rx", net_io.bytes_recv),
-            "tx_bytes_per_sec": self.rate_reader.next("network_tx", net_io.bytes_sent),
+            "network.total.rx.bytes_per_sec": self.rate_reader.next("network_rx", net_io.bytes_recv),
+            "network.total.tx.bytes_per_sec": self.rate_reader.next("network_tx", net_io.bytes_sent),
         }
