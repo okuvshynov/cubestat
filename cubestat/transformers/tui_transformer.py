@@ -62,6 +62,62 @@ class TUITransformer(MetricTransformer):
         if "accel.ane.utilization.percent" in metrics:
             transformed["ane_utilization"] = metrics["accel.ane.utilization.percent"]
 
+        # GPU metrics - handle multi-vendor with proper display ordering
+        gpu_devices = {}
+        gpu_total_count = metrics.get("gpu.total.count", 0)
+        gpu_total_util = metrics.get("gpu.total.utilization.percent", 0.0)
+
+        # First pass: collect all GPU metrics by vendor and device
+        for key, value in metrics.items():
+            if key.startswith("gpu.") and key not in [
+                "gpu.total.count",
+                "gpu.total.utilization.percent",
+            ]:
+                parts = key.split(".")
+                if len(parts) >= 5:
+                    # gpu.vendor.device_id.metric.unit
+                    vendor = parts[1]
+                    device_id = parts[2]
+                    metric_type = parts[3]
+
+                    device_key = f"{vendor}.{device_id}"
+                    if device_key not in gpu_devices:
+                        gpu_devices[device_key] = {}
+
+                    if metric_type == "utilization":
+                        gpu_devices[device_key]["util"] = value
+                        gpu_devices[device_key]["vendor"] = vendor.upper()
+                        gpu_devices[device_key]["id"] = device_id
+                    elif metric_type == "memory":
+                        gpu_devices[device_key]["vram_used_percent"] = value
+
+        # Add metadata for presenter
+        transformed["_n_gpus"] = gpu_total_count
+        transformed["_total_util"] = gpu_total_util
+
+        # Add multi-GPU total if needed
+        if gpu_total_count > 1:
+            transformed[f"[{gpu_total_count}] Total GPU util %"] = gpu_total_util
+
+        # Second pass: output GPUs in order by vendor then device ID
+        for device_key in sorted(gpu_devices.keys()):
+            device = gpu_devices[device_key]
+            vendor = device.get("vendor", "")
+            device_id = device.get("id", "")
+
+            # Handle special case for macOS single GPU
+            if vendor == "APPLE":
+                if "util" in device:
+                    transformed["GPU util %"] = device["util"]
+            else:
+                # Multi-vendor format
+                if "util" in device:
+                    transformed[f"{vendor} GPU {device_id} util %"] = device["util"]
+                if "vram_used_percent" in device:
+                    transformed[f"{vendor} GPU {device_id} vram used %"] = device[
+                        "vram_used_percent"
+                    ]
+
         # CPU metrics - complex transformation maintaining cluster grouping order
         cpu_clusters = {}
 
@@ -145,4 +201,3 @@ class TUITransformer(MetricTransformer):
         # During migration, include everything
         # Later we can be more selective
         return True
-

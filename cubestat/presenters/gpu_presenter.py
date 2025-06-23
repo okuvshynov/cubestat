@@ -76,35 +76,14 @@ class GPUPresenter(BasePresenter):
 
     def process_data(self, raw_data: Dict[str, Any]) -> Dict[str, float]:
         """Convert collector data to display format with proper titles."""
-        result = {}
-        
+        # With the transformer architecture, this should receive data that's
+        # already been transformed back to the expected format
+
         # Extract metadata
         self.n_gpus = raw_data.get("_n_gpus", 0)
-        total_util = raw_data.get("_total_util", 0.0)
-        
-        # Handle multi-GPU total first
-        if self.n_gpus > 1:
-            result[f"[{self.n_gpus}] Total GPU util %"] = total_util
-        
-        # Process individual GPU metrics
-        for key, value in raw_data.items():
-            if key.startswith("_"):  # Skip metadata
-                continue
-                
-            # Parse GPU metrics and convert to display format
-            if "_gpu_" in key:
-                # Format: VENDOR_gpu_INDEX_METRIC
-                parts = key.split("_")
-                if len(parts) >= 4:
-                    vendor = parts[0]
-                    gpu_index = parts[2]
-                    metric_type = "_".join(parts[3:])
-                    
-                    if metric_type == "util":
-                        result[f"{vendor} GPU {gpu_index} util %"] = value
-                    elif metric_type == "vram_used_percent":
-                        result[f"{vendor} GPU {gpu_index} vram used %"] = value
-            elif key == "gpu_util":  # macOS format
-                result["GPU util %"] = value
-        
+
+        # The transformer should have already converted all the keys to the
+        # display format, so just filter out the private metadata keys
+        result = {k: v for k, v in raw_data.items() if not k.startswith("_")}
+
         return result
