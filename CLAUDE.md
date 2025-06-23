@@ -50,10 +50,11 @@ All metrics follow the collector/presenter/transformer architecture with standar
 - Manage hotkeys and command-line arguments
 - Platform-agnostic display logic
 
-**Metric Adapters** (`cubestat/metrics/`):
-- Bridge between new architecture and existing metric system
-- Coordinate collector, transformer, and presenter
-- **IMPORTANT**: Do NOT override read() method - use base implementation for transformer flow
+**Metrics** (`cubestat/metrics/`):
+- Unified `Metric` class that directly composes collector, presenter, and transformer
+- Simple factory functions create platform-specific instances
+- Configuration-driven approach via `all_metrics.py`
+- No complex inheritance hierarchy or adapter patterns
 
 ### Data Flow
 ```
@@ -63,13 +64,15 @@ Raw System   component.type.     TUI: old     Format    TUI Chart
    Data      instance.attr.unit  CSV: std     Values    CSV Output
 ```
 
-### Example Structure
+### Current Architecture Structure
 ```
 cubestat/collectors/memory_collector.py   # Data collection → standardized names
-cubestat/transformers/tui_transformer.py  # TUI format conversion
+cubestat/transformers/tui_transformer.py  # TUI format conversion  
 cubestat/transformers/csv_transformer.py  # CSV format (pass-through)
-cubestat/presenters/memory_presenter.py   # UI/formatting  
-cubestat/metrics/memory.py                # Coordination (no read() override)
+cubestat/presenters/memory_presenter.py   # UI/formatting
+cubestat/metrics/metric.py                # Unified Metric class
+cubestat/metrics/metric_factory.py        # Simple factory functions
+cubestat/metrics/all_metrics.py           # Configuration-driven metric definitions
 ```
 
 ### Standardized Naming Examples
@@ -91,6 +94,28 @@ cubestat/metrics/memory.py                # Coordination (no read() override)
 - Perfect for monitoring systems, scripts, and data analysis
 - Format: `timestamp,metric,value`
 - Example: `1750693377.593887,cpu.performance.0.core.0.utilization.percent,26.7591`
+
+### Metric Creation
+**Unified Architecture** (current):
+- Single `Metric` class handles all metric functionality via composition
+- Factory functions in `metric_factory.py` create platform-specific instances
+- Configuration in `all_metrics.py` defines all metrics declaratively
+- No inheritance hierarchy or complex adapter patterns
+
+**Adding New Metrics**:
+1. Implement collector(s) in `cubestat/collectors/`
+2. Implement presenter in `cubestat/presenters/`  
+3. Add metric key to appropriate list in `all_metrics.py`
+4. Handle special cases (if any) with simple configuration overrides
+
+**Example - Adding a new cross-platform metric**:
+```python
+# In all_metrics.py
+CROSS_PLATFORM_METRICS = [
+    "cpu", "network", "gpu", "disk", "swap", 
+    "temperature"  # ← Just add the key here
+]
+```
 
 ### Platform-Specific Guidelines
 - **macOS-only metrics** (power, accel): No Linux implementation to avoid confusion

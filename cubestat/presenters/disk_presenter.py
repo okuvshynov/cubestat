@@ -42,17 +42,7 @@ class DiskPresenter(BasePresenter):
         )
 
     def configure(self, config) -> "DiskPresenter":
-        # Handle both Dict and Namespace objects
-        if hasattr(config, "get"):
-            mode_value = config.get("disk", SimpleMode.show)
-        else:
-            mode_value = getattr(config, "disk", SimpleMode.show)
-
-        # Ensure we have a proper SimpleMode enum, not a string
-        if isinstance(mode_value, str):
-            self.mode = SimpleMode(mode_value)
-        else:
-            self.mode = mode_value
+        self.mode = getattr(config, "disk", SimpleMode.show)
         return self
 
     def process_data(self, raw_data: Dict[str, Any]) -> Dict[str, float]:

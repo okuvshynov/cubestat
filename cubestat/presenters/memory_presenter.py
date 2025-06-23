@@ -27,17 +27,7 @@ class MemoryPresenter(BasePresenter):
         return "memory"
 
     def configure(self, config) -> "MemoryPresenter":
-        # Handle both Dict and Namespace objects
-        if hasattr(config, "get"):
-            mode_value = config.get("memory", RAMMode.all)
-        else:
-            mode_value = getattr(config, "memory", RAMMode.all)
-
-        # Ensure we have a proper RAMMode enum, not a string
-        if isinstance(mode_value, str):
-            self.mode = RAMMode(mode_value)  # type: ignore
-        else:
-            self.mode = mode_value  # type: ignore
+        self.mode = getattr(config, "memory", RAMMode.all)
         return self
 
     def pre(self, title: str) -> Tuple[bool, str]:

@@ -22,18 +22,7 @@ class SwapPresenter(BasePresenter):
         return "swap"
 
     def configure(self, config) -> "SwapPresenter":
-        """Configure swap display mode."""
-        # Handle both Dict and Namespace objects
-        if hasattr(config, "get"):
-            mode_value = config.get("swap", SimpleMode.show)
-        else:
-            mode_value = getattr(config, "swap", SimpleMode.show)
-
-        # Ensure we have a proper SimpleMode enum, not a string
-        if isinstance(mode_value, str):
-            self.mode = SimpleMode(mode_value)
-        else:
-            self.mode = mode_value
+        self.mode = getattr(config, "swap", SimpleMode.show)
         return self
 
     def pre(self, title: str) -> Tuple[bool, str]:
