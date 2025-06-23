@@ -1,5 +1,4 @@
 from argparse import ArgumentParser
-from typing import Any, Dict
 
 from cubestat.metrics.metric_adapter import MetricAdapter
 from cubestat.metrics_registry import collector_registry, cubestat_metric, presenter_registry
@@ -7,11 +6,6 @@ from cubestat.metrics_registry import collector_registry, cubestat_metric, prese
 
 class PowerMetricAdapter(MetricAdapter):
     """Power metric adapter handling data processing."""
-
-    def read(self, context: Dict[str, Any]) -> Dict[str, float]:
-        """Read power data and convert to display format."""
-        raw_data = self.collector.collect(context)
-        return self.presenter.process_data(raw_data)
 
     @classmethod
     def key(cls) -> str:

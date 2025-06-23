@@ -20,10 +20,10 @@ class MacOSPowerCollector(PowerCollector):
         """Collect power metrics from macOS system context."""
         processor_data = context.get("processor", {})
         return {
-            "total_power": processor_data.get("combined_power", 0.0),
-            "ane_power": processor_data.get("ane_power", 0.0),
-            "cpu_power": processor_data.get("cpu_power", 0.0),
-            "gpu_power": processor_data.get("gpu_power", 0.0),
+            "power.component.total.consumption.watts": processor_data.get("combined_power", 0.0),
+            "power.component.ane.consumption.watts": processor_data.get("ane_power", 0.0),
+            "power.component.cpu.consumption.watts": processor_data.get("cpu_power", 0.0),
+            "power.component.gpu.consumption.watts": processor_data.get("gpu_power", 0.0),
         }
 
 
@@ -36,8 +36,8 @@ class LinuxPowerCollector(PowerCollector):
         # Linux generally doesn't provide detailed power consumption data
         # This is a placeholder that returns zero values
         return {
-            "total_power": 0.0,
-            "ane_power": 0.0,
-            "cpu_power": 0.0,
-            "gpu_power": 0.0,
+            "power.component.total.consumption.watts": 0.0,
+            "power.component.ane.consumption.watts": 0.0,
+            "power.component.cpu.consumption.watts": 0.0,
+            "power.component.gpu.consumption.watts": 0.0,
         }
