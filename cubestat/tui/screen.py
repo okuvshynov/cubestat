@@ -1,7 +1,7 @@
 import curses
 from math import floor
 
-from cubestat.colors import Colorschemes
+from cubestat.tui.colors import Colorschemes
 
 
 class Screen:

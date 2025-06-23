@@ -1,0 +1,1 @@
+"""TUI-specific functionality for cubestat."""
