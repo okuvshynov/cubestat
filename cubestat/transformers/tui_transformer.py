@@ -62,6 +62,10 @@ class TUITransformer(MetricTransformer):
         if "accel.ane.utilization.percent" in metrics:
             transformed["ane_utilization"] = metrics["accel.ane.utilization.percent"]
 
+        # Mock metrics
+        if "mock.test.value.count" in metrics:
+            transformed["mock"] = metrics["mock.test.value.count"]
+
         # GPU metrics - handle multi-vendor with proper display ordering
         gpu_devices = {}
         gpu_total_count = metrics.get("gpu.total.count", 0)
