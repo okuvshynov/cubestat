@@ -75,7 +75,7 @@ class MemoryPresenter(BasePresenter):
         if "memory.system.mapped.bytes" in raw_data:  # Linux
             result["RAM mapped"] = raw_data["memory.system.mapped.bytes"]
 
-        # Legacy support for transformer-converted names (during migration)
+        # Legacy support for pre-transformed data (backward compatibility)
         if "used_percent" in raw_data:
             result["RAM used %"] = raw_data["used_percent"]
 

@@ -34,14 +34,14 @@ class MockPresenter(BasePresenter):
         pass
 
     def process_data(self, raw_data: Dict[str, Any]) -> Dict[str, float]:
-        """Process mock data from transformer."""
+        """Process mock data from collector."""
         result = {}
 
         # Handle standardized metric names (from collector)
         if "mock.test.value.count" in raw_data:
             result["mock"] = raw_data["mock.test.value.count"]
 
-        # Legacy support for transformer-converted names (during migration)
+        # Legacy support for pre-transformed data (backward compatibility)
         if "mock" in raw_data:
             result["mock"] = raw_data["mock"]
 

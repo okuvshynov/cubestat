@@ -51,7 +51,7 @@ class AccelPresenter(BasePresenter):
         if "accel.ane.utilization.percent" in raw_data:
             result["ANE util %"] = raw_data["accel.ane.utilization.percent"]
 
-        # Legacy support for transformer-converted names (during migration)
+        # Legacy support for pre-transformed data (backward compatibility)
         if "ane_utilization" in raw_data:
             result["ANE util %"] = raw_data["ane_utilization"]
 

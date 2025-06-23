@@ -76,7 +76,7 @@ class PowerPresenter(BasePresenter):
         if "power.component.ane.consumption.watts" in raw_data:
             result["ANE power"] = raw_data["power.component.ane.consumption.watts"]
 
-        # Legacy support for transformer-converted names (during migration)
+        # Legacy support for pre-transformed data (backward compatibility)
         if "total_power" in raw_data:
             result["total power"] = raw_data["total_power"]
 

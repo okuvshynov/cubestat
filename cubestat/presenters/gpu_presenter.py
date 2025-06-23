@@ -62,7 +62,7 @@ class GPUPresenter(BasePresenter):
         )
 
     def process_data(self, raw_data: Dict[str, Any]) -> Dict[str, float]:
-        """Process GPU data from collector or transformer."""
+        """Process GPU data from collector."""
         result = {}
         
         # Check if we have standardized metrics (from collector)
@@ -124,7 +124,7 @@ class GPUPresenter(BasePresenter):
                             "vram_used_percent"
                         ]
         else:
-            # Legacy support for transformer-converted data (during migration)
+            # Legacy support for pre-transformed data (backward compatibility)
             # Extract GPU count for display filtering
             self.n_gpus = raw_data.get("_n_gpus", 0)
             

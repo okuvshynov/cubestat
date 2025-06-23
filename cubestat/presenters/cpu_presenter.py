@@ -68,7 +68,7 @@ class CPUPresenter(BasePresenter):
         )
 
     def process_data(self, raw_data: Dict[str, Any]) -> Dict[str, float]:
-        """Process CPU data from collector or transformer."""
+        """Process CPU data from collector."""
         result = {}
         
         # Check if we have standardized metrics (from collector)
@@ -139,7 +139,7 @@ class CPUPresenter(BasePresenter):
                     cpu_title = f"{cluster_name} CPU {core_id} util %"
                     result[cpu_title] = cluster_data["cores"][core_id]
         else:
-            # Legacy support for transformer-converted data (during migration)
+            # Legacy support for pre-transformed data (backward compatibility)
             # Extract cluster titles for filtering
             self.cpu_clusters = []
             for key in raw_data.keys():

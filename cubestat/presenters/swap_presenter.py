@@ -57,7 +57,7 @@ class SwapPresenter(BasePresenter):
         if "swap.total.used.bytes" in raw_data:
             result["swap used"] = raw_data["swap.total.used.bytes"]
 
-        # Legacy support for transformer-converted names (during migration)
+        # Legacy support for pre-transformed data (backward compatibility)
         if "used_bytes" in raw_data:
             result["swap used"] = raw_data["used_bytes"]
 

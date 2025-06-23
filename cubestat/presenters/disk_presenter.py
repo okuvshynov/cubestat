@@ -53,7 +53,7 @@ class DiskPresenter(BasePresenter):
         if "disk.total.write.bytes_per_sec" in raw_data:
             result["disk write"] = raw_data["disk.total.write.bytes_per_sec"]
 
-        # Legacy support for transformer-converted names (during migration)
+        # Legacy support for pre-transformed data (backward compatibility)
         if "disk_read" in raw_data:
             result["disk read"] = raw_data["disk_read"]
 
