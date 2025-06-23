@@ -1,4 +1,4 @@
-from cubestat.colors import Colorschemes
+from cubestat.tui.colors import Colorschemes
 
 from unittest.mock import patch
 import unittest

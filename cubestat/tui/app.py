@@ -3,12 +3,12 @@
 import logging
 from threading import Lock, Thread
 
-from cubestat.colors import ColorTheme, get_theme
 from cubestat.common import DisplayMode
 from cubestat.data import DataManager
-from cubestat.input import InputHandler
 from cubestat.metrics_registry import get_metrics
-from cubestat.screen import Screen
+from cubestat.tui.colors import ColorTheme, get_theme
+from cubestat.tui.input import InputHandler
+from cubestat.tui.screen import Screen
 
 
 class ViewMode(DisplayMode):
