@@ -57,6 +57,59 @@ class TUITransformer(MetricTransformer):
         if "swap.total.used.bytes" in metrics:
             transformed["used_bytes"] = metrics["swap.total.used.bytes"]
             
+        # CPU metrics - complex transformation maintaining cluster grouping order
+        cpu_clusters = {}
+        
+        # First pass: collect all CPU metrics by cluster
+        for key, value in metrics.items():
+            if key.startswith("cpu.") and key != "cpu.total.count":
+                parts = key.split(".")
+                if len(parts) >= 7 and parts[3] == "core":
+                    # Individual core: cpu.performance.0.core.2.utilization.percent
+                    cluster_name = parts[1].capitalize()
+                    cluster_index = parts[2]
+                    core_id = parts[4]
+                    cluster_key = f"{cluster_name}.{cluster_index}"
+                    
+                    if cluster_key not in cpu_clusters:
+                        cpu_clusters[cluster_key] = {"cores": {}, "total_key": None, "total_value": None}
+                    
+                    cpu_clusters[cluster_key]["cores"][core_id] = value
+                    
+                elif len(parts) >= 6 and parts[3] == "total":
+                    # Cluster total: cpu.performance.0.total.utilization.percent
+                    cluster_name = parts[1].capitalize()
+                    cluster_index = parts[2]
+                    cluster_key = f"{cluster_name}.{cluster_index}"
+                    
+                    if cluster_key not in cpu_clusters:
+                        cpu_clusters[cluster_key] = {"cores": {}, "total_key": None, "total_value": None}
+                    
+                    cpu_clusters[cluster_key]["total_key"] = key
+                    cpu_clusters[cluster_key]["total_value"] = value
+        
+        # Second pass: build ordered output (cluster total, then its cores)
+        # Sort clusters by minimum CPU ID to preserve original order (Performance cores typically have lower IDs)
+        def cluster_sort_key(item):
+            cluster_key, cluster_data = item
+            if cluster_data["cores"]:
+                return min(int(core_id) for core_id in cluster_data["cores"].keys())
+            return float('inf')
+        
+        for cluster_key, cluster_data in sorted(cpu_clusters.items(), key=cluster_sort_key):
+            cluster_name = cluster_key.split(".")[0]
+            
+            # Add cluster total first
+            if cluster_data["total_value"] is not None:
+                core_count = len(cluster_data["cores"])
+                cluster_title = f"[{core_count}] {cluster_name} total CPU util %"
+                transformed[cluster_title] = cluster_data["total_value"]
+            
+            # Then add individual cores in order
+            for core_id in sorted(cluster_data["cores"].keys(), key=int):
+                cpu_title = f"{cluster_name} CPU {core_id} util %"
+                transformed[cpu_title] = cluster_data["cores"][core_id]
+            
         # Pass through any unrecognized metrics (for collectors not yet migrated)
         for key, value in metrics.items():
             # If it's not a standardized metric name, pass it through as-is

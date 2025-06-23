@@ -93,6 +93,63 @@ result = metric.read({})
 print("Final result:", result)
 ```
 
+## Advanced Example: CPU Metric Migration
+
+The CPU metric was the most complex migration, involving hierarchical data flattening and ordering preservation.
+
+### Original Structure (Complex)
+```python
+# Collector returned nested CPUCluster objects
+{
+  "clusters": [
+    CPUCluster("Performance", [{"cpu": 0, "utilization": 70}, {"cpu": 1, "utilization": 60}]),
+    CPUCluster("Efficiency", [{"cpu": 2, "utilization": 20}, {"cpu": 3, "utilization": 10}])
+  ],
+  "total_cpus": 4
+}
+```
+
+### Standardized Format (Flat)
+```python
+{
+  "cpu.performance.0.core.0.utilization.percent": 70.0,
+  "cpu.performance.0.core.1.utilization.percent": 60.0,
+  "cpu.performance.0.total.utilization.percent": 65.0,
+  "cpu.efficiency.0.core.2.utilization.percent": 20.0,
+  "cpu.efficiency.0.core.3.utilization.percent": 10.0,
+  "cpu.efficiency.0.total.utilization.percent": 15.0,
+  "cpu.total.count": 4
+}
+```
+
+### TUI Display Format (Ordered)
+```python
+{
+  "[2] Performance total CPU util %": 65.0,    # Cluster total first
+  "Performance CPU 0 util %": 70.0,           # Individual cores follow
+  "Performance CPU 1 util %": 60.0,
+  "[2] Efficiency total CPU util %": 15.0,    # Next cluster total
+  "Efficiency CPU 2 util %": 20.0,           # Its cores follow
+  "Efficiency CPU 3 util %": 10.0
+}
+```
+
+### Key Challenges Solved
+1. **Hierarchical Flattening**: Converted nested cluster structure to flat dot-notation
+2. **Display Ordering**: Maintained cluster grouping (total + cores) using custom sort
+3. **Presenter Compatibility**: Updated presenter to handle both old and new formats
+4. **Multi-Platform**: Works for macOS clusters and Linux single-cluster
+
+### Transformer Logic Summary
+```python
+# 1. Parse standardized names into clusters
+# 2. Group cores and totals by cluster
+# 3. Sort clusters by minimum core ID (preserves P-core/E-core order)
+# 4. Output cluster total, then its cores, repeat for next cluster
+```
+
+This pattern can be applied to other hierarchical metrics (GPU with multiple devices, etc.).
+
 ## Naming Schema Reference
 
 ### Memory
@@ -113,10 +170,15 @@ print("Final result:", result)
 - `disk.device.<name>.read.bytes_per_sec`
 - `disk.device.<name>.write.bytes_per_sec`
 
-### CPU
-- `cpu.<cluster>.<index>.core.<core>.utilization.percent`
-- `cpu.total.utilization.percent`
+### CPU (Complex Hierarchical)
+- `cpu.<cluster>.<cluster_index>.core.<core_id>.utilization.percent`
+- `cpu.<cluster>.<cluster_index>.total.utilization.percent`
 - `cpu.total.count`
+
+**Examples:**
+- `cpu.performance.0.core.2.utilization.percent` (P-Core 2 in cluster 0)
+- `cpu.efficiency.0.total.utilization.percent` (E-Core cluster total)
+- `cpu.cpu.0.core.1.utilization.percent` (Linux: Core 1 in single cluster)
 
 ### GPU
 - `gpu.<vendor>.<index>.compute.utilization.percent`
@@ -133,12 +195,13 @@ print("Final result:", result)
 ## Migration Order
 
 1. ✅ Memory (completed - pilot)
-2. Disk (simple, similar to memory)
-3. Network (simple, test interface naming)
-4. Power (test component hierarchy)
-5. Swap (single value, simplest)
-6. GPU (complex multi-instance)
-7. CPU (most complex, needs flattening)
+2. ✅ Disk (completed - simple, similar to memory)
+3. ✅ Network (completed - simple, interface naming)
+4. ✅ CPU (completed - most complex, hierarchical flattening)
+5. Power (test component hierarchy)
+6. Swap (single value, simplest)
+7. GPU (complex multi-instance)
+8. Accel (simple single value)
 
 ## Common Issues
 
@@ -157,6 +220,16 @@ print("Final result:", result)
 **Cause**: Breaking changes to base collector
 **Solution**: Use simple approach - `collect()` returns standardized names directly
 
+### Issue: Wrong Display Ordering (Complex Metrics)
+**Symptom**: Hierarchical metrics show incorrect grouping (e.g., all cores then all clusters)
+**Cause**: Simple alphabetical sorting doesn't preserve logical grouping
+**Solution**: Custom sorting logic in transformer (e.g., CPU clusters by minimum core ID)
+
+### Issue: Presenter Expects Old Format
+**Symptom**: Presenter crashes looking for old structure (e.g., "clusters" key)
+**Cause**: Presenter designed for original collector format
+**Solution**: Update presenter to handle both old and new flat formats
+
 ## Testing Checklist
 
 For each migrated metric:
@@ -165,6 +238,8 @@ For each migrated metric:
 - [ ] Metric adapter has no `read()` override
 - [ ] End-to-end test: `metric.read({})` returns presenter-formatted data
 - [ ] Manual test: metric appears correctly in cubestat TUI
+- [ ] **Complex metrics only**: Verify display ordering preserves logical grouping
+- [ ] **Complex metrics only**: Update presenter if it expects old structure
 
 ## Notes
 
