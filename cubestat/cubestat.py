@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 
 import argparse
+import csv
 import curses
 import logging
+import sys
 
 from threading import Thread, Lock
 
@@ -14,6 +16,7 @@ from cubestat.screen import Screen
 
 from cubestat.platforms.factory import get_platform
 from cubestat.metrics_registry import get_metrics, metrics_configure_argparse
+from cubestat.transformers import CSVTransformer
 
 
 class ViewMode(DisplayMode):
@@ -75,7 +78,7 @@ class Cubestat:
     def render(self) -> None:
         with self.lock:
             if self.snapshots_rendered > self.snapshots_observed:
-                logging.fatal('self.snapshots_rendered > self.snapshots_observed')
+                logging.fatal("self.snapshots_rendered > self.snapshots_observed")
                 exit(0)
             if self.snapshots_observed == self.snapshots_rendered and not self.settings_changed:
                 return
@@ -113,7 +116,9 @@ class Cubestat:
             self.snapshots_rendered = self.snapshots_observed
             self.settings_changed = False
             if self.view != ViewMode.off:
-                ruler_times = [(i, f'-{(self.step_s * (i + self.h_shift)):.2f}s') for i in ruler_indices]
+                ruler_times = [
+                    (i, f"-{(self.step_s * (i + self.h_shift)):.2f}s") for i in ruler_indices
+                ]
                 self.screen.render_time(base_ruler, ruler_times, row)
         self.screen.render_done()
 
@@ -130,28 +135,93 @@ def start(stdscr, platform, args):
     h.loop(platform)
 
 
+class CSVExporter:
+    """CSV exporter that outputs metrics in standardized format."""
+
+    def __init__(self, args):
+        self.csv_transformer = CSVTransformer()
+        self.metrics = get_metrics(args)
+        self.writer = csv.writer(sys.stdout)
+        self.header_written = False
+
+        # Replace the transformer in each metric adapter to use CSV transformer
+        for metric in self.metrics.values():
+            if hasattr(metric, "transformer"):
+                metric.transformer = self.csv_transformer
+
+    def do_read(self, context) -> None:
+        """CSV version of do_read - outputs standardized metric names."""
+        # Collect all standardized metrics
+        all_metrics = {}
+        for group, metric in self.metrics.items():
+            # Get raw data from collector
+            raw_data = metric.collector.collect(context)
+            # Transform with CSV transformer (preserves standardized names)
+            csv_data = self.csv_transformer.transform(raw_data)
+            # Add to combined metrics
+            for metric_name, value in csv_data.items():
+                all_metrics[metric_name] = value
+
+        # Write CSV header on first output
+        if not self.header_written:
+            self.writer.writerow(["timestamp", "metric", "value"])
+            self.header_written = True
+
+        # Write data with timestamp
+        import time
+
+        timestamp = time.time()
+        for metric_name, value in sorted(all_metrics.items()):
+            self.writer.writerow([timestamp, metric_name, value])
+
+        # Flush to ensure immediate output
+        sys.stdout.flush()
+
+
+def csv_export(platform, args):
+    """Export metrics in CSV format without TUI initialization."""
+    exporter = CSVExporter(args)
+
+    # Use the same platform loop as TUI but with CSV output
+    platform.loop(exporter.do_read)
+
+
 def main():
-    logging.basicConfig(filename='/tmp/cubestat.log', level=logging.INFO)
+    logging.basicConfig(filename="/tmp/cubestat.log", level=logging.INFO)
     parser = argparse.ArgumentParser("cubestat")
     parser.add_argument(
-        '--refresh_ms', '-i', type=int, default=1000,
-        help='Update frequency (milliseconds)'
+        "--refresh_ms", "-i", type=int, default=1000, help="Update frequency (milliseconds)"
     )
 
     parser.add_argument(
-        '--buffer_size', type=int, default=500,
-        help='Number of datapoints to store. Consider setting it larger than the screen width to accommodate window resizing.'
+        "--buffer_size",
+        type=int,
+        default=500,
+        help="Number of datapoints to store. Consider setting it larger than the screen width to accommodate window resizing.",
     )
 
     parser.add_argument(
-        '--view', type=ViewMode, default=ViewMode.one, choices=list(ViewMode),
-        help='Display mode (legend, values, time). Hotkey: "v".'
+        "--view",
+        type=ViewMode,
+        default=ViewMode.one,
+        choices=list(ViewMode),
+        help='Display mode (legend, values, time). Hotkey: "v".',
+    )
+
+    parser.add_argument(
+        "--csv", action="store_true", help="Export metrics in CSV format to stdout (bypasses TUI)"
     )
 
     metrics_configure_argparse(parser)
     args = parser.parse_args()
-    curses.wrapper(start, get_platform(args.refresh_ms), args)
+
+    platform = get_platform(args.refresh_ms)
+
+    if args.csv:
+        csv_export(platform, args)
+    else:
+        curses.wrapper(start, platform, args)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
