@@ -63,7 +63,7 @@ class PowerPresenter(BasePresenter):
         """Convert collector data to display format with proper titles."""
         result = {}
 
-        # Handle standardized metric names (from collector)
+        # Handle standardized metric names from collector
         if "power.component.total.consumption.watts" in raw_data:
             result["total power"] = raw_data["power.component.total.consumption.watts"]
 
@@ -75,18 +75,5 @@ class PowerPresenter(BasePresenter):
 
         if "power.component.ane.consumption.watts" in raw_data:
             result["ANE power"] = raw_data["power.component.ane.consumption.watts"]
-
-        # Legacy support for pre-transformed data (backward compatibility)
-        if "total_power" in raw_data:
-            result["total power"] = raw_data["total_power"]
-
-        if "ane_power" in raw_data:
-            result["ANE power"] = raw_data["ane_power"]
-
-        if "cpu_power" in raw_data:
-            result["CPU power"] = raw_data["cpu_power"]
-
-        if "gpu_power" in raw_data:
-            result["GPU power"] = raw_data["gpu_power"]
 
         return result

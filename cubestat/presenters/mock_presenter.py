@@ -37,13 +37,9 @@ class MockPresenter(BasePresenter):
         """Process mock data from collector."""
         result = {}
 
-        # Handle standardized metric names (from collector)
+        # Handle standardized metric names from collector
         if "mock.test.value.count" in raw_data:
             result["mock"] = raw_data["mock.test.value.count"]
-
-        # Legacy support for pre-transformed data (backward compatibility)
-        if "mock" in raw_data:
-            result["mock"] = raw_data["mock"]
 
         # Filter out metadata keys and pass through other values
         for k, v in raw_data.items():

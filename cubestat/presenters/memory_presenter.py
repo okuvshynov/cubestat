@@ -62,7 +62,7 @@ class MemoryPresenter(BasePresenter):
         """Convert collector data to display format with proper titles."""
         result = {}
 
-        # Handle standardized metric names (from collector)
+        # Handle standardized metric names from collector
         if "memory.system.total.used.percent" in raw_data:
             result["RAM used %"] = raw_data["memory.system.total.used.percent"]
 
@@ -74,18 +74,5 @@ class MemoryPresenter(BasePresenter):
 
         if "memory.system.mapped.bytes" in raw_data:  # Linux
             result["RAM mapped"] = raw_data["memory.system.mapped.bytes"]
-
-        # Legacy support for pre-transformed data (backward compatibility)
-        if "used_percent" in raw_data:
-            result["RAM used %"] = raw_data["used_percent"]
-
-        if "used_bytes" in raw_data:
-            result["RAM used"] = raw_data["used_bytes"]
-
-        if "wired_bytes" in raw_data:  # macOS
-            result["RAM wired"] = raw_data["wired_bytes"]
-
-        if "mapped_bytes" in raw_data:  # Linux
-            result["RAM mapped"] = raw_data["mapped_bytes"]
 
         return result

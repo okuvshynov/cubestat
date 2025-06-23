@@ -53,18 +53,11 @@ class NetworkPresenter(BasePresenter):
         """Convert collector data to display format with proper titles."""
         result = {}
 
-        # Handle standardized metric names (from collector)
+        # Handle standardized metric names from collector
         if "network.total.rx.bytes_per_sec" in raw_data:
             result["network rx"] = raw_data["network.total.rx.bytes_per_sec"]
 
         if "network.total.tx.bytes_per_sec" in raw_data:
             result["network tx"] = raw_data["network.total.tx.bytes_per_sec"]
-
-        # Legacy support for pre-transformed data (backward compatibility)
-        if "rx_bytes_per_sec" in raw_data:
-            result["network rx"] = raw_data["rx_bytes_per_sec"]
-
-        if "tx_bytes_per_sec" in raw_data:
-            result["network tx"] = raw_data["tx_bytes_per_sec"]
 
         return result
