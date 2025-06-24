@@ -14,9 +14,6 @@ class DiskPresenter(BasePresenter):
     def key(cls) -> str:
         return "disk"
 
-    @classmethod
-    def collector_id(cls) -> str:
-        return "disk"
 
     def hotkey(self) -> Optional[str]:
         return "d"
@@ -49,11 +46,11 @@ class DiskPresenter(BasePresenter):
         """Convert collector data to display format with proper titles."""
         result = {}
 
-        # Map collector keys to display titles
-        if "disk_read" in raw_data:
-            result["disk read"] = raw_data["disk_read"]
+        # Handle standardized metric names from collector
+        if "disk.total.read.bytes_per_sec" in raw_data:
+            result["disk read"] = raw_data["disk.total.read.bytes_per_sec"]
 
-        if "disk_write" in raw_data:
-            result["disk write"] = raw_data["disk_write"]
+        if "disk.total.write.bytes_per_sec" in raw_data:
+            result["disk write"] = raw_data["disk.total.write.bytes_per_sec"]
 
         return result

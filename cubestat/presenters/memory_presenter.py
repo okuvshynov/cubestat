@@ -22,9 +22,6 @@ class MemoryPresenter(BasePresenter):
     def key(cls) -> str:
         return "memory"
 
-    @classmethod
-    def collector_id(cls) -> str:
-        return "memory"
 
     def configure(self, config) -> "MemoryPresenter":
         self.mode = getattr(config, "memory", RAMMode.all)
@@ -65,18 +62,17 @@ class MemoryPresenter(BasePresenter):
         """Convert collector data to display format with proper titles."""
         result = {}
 
-        # Map collector keys to display titles
-        if "used_percent" in raw_data:
-            result["RAM used %"] = raw_data["used_percent"]
+        # Handle standardized metric names from collector
+        if "memory.system.total.used.percent" in raw_data:
+            result["RAM used %"] = raw_data["memory.system.total.used.percent"]
 
-        if "used_bytes" in raw_data:
-            result["RAM used"] = raw_data["used_bytes"]
+        if "memory.system.total.used.bytes" in raw_data:
+            result["RAM used"] = raw_data["memory.system.total.used.bytes"]
 
-        # Platform-specific memory types
-        if "wired_bytes" in raw_data:  # macOS
-            result["RAM wired"] = raw_data["wired_bytes"]
+        if "memory.system.wired.bytes" in raw_data:  # macOS
+            result["RAM wired"] = raw_data["memory.system.wired.bytes"]
 
-        if "mapped_bytes" in raw_data:  # Linux
-            result["RAM mapped"] = raw_data["mapped_bytes"]
+        if "memory.system.mapped.bytes" in raw_data:  # Linux
+            result["RAM mapped"] = raw_data["memory.system.mapped.bytes"]
 
         return result

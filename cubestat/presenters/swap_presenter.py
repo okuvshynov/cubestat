@@ -17,9 +17,6 @@ class SwapPresenter(BasePresenter):
     def key(cls) -> str:
         return "swap"
 
-    @classmethod
-    def collector_id(cls) -> str:
-        return "swap"
 
     def configure(self, config) -> "SwapPresenter":
         self.mode = getattr(config, "swap", SimpleMode.show)
@@ -56,8 +53,8 @@ class SwapPresenter(BasePresenter):
         """Convert collector data to display format with proper titles."""
         result = {}
 
-        # Map collector keys to display titles
-        if "used_bytes" in raw_data:
-            result["swap used"] = raw_data["used_bytes"]
+        # Handle standardized metric names from collector
+        if "swap.total.used.bytes" in raw_data:
+            result["swap used"] = raw_data["swap.total.used.bytes"]
 
         return result

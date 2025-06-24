@@ -9,7 +9,6 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 from cubestat.collectors.base_collector import BaseCollector
 from cubestat.presenters.base_presenter import BasePresenter
-from cubestat.transformers import TUITransformer, MetricTransformer
 from cubestat.metrics_registry import presenter_registry
 
 
@@ -19,23 +18,20 @@ class Metric:
     def __init__(self, 
                  key: str,
                  collector: BaseCollector, 
-                 presenter: BasePresenter,
-                 transformer: Optional[MetricTransformer] = None):
-        """Initialize metric with collector, presenter and transformer.
+                 presenter: BasePresenter):
+        """Initialize metric with collector and presenter.
         
         Args:
             key: The key identifying this metric (e.g., "cpu", "ram", "network")
             collector: Data collector for this metric
             presenter: Presenter for formatting and display
-            transformer: Data transformer (defaults to TUITransformer)
         """
         self.key = key
         self.collector = collector
         self.presenter = presenter
-        self.transformer = transformer or TUITransformer()
     
     def read(self, context: Dict[str, Any]) -> Dict[str, float]:
-        """Read data using the collector and transform for display.
+        """Read data using the collector and process through presenter.
         
         Args:
             context: Context information for data collection
@@ -46,11 +42,8 @@ class Metric:
         # Collector returns standardized metric names
         standardized_data = self.collector.collect(context)
         
-        # Transform to display format
-        transformed_data = self.transformer.transform(standardized_data)
-        
-        # Process through presenter
-        return self.presenter.process_data(transformed_data)
+        # Process directly through presenter (handles standardized names)
+        return self.presenter.process_data(standardized_data)
     
     def pre(self, title: str) -> Tuple[bool, str]:
         """Prepare metric for display - delegate to presenter.

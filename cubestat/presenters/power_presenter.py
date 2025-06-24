@@ -23,9 +23,6 @@ class PowerPresenter(BasePresenter):
     def key(cls) -> str:
         return "power"
 
-    @classmethod
-    def collector_id(cls) -> str:
-        return "power"
 
     def configure(self, config) -> "PowerPresenter":
         self.mode = getattr(config, "power", PowerMode.combined)
@@ -66,17 +63,17 @@ class PowerPresenter(BasePresenter):
         """Convert collector data to display format with proper titles."""
         result = {}
 
-        # Map collector keys to display titles
-        if "total_power" in raw_data:
-            result["total power"] = raw_data["total_power"]
+        # Handle standardized metric names from collector
+        if "power.component.total.consumption.watts" in raw_data:
+            result["total power"] = raw_data["power.component.total.consumption.watts"]
 
-        if "ane_power" in raw_data:
-            result["ANE power"] = raw_data["ane_power"]
+        if "power.component.cpu.consumption.watts" in raw_data:
+            result["CPU power"] = raw_data["power.component.cpu.consumption.watts"]
 
-        if "cpu_power" in raw_data:
-            result["CPU power"] = raw_data["cpu_power"]
+        if "power.component.gpu.consumption.watts" in raw_data:
+            result["GPU power"] = raw_data["power.component.gpu.consumption.watts"]
 
-        if "gpu_power" in raw_data:
-            result["GPU power"] = raw_data["gpu_power"]
+        if "power.component.ane.consumption.watts" in raw_data:
+            result["ANE power"] = raw_data["power.component.ane.consumption.watts"]
 
         return result

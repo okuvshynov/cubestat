@@ -17,9 +17,6 @@ class NetworkPresenter(BasePresenter):
     def key(cls) -> str:
         return "network"
 
-    @classmethod
-    def collector_id(cls) -> str:
-        return "network"
 
     def configure(self, config) -> "NetworkPresenter":
         self.mode = getattr(config, "network", SimpleMode.show)
@@ -56,11 +53,11 @@ class NetworkPresenter(BasePresenter):
         """Convert collector data to display format with proper titles."""
         result = {}
 
-        # Map collector keys to display titles
-        if "rx_bytes_per_sec" in raw_data:
-            result["network rx"] = raw_data["rx_bytes_per_sec"]
+        # Handle standardized metric names from collector
+        if "network.total.rx.bytes_per_sec" in raw_data:
+            result["network rx"] = raw_data["network.total.rx.bytes_per_sec"]
 
-        if "tx_bytes_per_sec" in raw_data:
-            result["network tx"] = raw_data["tx_bytes_per_sec"]
+        if "network.total.tx.bytes_per_sec" in raw_data:
+            result["network tx"] = raw_data["network.total.tx.bytes_per_sec"]
 
         return result

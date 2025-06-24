@@ -18,7 +18,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Class naming: CamelCase for primary classes (e.g., `DataManager`), snake_case for metrics 
 - Add type hints to all new code and when refactoring existing code
 - Imports: standard library first, then project imports
-- **Metrics Architecture**: Use collector/presenter/transformer pattern (see Architecture section below)
+- **Metrics Architecture**: Use collector/presenter pattern (see Architecture section below)
 - **Metric Naming**: Use standardized `component.type.instance.attribute.unit` format
 - Platform-specific implementations in separate modules
 - Error handling: Use try/except blocks with specific exceptions and logging
@@ -29,8 +29,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Architecture
 
-### Collector/Presenter/Transformer Pattern
-All metrics follow the collector/presenter/transformer architecture with standardized naming:
+### Collector/Presenter Pattern
+All metrics follow the simplified collector/presenter architecture with standardized naming:
 
 **Collectors** (`cubestat/collectors/`):
 - Responsible for data collection from system APIs
@@ -38,38 +38,30 @@ All metrics follow the collector/presenter/transformer architecture with standar
 - **Return standardized metric names**: `component.type.instance.attribute.unit`
 - Handle platform differences (psutil vs system context vs /proc files)
 
-**Transformers** (`cubestat/transformers/`):
-- Convert between standardized names and output-specific formats
-- **TUITransformer**: Converts standardized names to presenter-expected format
-- **CSVTransformer**: Preserves standardized names for export
-- Enable multiple output formats without changing collectors
-
 **Presenters** (`cubestat/presenters/`):
-- Handle UI concerns: display modes, formatting, filtering
-- Process transformed data into final display format
+- Handle data transformation and UI concerns: display modes, formatting, filtering
+- Process standardized collector data directly into final display format
 - Manage hotkeys and command-line arguments
 - Platform-agnostic display logic
 
 **Metrics** (`cubestat/metrics/`):
-- Unified `Metric` class that directly composes collector, presenter, and transformer
+- Unified `Metric` class that directly composes collector and presenter
 - Simple factory functions create platform-specific instances
 - Configuration-driven approach via `all_metrics.py`
 - No complex inheritance hierarchy or adapter patterns
 
 ### Data Flow
 ```
-Collector → Standardized Names → Transformer → Presenter → Display
-    ↓              ↓                  ↓           ↓         ↓
-Raw System   component.type.     TUI: old     Format    TUI Chart
-   Data      instance.attr.unit  CSV: std     Values    CSV Output
+Collector → Standardized Names → Presenter → Display
+    ↓              ↓                  ↓         ↓
+Raw System   component.type.     Process &   TUI Chart
+   Data      instance.attr.unit   Format     CSV Output
 ```
 
 ### Current Architecture Structure
 ```
 cubestat/collectors/memory_collector.py   # Data collection → standardized names
-cubestat/transformers/tui_transformer.py  # TUI format conversion  
-cubestat/transformers/csv_transformer.py  # CSV format (pass-through)
-cubestat/presenters/memory_presenter.py   # UI/formatting
+cubestat/presenters/memory_presenter.py   # Data transformation & UI formatting
 cubestat/metrics/metric.py                # Unified Metric class
 cubestat/metrics/metric_factory.py        # Simple factory functions
 cubestat/metrics/all_metrics.py           # Configuration-driven metric definitions
@@ -85,19 +77,19 @@ cubestat/metrics/all_metrics.py           # Configuration-driven metric definiti
 ### Output Modes
 **TUI Mode (default)**:
 - Interactive terminal interface with horizon charts
-- Uses TUITransformer for backward-compatible display names
+- Presenters transform standardized names to display-friendly format
 - Requires curses and 256-color terminal
 
 **CSV Export Mode (`--csv`)**:
 - Non-interactive streaming CSV output to stdout
-- Uses CSVTransformer to preserve standardized metric names  
+- Outputs standardized metric names directly for scripting/analysis  
 - Perfect for monitoring systems, scripts, and data analysis
 - Format: `timestamp,metric,value`
 - Example: `1750693377.593887,cpu.performance.0.core.0.utilization.percent,26.7591`
 
 ### Metric Creation
-**Unified Architecture** (current):
-- Single `Metric` class handles all metric functionality via composition
+**Simplified Architecture** (current):
+- Single `Metric` class composes collector and presenter directly
 - Factory functions in `metric_factory.py` create platform-specific instances
 - Configuration in `all_metrics.py` defines all metrics declaratively
 - No inheritance hierarchy or complex adapter patterns

@@ -13,9 +13,6 @@ class MockPresenter(BasePresenter):
     def key(cls) -> str:
         return "mock"
 
-    @classmethod
-    def collector_id(cls) -> str:
-        return "mock"
 
     def pre(self, title: str) -> Tuple[bool, str]:
         """Mock metric is always hidden (for testing only)."""
@@ -37,6 +34,16 @@ class MockPresenter(BasePresenter):
         pass
 
     def process_data(self, raw_data: Dict[str, Any]) -> Dict[str, float]:
-        """Process mock data from transformer."""
-        # Filter out metadata keys
-        return {k: v for k, v in raw_data.items() if not k.startswith("_")}
+        """Process mock data from collector."""
+        result = {}
+
+        # Handle standardized metric names from collector
+        if "mock.test.value.count" in raw_data:
+            result["mock"] = raw_data["mock.test.value.count"]
+
+        # Filter out metadata keys and pass through other values
+        for k, v in raw_data.items():
+            if not k.startswith("_") and k not in result:
+                result[k] = v
+
+        return result

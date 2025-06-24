@@ -24,9 +24,6 @@ class GPUPresenter(BasePresenter):
     def key(cls) -> str:
         return "gpu"
 
-    @classmethod
-    def collector_id(cls) -> str:
-        return "gpu"
 
     def configure(self, config) -> "GPUPresenter":
         """Configure GPU display mode."""
@@ -65,9 +62,60 @@ class GPUPresenter(BasePresenter):
         )
 
     def process_data(self, raw_data: Dict[str, Any]) -> Dict[str, float]:
-        """Process GPU data from transformer."""
-        # Extract GPU count for display filtering
-        self.n_gpus = raw_data.get("_n_gpus", 0)
-        
-        # Filter out metadata keys
-        return {k: v for k, v in raw_data.items() if not k.startswith("_")}
+        """Process GPU data from collector."""
+        result = {}
+        gpu_devices = {}
+        gpu_total_count = raw_data.get("gpu.total.count", 0)
+        gpu_total_util = raw_data.get("gpu.total.utilization.percent", 0.0)
+
+        # Collect all GPU metrics by vendor and device
+        for key, value in raw_data.items():
+            if key.startswith("gpu.") and key not in [
+                "gpu.total.count",
+                "gpu.total.utilization.percent",
+            ]:
+                parts = key.split(".")
+                if len(parts) >= 5:
+                    # gpu.vendor.device_id.metric.unit
+                    vendor = parts[1]
+                    device_id = parts[2]
+                    metric_type = parts[3]
+
+                    device_key = f"{vendor}.{device_id}"
+                    if device_key not in gpu_devices:
+                        gpu_devices[device_key] = {}
+
+                    if metric_type == "utilization":
+                        gpu_devices[device_key]["util"] = value
+                        gpu_devices[device_key]["vendor"] = vendor.upper()
+                        gpu_devices[device_key]["id"] = device_id
+                    elif metric_type == "memory":
+                        gpu_devices[device_key]["vram_used_percent"] = value
+
+        # Store GPU count for display filtering
+        self.n_gpus = gpu_total_count
+
+        # Add multi-GPU total if needed
+        if gpu_total_count > 1:
+            result[f"[{gpu_total_count}] Total GPU util %"] = gpu_total_util
+
+        # Output GPUs in order by vendor then device ID
+        for device_key in sorted(gpu_devices.keys()):
+            device = gpu_devices[device_key]
+            vendor = device.get("vendor", "")
+            device_id = device.get("id", "")
+
+            # Handle special case for macOS single GPU
+            if vendor == "APPLE":
+                if "util" in device:
+                    result["GPU util %"] = device["util"]
+            else:
+                # Multi-vendor format
+                if "util" in device:
+                    result[f"{vendor} GPU {device_id} util %"] = device["util"]
+                if "vram_used_percent" in device:
+                    result[f"{vendor} GPU {device_id} vram used %"] = device[
+                        "vram_used_percent"
+                    ]
+
+        return result
