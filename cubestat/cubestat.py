@@ -36,10 +36,22 @@ def main():
         "--csv", action="store_true", help="Export metrics in CSV format to stdout (bypasses TUI)"
     )
 
+    parser.add_argument(
+        "--http-port", type=int, help="Enable HTTP server on specified port to serve metrics as JSON"
+    )
+
+    parser.add_argument(
+        "--http-host", type=str, default="localhost", help="HTTP server host (default: localhost)"
+    )
+
     metrics_configure_argparse(parser)
     args = parser.parse_args()
 
     platform = get_platform(args.refresh_ms)
+
+    # Validate argument combinations
+    if args.csv and hasattr(args, 'http_port') and args.http_port:
+        parser.error("--csv and --http-port cannot be used together")
 
     if args.csv:
         csv_export(platform, args)

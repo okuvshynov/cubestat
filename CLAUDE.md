@@ -12,6 +12,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Format: `ruff format cubestat`
 - Run TUI mode: `python -m cubestat.cubestat`
 - Run CSV export: `python -m cubestat.cubestat --csv`
+- Run with HTTP server: `python -m cubestat.cubestat --http-port 8080`
+- Run with HTTP server on specific host: `python -m cubestat.cubestat --http-port 8080 --http-host 0.0.0.0`
 
 ## Code Style
 - File/function/variable naming: snake_case (e.g., `data_manager.py`, `get_metrics`)
@@ -86,6 +88,14 @@ cubestat/metrics/all_metrics.py           # Configuration-driven metric definiti
 - Perfect for monitoring systems, scripts, and data analysis
 - Format: `timestamp,metric,value`
 - Example: `1750693377.593887,cpu.performance.0.core.0.utilization.percent,26.7591`
+
+**HTTP Server Mode (`--http-port PORT`)**:
+- Enables HTTP server on specified port (requires TUI mode)
+- Serves JSON metrics at `/metrics` endpoint
+- Compatible with TUI mode - provides real-time access to same data displayed in terminal
+- Optional `--http-host HOST` (default: localhost, use 0.0.0.0 for external access)
+- Returns JSON with current values and historical data for each metric
+- Cannot be combined with `--csv` mode
 
 ### Metric Creation
 **Simplified Architecture** (current):

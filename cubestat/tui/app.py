@@ -2,9 +2,11 @@
 
 import logging
 from threading import Lock, Thread
+from typing import Optional
 
 from cubestat.common import DisplayMode
 from cubestat.data import DataManager
+from cubestat.http_server import HTTPMetricsServer
 from cubestat.metrics_registry import get_metrics
 from cubestat.tui.colors import ColorTheme, get_theme
 from cubestat.tui.input import InputHandler
@@ -39,6 +41,12 @@ class Cubestat:
 
         self.input_handler = InputHandler(self)
         self.data_manager = DataManager(args.buffer_size)
+        
+        # Initialize HTTP server if requested
+        self.http_server: Optional[HTTPMetricsServer] = None
+        if hasattr(args, 'http_port') and args.http_port:
+            self.http_server = HTTPMetricsServer(args.http_host, args.http_port, self.data_manager)
+            self.http_server.start()
 
     def do_read(self, context) -> None:
         updates = []
@@ -114,12 +122,20 @@ class Cubestat:
                 self.screen.render_time(base_ruler, ruler_times, row)
         self.screen.render_done()
 
+    def cleanup(self) -> None:
+        """Clean up resources when shutting down."""
+        if self.http_server:
+            self.http_server.stop()
+
     def loop(self, platform):
-        Thread(target=platform.loop, daemon=True, args=(self.do_read,)).start()
-        self.screen.stdscr.keypad(True)
-        while True:
-            self.render()
-            self.input_handler.handle_input()
+        try:
+            Thread(target=platform.loop, daemon=True, args=(self.do_read,)).start()
+            self.screen.stdscr.keypad(True)
+            while True:
+                self.render()
+                self.input_handler.handle_input()
+        finally:
+            self.cleanup()
 
 
 def start(stdscr, platform, args):
