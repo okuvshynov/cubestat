@@ -10,7 +10,7 @@ class DisplayMode(Enum):
     def __str__(self) -> str:
         return self.value
 
-    def next(self: T) -> T:
+    def next(self: T):
         values = list(self.__class__)
         return values[(values.index(self) + 1) % len(values)]
 
