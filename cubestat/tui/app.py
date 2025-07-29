@@ -45,7 +45,7 @@ class Cubestat:
         # Initialize HTTP server if requested
         self.http_server: Optional[HTTPMetricsServer] = None
         if hasattr(args, 'http_port') and args.http_port:
-            self.http_server = HTTPMetricsServer(args.http_host, args.http_port, self.data_manager)
+            self.http_server = HTTPMetricsServer(args.http_host, args.http_port, self.data_manager, self.refresh_ms)
             self.http_server.start()
 
     def do_read(self, context) -> None:

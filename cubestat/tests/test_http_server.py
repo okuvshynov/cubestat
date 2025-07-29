@@ -27,7 +27,7 @@ class TestHTTPServer(unittest.TestCase):
 
     def test_server_starts_and_stops(self):
         """Test that HTTP server can start and stop cleanly."""
-        self.server = HTTPMetricsServer(self.host, 8999, self.data_manager)
+        self.server = HTTPMetricsServer(self.host, 8999, self.data_manager, 1000)
         
         # Server should start without errors
         self.server.start()
@@ -38,7 +38,7 @@ class TestHTTPServer(unittest.TestCase):
 
     def test_metrics_endpoint_empty_data(self):
         """Test /metrics endpoint with no data."""
-        self.server = HTTPMetricsServer(self.host, 8998, self.data_manager)
+        self.server = HTTPMetricsServer(self.host, 8998, self.data_manager, 1000)
         self.server.start()
         time.sleep(0.1)
         
@@ -51,6 +51,8 @@ class TestHTTPServer(unittest.TestCase):
                 data = json.loads(response.read().decode('utf-8'))
                 self.assertIn('metrics', data)
                 self.assertEqual(data['metrics'], {})
+                self.assertIn('metadata', data)
+                self.assertEqual(data['metadata']['refresh_ms'], 1000)
         finally:
             self.server.stop()
 
@@ -64,7 +66,7 @@ class TestHTTPServer(unittest.TestCase):
         ]
         self.data_manager.update(test_updates)
         
-        self.server = HTTPMetricsServer(self.host, 8997, self.data_manager)
+        self.server = HTTPMetricsServer(self.host, 8997, self.data_manager, 1000)
         self.server.start()
         time.sleep(0.1)
         
@@ -97,7 +99,7 @@ class TestHTTPServer(unittest.TestCase):
 
     def test_404_for_unknown_endpoint(self):
         """Test that unknown endpoints return 404."""
-        self.server = HTTPMetricsServer(self.host, 8996, self.data_manager)
+        self.server = HTTPMetricsServer(self.host, 8996, self.data_manager, 1000)
         self.server.start()
         time.sleep(0.1)
         
@@ -111,7 +113,7 @@ class TestHTTPServer(unittest.TestCase):
 
     def test_cors_headers(self):
         """Test that CORS headers are set correctly."""
-        self.server = HTTPMetricsServer(self.host, 8995, self.data_manager)
+        self.server = HTTPMetricsServer(self.host, 8995, self.data_manager, 1000)
         self.server.start()
         time.sleep(0.1)
         
@@ -119,6 +121,29 @@ class TestHTTPServer(unittest.TestCase):
             url = f"http://{self.host}:8995/metrics"
             with urllib.request.urlopen(url) as response:
                 self.assertEqual(response.headers.get('Access-Control-Allow-Origin'), '*')
+        finally:
+            self.server.stop()
+
+    def test_metadata_in_response(self):
+        """Test that metadata with refresh_ms is included in response."""
+        refresh_ms = 2500
+        self.server = HTTPMetricsServer(self.host, 8994, self.data_manager, refresh_ms)
+        self.server.start()
+        time.sleep(0.1)
+        
+        try:
+            url = f"http://{self.host}:8994/metrics"
+            with urllib.request.urlopen(url) as response:
+                data = json.loads(response.read().decode('utf-8'))
+                
+                # Check metadata exists
+                self.assertIn('metadata', data)
+                metadata = data['metadata']
+                
+                # Check refresh_ms in metadata
+                self.assertIn('refresh_ms', metadata)
+                self.assertEqual(metadata['refresh_ms'], refresh_ms)
+                
         finally:
             self.server.stop()
 

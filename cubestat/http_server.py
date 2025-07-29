@@ -10,8 +10,9 @@ from typing import Any, Dict, Optional
 class MetricsHandler(BaseHTTPRequestHandler):
     """HTTP request handler for serving metrics data."""
 
-    def __init__(self, data_manager, *args, **kwargs):
+    def __init__(self, data_manager, refresh_ms, *args, **kwargs):
         self.data_manager = data_manager
+        self.refresh_ms = refresh_ms
         super().__init__(*args, **kwargs)
 
     def do_GET(self) -> None:
@@ -43,7 +44,10 @@ class MetricsHandler(BaseHTTPRequestHandler):
 
             response_data = {
                 'timestamp': None,  # Will be filled by the platform context if needed
-                'metrics': metrics_data
+                'metrics': metrics_data,
+                'metadata': {
+                    'refresh_ms': self.refresh_ms
+                }
             }
 
             self._send_json_response(response_data)
@@ -83,25 +87,27 @@ class MetricsHandler(BaseHTTPRequestHandler):
 class HTTPMetricsServer:
     """HTTP server for serving cubestat metrics."""
 
-    def __init__(self, host: str, port: int, data_manager) -> None:
+    def __init__(self, host: str, port: int, data_manager, refresh_ms: int) -> None:
         """Initialize HTTP server.
         
         Args:
             host: Host to bind to
             port: Port to listen on
             data_manager: DataManager instance containing metrics data
+            refresh_ms: Refresh interval in milliseconds
         """
         self.host = host
         self.port = port
         self.data_manager = data_manager
+        self.refresh_ms = refresh_ms
         self.server: Optional[HTTPServer] = None
         self.server_thread: Optional[threading.Thread] = None
 
     def start(self) -> None:
         """Start the HTTP server in a separate thread."""
         try:
-            # Create handler class with data_manager bound
-            handler_class = lambda *args, **kwargs: MetricsHandler(self.data_manager, *args, **kwargs)
+            # Create handler class with data_manager and refresh_ms bound
+            handler_class = lambda *args, **kwargs: MetricsHandler(self.data_manager, self.refresh_ms, *args, **kwargs)
             
             self.server = HTTPServer((self.host, self.port), handler_class)
             self.server_thread = threading.Thread(target=self.server.serve_forever, daemon=True)
