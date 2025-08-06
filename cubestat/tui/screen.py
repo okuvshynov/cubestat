@@ -80,3 +80,20 @@ class Screen:
 
     def chart_width(self, indent):
         return self.cols - 2 * len(self.spacing) - len(indent) - 2
+
+    def render_status(self, http_endpoint, refresh_ms, row):
+        left_status = f"Endpoint: {http_endpoint}" if http_endpoint else ""
+        right_status = f"Update every {refresh_ms}ms "
+        
+        if row >= self.rows:
+            return
+            
+        status_line = " " * self.cols
+        
+        if left_status:
+            status_line = left_status + status_line[len(left_status):]
+        
+        if len(right_status) < self.cols:
+            status_line = status_line[:-len(right_status)] + right_status
+        
+        self.write_string(row, 0, status_line, curses.A_REVERSE)

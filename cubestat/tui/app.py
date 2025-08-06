@@ -120,6 +120,13 @@ class Cubestat:
                     (i, f"-{(self.step_s * (i + self.h_shift)):.2f}s") for i in ruler_indices
                 ]
                 self.screen.render_time(base_ruler, ruler_times, row)
+                row += 2
+            
+            # Render status line at the bottom
+            http_endpoint = None
+            if self.http_server:
+                http_endpoint = f"http://{self.http_server.host}:{self.http_server.port}/metrics"
+            self.screen.render_status(http_endpoint, self.refresh_ms, self.screen.rows - 1)
         self.screen.render_done()
 
     def cleanup(self) -> None:
