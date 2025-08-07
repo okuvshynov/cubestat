@@ -14,6 +14,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Run CSV export: `python -m cubestat.cubestat --csv`
 - Run with HTTP server: `python -m cubestat.cubestat --http-port 8080`
 - Run with HTTP server on specific host: `python -m cubestat.cubestat --http-port 8080 --http-host 0.0.0.0`
+- Run with Prometheus metrics export: `python -m cubestat.cubestat --prometheus-port 9090`
+- Run with both HTTP and Prometheus: `python -m cubestat.cubestat --http-port 8080 --prometheus-port 9090`
 
 ## Code Style
 - File/function/variable naming: snake_case (e.g., `data_manager.py`, `get_metrics`)
@@ -96,6 +98,14 @@ cubestat/metrics/all_metrics.py           # Configuration-driven metric definiti
 - Optional `--http-host HOST` (default: localhost, use 0.0.0.0 for external access)
 - Returns JSON with current values and historical data for each metric
 - Cannot be combined with `--csv` mode
+
+**Prometheus Metrics Mode (`--prometheus-port PORT`)**:
+- Enables Prometheus metrics exporter on specified port
+- Serves metrics in Prometheus format at `/metrics` endpoint
+- Compatible with TUI mode and HTTP server mode
+- Metrics include labels for multi-dimensional data (e.g., CPU core, cluster type)
+- Cannot be combined with `--csv` mode
+- Currently supports ANE (accelerator) and CPU metrics with proper labeling
 
 ### Metric Creation
 **Simplified Architecture** (current):

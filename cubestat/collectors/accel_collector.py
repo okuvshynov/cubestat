@@ -1,5 +1,7 @@
 import subprocess
-from typing import Any, Dict
+from typing import Any, Dict, Optional
+
+from prometheus_client import Gauge
 
 from cubestat.collectors.base_collector import BaseCollector
 from cubestat.metrics_registry import collector_registry
@@ -19,6 +21,22 @@ class MacOSAccelCollector(AccelCollector):
 
     def __init__(self):
         self.ane_scaler = self._get_ane_scaler()
+        
+        # Initialize Prometheus metrics
+        self.ane_utilization_gauge: Optional[Gauge] = None
+        self._init_prometheus_metrics()
+    
+    def _init_prometheus_metrics(self) -> None:
+        """Initialize Prometheus Gauge metrics for ANE monitoring."""
+        try:
+            self.ane_utilization_gauge = Gauge(
+                'ane_usage_percent',
+                'Apple Neural Engine (ANE) utilization percentage'
+            )
+        except Exception:
+            # Gauge might already exist if collector is re-initialized
+            # For now, we'll just set it to None and handle it gracefully
+            self.ane_utilization_gauge = None
 
     def _get_ane_scaler(self) -> float:
         """Determine ANE power scaler based on Apple Silicon chip model."""
@@ -52,5 +70,9 @@ class MacOSAccelCollector(AccelCollector):
 
         # Calculate ANE utilization as percentage
         ane_util_percent = 100.0 * ane_power / self.ane_scaler
+        
+        # Update Prometheus gauge (no-op for now, but sets the value)
+        if self.ane_utilization_gauge is not None:
+            self.ane_utilization_gauge.set(ane_util_percent)
 
         return {"accel.ane.utilization.percent": ane_util_percent}
