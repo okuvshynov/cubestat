@@ -1,6 +1,7 @@
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 import psutil
+from prometheus_client import Gauge
 
 from cubestat.collectors.base_collector import BaseCollector
 from cubestat.common import RateReader
@@ -19,12 +20,43 @@ class NetworkCollector(BaseCollector):
 class MacOSNetworkCollector(NetworkCollector):
     """macOS-specific network collector using system context."""
 
+    def __init__(self):
+        # Initialize Prometheus metrics
+        self.network_rx_gauge: Optional[Gauge] = None
+        self.network_tx_gauge: Optional[Gauge] = None
+        self._init_prometheus_metrics()
+    
+    def _init_prometheus_metrics(self) -> None:
+        """Initialize Prometheus Gauge metrics for network monitoring."""
+        try:
+            self.network_rx_gauge = Gauge(
+                'network_receive_bytes_per_second',
+                'Network receive throughput in bytes per second'
+            )
+            self.network_tx_gauge = Gauge(
+                'network_transmit_bytes_per_second',
+                'Network transmit throughput in bytes per second'
+            )
+        except Exception:
+            # Gauges might already exist if collector is re-initialized
+            self.network_rx_gauge = None
+            self.network_tx_gauge = None
+
     def collect(self, context: Dict[str, Any]) -> Dict[str, float]:
         """Collect network rates from macOS system context."""
         network_data = context.get("network", {})
+        rx_bytes_per_sec = network_data.get("ibyte_rate", 0.0)
+        tx_bytes_per_sec = network_data.get("obyte_rate", 0.0)
+        
+        # Update Prometheus gauges
+        if self.network_rx_gauge is not None:
+            self.network_rx_gauge.set(rx_bytes_per_sec)
+        if self.network_tx_gauge is not None:
+            self.network_tx_gauge.set(tx_bytes_per_sec)
+        
         return {
-            "network.total.rx.bytes_per_sec": network_data.get("ibyte_rate", 0.0),
-            "network.total.tx.bytes_per_sec": network_data.get("obyte_rate", 0.0),
+            "network.total.rx.bytes_per_sec": rx_bytes_per_sec,
+            "network.total.tx.bytes_per_sec": tx_bytes_per_sec,
         }
 
 
@@ -33,7 +65,27 @@ class LinuxNetworkCollector(NetworkCollector):
     """Linux-specific network collector using psutil with rate calculation."""
 
     def __init__(self):
-        self.rate_reader = None
+        self.rate_reader: Optional[RateReader] = None
+        # Initialize Prometheus metrics
+        self.network_rx_gauge: Optional[Gauge] = None
+        self.network_tx_gauge: Optional[Gauge] = None
+        self._init_prometheus_metrics()
+    
+    def _init_prometheus_metrics(self) -> None:
+        """Initialize Prometheus Gauge metrics for network monitoring."""
+        try:
+            self.network_rx_gauge = Gauge(
+                'network_receive_bytes_per_second',
+                'Network receive throughput in bytes per second'
+            )
+            self.network_tx_gauge = Gauge(
+                'network_transmit_bytes_per_second',
+                'Network transmit throughput in bytes per second'
+            )
+        except Exception:
+            # Gauges might already exist if collector is re-initialized
+            self.network_rx_gauge = None
+            self.network_tx_gauge = None
 
     def configure(self, config) -> "LinuxNetworkCollector":
         # Handle both Dict and Namespace objects
@@ -51,7 +103,16 @@ class LinuxNetworkCollector(NetworkCollector):
             self.rate_reader = RateReader(200)
 
         net_io = psutil.net_io_counters()
+        rx_bytes_per_sec = self.rate_reader.next("network_rx", net_io.bytes_recv)
+        tx_bytes_per_sec = self.rate_reader.next("network_tx", net_io.bytes_sent)
+        
+        # Update Prometheus gauges
+        if self.network_rx_gauge is not None:
+            self.network_rx_gauge.set(rx_bytes_per_sec)
+        if self.network_tx_gauge is not None:
+            self.network_tx_gauge.set(tx_bytes_per_sec)
+        
         return {
-            "network.total.rx.bytes_per_sec": self.rate_reader.next("network_rx", net_io.bytes_recv),
-            "network.total.tx.bytes_per_sec": self.rate_reader.next("network_tx", net_io.bytes_sent),
+            "network.total.rx.bytes_per_sec": rx_bytes_per_sec,
+            "network.total.tx.bytes_per_sec": tx_bytes_per_sec,
         }
