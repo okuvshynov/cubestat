@@ -41,6 +41,8 @@ All metrics follow the simplified collector/presenter architecture with standard
 - Platform-specific implementations (e.g., `MacOSCPUCollector`, `LinuxCPUCollector`)
 - **Return standardized metric names**: `component.type.instance.attribute.unit`
 - Handle platform differences (psutil vs system context vs /proc files)
+- **Double-write pattern**: Update both return dict and Prometheus gauges simultaneously
+- Initialize Prometheus `Gauge` metrics in constructor with appropriate labels
 
 **Presenters** (`cubestat/presenters/`):
 - Handle data transformation and UI concerns: display modes, formatting, filtering
@@ -60,6 +62,10 @@ Collector → Standardized Names → Presenter → Display
     ↓              ↓                  ↓         ↓
 Raw System   component.type.     Process &   TUI Chart
    Data      instance.attr.unit   Format     CSV Output
+    ↓
+Prometheus Gauges (double-write)
+    ↓
+HTTP /metrics endpoint
 ```
 
 ### Current Architecture Structure
@@ -103,9 +109,17 @@ cubestat/metrics/all_metrics.py           # Configuration-driven metric definiti
 - Enables Prometheus metrics exporter on specified port
 - Serves metrics in Prometheus format at `/metrics` endpoint
 - Compatible with TUI mode and HTTP server mode
-- Metrics include labels for multi-dimensional data (e.g., CPU core, cluster type)
+- Metrics include labels for multi-dimensional data (e.g., CPU core, cluster type, GPU vendor)
 - Cannot be combined with `--csv` mode
-- Currently supports ANE (accelerator) and CPU metrics with proper labeling
+- **Complete collector coverage**: All system collectors export Prometheus metrics
+  - **ANE**: `ane_usage_percent` - Apple Neural Engine utilization
+  - **CPU**: `cpu_usage_percent` - Per-core utilization with cluster labels
+  - **Disk**: `disk_read_bytes_per_second`, `disk_write_bytes_per_second` - I/O throughput
+  - **GPU**: `gpu_usage_percent`, `gpu_memory_usage_percent` - Multi-vendor with labels
+  - **Memory**: `memory_usage_percent`, `memory_used_bytes`, platform-specific metrics
+  - **Network**: `network_receive_bytes_per_second`, `network_transmit_bytes_per_second`
+  - **Power**: `power_consumption_total_watts`, `power_consumption_watts` by component
+  - **Swap**: `swap_used_bytes` - Virtual memory usage
 
 ### Metric Creation
 **Simplified Architecture** (current):

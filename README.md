@@ -40,27 +40,40 @@ or
 ## Usage
 
 ```
-usage: cubestat [-h] [--refresh_ms REFRESH_MS] [--buffer_size BUFFER_SIZE] [--view {off,one,all}] [--csv] [--cpu {all,by_cluster,by_core}] [--gpu {collapsed,load_only,load_and_vram}] [--swap {show,hide}] [--network {show,hide}] [--disk {show,hide}]
-                [--power {combined,all,off}]
+usage: cubestat [-h] [--refresh_ms REFRESH_MS] [--buffer_size BUFFER_SIZE]
+                [--view {off,one,all}] [--csv] [--http-port HTTP_PORT]
+                [--http-host HTTP_HOST] [--prometheus-port PROMETHEUS_PORT]
+                [--cpu {all,by_cluster,by_core}] [--network {show,hide}]
+                [--gpu {collapsed,load_only,load_and_vram}]
+                [--disk {show,hide}] [--swap {show,hide}]
+                [--memory {percent,all}] [--power {combined,all,off}]
 
 options:
   -h, --help            show this help message and exit
   --refresh_ms REFRESH_MS, -i REFRESH_MS
-                        Update frequency, milliseconds
+                        Update frequency (milliseconds)
   --buffer_size BUFFER_SIZE
-                        How many datapoints to store. Having it larger than screen width is a good idea as terminal window can be resized
-  --view {off,one,all}  legend/values/time mode. Can be toggled by pressing v.
+                        Number of datapoints to store. Consider larger values for window resizing.
+  --view {off,one,all}  Display mode (legend, values, time). Hotkey: "v".
   --csv                 Export metrics in CSV format to stdout (bypasses TUI)
+  --http-port HTTP_PORT
+                        Enable HTTP server on specified port to serve metrics as JSON
+  --http-host HTTP_HOST
+                        HTTP server host (default: localhost)
+  --prometheus-port PROMETHEUS_PORT
+                        Enable Prometheus metrics exporter on specified port
   --cpu {all,by_cluster,by_core}
-                        CPU mode - showing all cores, only cumulative by cluster or both. Can be toggled by pressing c.
-  --gpu {collapsed,load_only,load_and_vram}
-                        GPU mode - hidden, showing all GPUs load, or showing load and vram usage. Can be toggled by pressing g.
-  --swap {show,hide}    Show swap . Can be toggled by pressing s.
+                        Select CPU mode: all cores, cumulative by cluster, or both. Hotkey: "c".
   --network {show,hide}
-                        Show network io. Can be toggled by pressing n.
-  --disk {show,hide}    Show disk read/write. Can be toggled by pressing d.
+                        Show network io. Hotkey: "n"
+  --gpu {collapsed,load_only,load_and_vram}
+                        GPU mode - hidden, load, or load and vram usage. Hotkey: "g"
+  --disk {show,hide}    Show disk read/write rate. Hotkey: "d"
+  --swap {show,hide}    swap show/hide. Hotkey: "s"
+  --memory {percent,all}
+                        Select memory mode: percent only or all details. Hotkey: "m".
   --power {combined,all,off}
-                        Power mode - off, showing breakdown CPU/GPU/ANE load, or showing combined usage. Can be toggled by pressing p.
+                        Power: hidden, CPU/GPU/ANE breakdown, or combined usage. Hotkey: "p"
 ```
 
 Interactive commands:
@@ -134,6 +147,78 @@ cubestat --csv | grep "cpu.*utilization" | awk -F, '{sum+=$3; count++} END {prin
 # Monitor memory usage
 cubestat --csv | grep "memory.system.total.used.percent" | tail -f
 ```
+
+## Prometheus Metrics Export
+
+cubestat provides native Prometheus metrics export for seamless integration with Prometheus monitoring systems:
+
+```bash
+# Start with Prometheus metrics on port 9090
+cubestat --prometheus-port 9090
+
+# Combine with TUI and HTTP JSON endpoint
+cubestat --prometheus-port 9090 --http-port 8080
+
+# Custom refresh rate
+cubestat --prometheus-port 9090 --refresh_ms 500
+```
+
+### Prometheus Metrics Available
+
+All system collectors export metrics in Prometheus format at `http://localhost:PORT/metrics`:
+
+- **CPU**: `cpu_usage_percent` with labels for core, cluster, and type (performance/efficiency)
+- **Memory**: `memory_usage_percent`, `memory_used_bytes`, platform-specific metrics
+- **GPU**: `gpu_usage_percent`, `gpu_memory_usage_percent` with vendor and GPU ID labels
+- **Disk I/O**: `disk_read_bytes_per_second`, `disk_write_bytes_per_second`
+- **Network**: `network_receive_bytes_per_second`, `network_transmit_bytes_per_second`
+- **Power**: `power_consumption_total_watts`, `power_consumption_watts` by component
+- **Swap**: `swap_used_bytes`
+- **ANE**: `ane_usage_percent` (Apple Neural Engine on Apple Silicon)
+
+### Prometheus Configuration Example
+
+```yaml
+# prometheus.yml
+scrape_configs:
+  - job_name: 'cubestat'
+    static_configs:
+      - targets: ['localhost:9090']
+    scrape_interval: 1s
+```
+
+### Example Prometheus Queries
+
+```promql
+# Average CPU usage across all cores
+avg(cpu_usage_percent)
+
+# Memory usage percentage
+memory_usage_percent
+
+# Network throughput
+rate(network_receive_bytes_per_second[5m])
+
+# GPU usage by vendor
+gpu_usage_percent{vendor="nvidia"}
+
+# Power consumption by component
+sum(power_consumption_watts) by (component)
+```
+
+## HTTP JSON API
+
+cubestat can also serve metrics via HTTP JSON API for programmatic access:
+
+```bash
+# Start HTTP server on port 8080
+cubestat --http-port 8080
+
+# Access metrics
+curl http://localhost:8080/metrics
+```
+
+The JSON API provides current values and historical data for all metrics, perfect for custom dashboards and monitoring solutions.
 
 ## Notes and examples
 
