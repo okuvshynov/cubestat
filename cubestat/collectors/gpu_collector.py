@@ -2,7 +2,9 @@ import logging
 import subprocess
 from abc import ABC, abstractmethod
 from importlib.util import find_spec
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
+
+from prometheus_client import Gauge
 
 from cubestat.collectors.base_collector import BaseCollector
 from cubestat.metrics_registry import collector_registry
@@ -263,6 +265,11 @@ class LinuxGPUCollector(GPUCollector):
         self.gpu_handlers: List[GPUHandler] = []
         self.n_gpus = 0
         self.gpu_counts: Dict[str, int] = {}
+        
+        # Initialize Prometheus metrics
+        self.gpu_utilization_gauge: Optional[Gauge] = None
+        self.gpu_memory_gauge: Optional[Gauge] = None
+        self._init_prometheus_metrics()
 
         # Try to initialize each GPU type
         for handler_class in [NVIDIAGPUHandler, AMDGPUHandler]:
@@ -277,6 +284,24 @@ class LinuxGPUCollector(GPUCollector):
                         logger.info(f"Detected {count} {handler.get_vendor_prefix()} GPU(s)")
             except Exception as e:
                 logger.warning(f"Failed to initialize {handler_class.__name__}: {str(e)}")
+    
+    def _init_prometheus_metrics(self) -> None:
+        """Initialize Prometheus Gauge metrics for GPU monitoring."""
+        try:
+            self.gpu_utilization_gauge = Gauge(
+                'gpu_usage_percent',
+                'GPU utilization percentage',
+                labelnames=['vendor', 'gpu_id']
+            )
+            self.gpu_memory_gauge = Gauge(
+                'gpu_memory_usage_percent',
+                'GPU memory usage percentage',
+                labelnames=['vendor', 'gpu_id']
+            )
+        except Exception:
+            # Gauges might already exist if collector is re-initialized
+            self.gpu_utilization_gauge = None
+            self.gpu_memory_gauge = None
 
     def collect(self, context: Dict[str, Any]) -> Dict[str, float]:
         """Collect GPU metrics from all available vendors."""
@@ -288,12 +313,34 @@ class LinuxGPUCollector(GPUCollector):
         for handler in self.gpu_handlers:
             handler_metrics = handler.read_metrics()
             result.update(handler_metrics)
+            
+            # Extract vendor name for Prometheus labels
+            vendor = handler.get_vendor_prefix().lower()
 
-            # Sum up utilization for total calculation
+            # Update Prometheus gauges and sum up for totals
             for key, value in handler_metrics.items():
                 if key.endswith(".utilization.percent"):
+                    # Extract GPU ID from key (e.g., "gpu.nvidia.0.utilization.percent" -> "0")
+                    parts = key.split('.')
+                    if len(parts) >= 3:
+                        gpu_id = parts[2]
+                        if self.gpu_utilization_gauge is not None:
+                            self.gpu_utilization_gauge.labels(
+                                vendor=vendor,
+                                gpu_id=gpu_id
+                            ).set(value)
                     total_util += value
                     gpu_count += 1
+                elif key.endswith(".memory.used.percent"):
+                    # Extract GPU ID for memory metrics
+                    parts = key.split('.')
+                    if len(parts) >= 3:
+                        gpu_id = parts[2]
+                        if self.gpu_memory_gauge is not None:
+                            self.gpu_memory_gauge.labels(
+                                vendor=vendor,
+                                gpu_id=gpu_id
+                            ).set(value)
 
         # Add standardized metadata
         result["gpu.total.count"] = self.n_gpus
@@ -309,6 +356,22 @@ class MacOSGPUCollector(GPUCollector):
 
     def __init__(self):
         self.n_gpus = 1  # macOS always reports 1 GPU
+        
+        # Initialize Prometheus metrics
+        self.gpu_utilization_gauge: Optional[Gauge] = None
+        self._init_prometheus_metrics()
+    
+    def _init_prometheus_metrics(self) -> None:
+        """Initialize Prometheus Gauge metrics for GPU monitoring."""
+        try:
+            self.gpu_utilization_gauge = Gauge(
+                'gpu_usage_percent',
+                'GPU utilization percentage',
+                labelnames=['vendor', 'gpu_id']
+            )
+        except Exception:
+            # Gauge might already exist if collector is re-initialized
+            self.gpu_utilization_gauge = None
 
     def collect(self, context: Dict[str, Any]) -> Dict[str, float]:
         """Collect macOS GPU metrics from context."""
@@ -326,6 +389,13 @@ class MacOSGPUCollector(GPUCollector):
             result["gpu.apple.0.utilization.percent"] = utilization
             result["gpu.total.count"] = self.n_gpus
             result["gpu.total.utilization.percent"] = utilization
+            
+            # Update Prometheus gauge
+            if self.gpu_utilization_gauge is not None:
+                self.gpu_utilization_gauge.labels(
+                    vendor="apple",
+                    gpu_id="0"
+                ).set(utilization)
         except KeyError as e:
             logger.warning(f"Missing key in GPU data: {str(e)}")
             result["gpu.total.count"] = 0
