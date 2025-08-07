@@ -1,7 +1,9 @@
 import logging
 import re
 import subprocess
-from typing import Any, Dict
+from typing import Any, Dict, Optional
+
+from prometheus_client import Gauge
 
 from cubestat.collectors.base_collector import BaseCollector
 from cubestat.metrics_registry import collector_registry
@@ -18,6 +20,22 @@ class SwapCollector(BaseCollector):
 @collector_registry.register("darwin")
 class MacOSSwapCollector(SwapCollector):
     """macOS-specific swap collector using sysctl."""
+
+    def __init__(self):
+        # Initialize Prometheus metrics
+        self.swap_used_bytes_gauge: Optional[Gauge] = None
+        self._init_prometheus_metrics()
+    
+    def _init_prometheus_metrics(self) -> None:
+        """Initialize Prometheus Gauge metrics for swap monitoring."""
+        try:
+            self.swap_used_bytes_gauge = Gauge(
+                'swap_used_bytes',
+                'Swap space used in bytes'
+            )
+        except Exception:
+            # Gauge might already exist if collector is re-initialized
+            self.swap_used_bytes_gauge = None
 
     def _parse_memstr(self, size_str: str) -> float:
         """Parse memory size string (e.g., '1.5G', '512M') to bytes."""
@@ -46,22 +64,53 @@ class MacOSSwapCollector(SwapCollector):
             if len(tokens) < 8:
                 raise IndexError("Invalid sysctl output")
             
-            return {"swap.total.used.bytes": self._parse_memstr(tokens[7])}
+            used_bytes = self._parse_memstr(tokens[7])
+            
+            # Update Prometheus gauge
+            if self.swap_used_bytes_gauge is not None:
+                self.swap_used_bytes_gauge.set(used_bytes)
+            
+            return {"swap.total.used.bytes": used_bytes}
             
         except subprocess.CalledProcessError as e:
             logging.error(f"sysctl command failed: {e}")
+            # Update gauge with zero on error
+            if self.swap_used_bytes_gauge is not None:
+                self.swap_used_bytes_gauge.set(0.0)
             return {"swap.total.used.bytes": 0.0}
         except (IndexError, ValueError) as e:
             logging.error(f"Invalid sysctl output: {e}")
+            # Update gauge with zero on error
+            if self.swap_used_bytes_gauge is not None:
+                self.swap_used_bytes_gauge.set(0.0)
             return {"swap.total.used.bytes": 0.0}
         except Exception as e:
             logging.error(f"Unexpected error collecting swap data: {e}")
+            # Update gauge with zero on error
+            if self.swap_used_bytes_gauge is not None:
+                self.swap_used_bytes_gauge.set(0.0)
             return {"swap.total.used.bytes": 0.0}
 
 
 @collector_registry.register("linux")
 class LinuxSwapCollector(SwapCollector):
     """Linux-specific swap collector reading /proc/meminfo."""
+
+    def __init__(self):
+        # Initialize Prometheus metrics
+        self.swap_used_bytes_gauge: Optional[Gauge] = None
+        self._init_prometheus_metrics()
+    
+    def _init_prometheus_metrics(self) -> None:
+        """Initialize Prometheus Gauge metrics for swap monitoring."""
+        try:
+            self.swap_used_bytes_gauge = Gauge(
+                'swap_used_bytes',
+                'Swap space used in bytes'
+            )
+        except Exception:
+            # Gauge might already exist if collector is re-initialized
+            self.swap_used_bytes_gauge = None
 
     def collect(self, context: Dict[str, Any]) -> Dict[str, float]:
         """Collect swap usage from /proc/meminfo."""
@@ -80,11 +129,22 @@ class LinuxSwapCollector(SwapCollector):
 
             # Convert from KB to bytes and calculate used
             used_bytes = 1024 * float(swap_total - swap_free)
+            
+            # Update Prometheus gauge
+            if self.swap_used_bytes_gauge is not None:
+                self.swap_used_bytes_gauge.set(used_bytes)
+            
             return {"swap.total.used.bytes": used_bytes}
             
         except (OSError, IOError, ValueError) as e:
             logging.error(f"Error reading swap data: {e}")
+            # Update gauge with zero on error
+            if self.swap_used_bytes_gauge is not None:
+                self.swap_used_bytes_gauge.set(0.0)
             return {"swap.total.used.bytes": 0.0}
         except Exception as e:
             logging.error(f"Unexpected error collecting swap data: {e}")
+            # Update gauge with zero on error
+            if self.swap_used_bytes_gauge is not None:
+                self.swap_used_bytes_gauge.set(0.0)
             return {"swap.total.used.bytes": 0.0}
