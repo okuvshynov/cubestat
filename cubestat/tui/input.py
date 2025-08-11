@@ -44,7 +44,11 @@ class InputHandler:
         for k, metric in self.hotkeys:
             if key == ord(k):
                 with self.horizon.lock:
-                    metric.mode = metric.mode.next()
+                    # Check if metric has toggle_visibility method (for visibility toggle)
+                    if hasattr(metric, 'toggle_visibility'):
+                        metric.toggle_visibility()
+                    else:
+                        metric.mode = metric.mode.next()
                     self.horizon.settings_changed = True
             if key == ord(k.upper()):
                 with self.horizon.lock:

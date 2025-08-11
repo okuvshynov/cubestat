@@ -19,13 +19,13 @@ class AccelPresenter(BasePresenter):
 
 
     def configure(self, config) -> "AccelPresenter":
-        # ANE metric doesn't have configurable modes, always shown
-        # But maintain consistent interface
-        self.mode = SimpleMode.show
+        self.mode = getattr(config, "ane", SimpleMode.show)
         return self
 
     def pre(self, _title: str) -> Tuple[bool, str]:
-        """ANE metrics are always shown without indentation."""
+        """Return visibility and indentation for ANE metrics."""
+        if self.mode == SimpleMode.hide:
+            return False, ""
         return True, ""
 
     def format(
@@ -35,13 +35,18 @@ class AccelPresenter(BasePresenter):
         return 100.0, [f"{values[i]:3.0f}%" for i in idxs]
 
     def hotkey(self) -> Optional[str]:
-        """ANE metric doesn't have a hotkey."""
-        return None
+        """Return the hotkey for toggling ANE visibility."""
+        return 'a'
 
     @classmethod
     def configure_argparse(cls, parser: ArgumentParser) -> None:
-        """ANE metric doesn't have command-line arguments."""
-        pass
+        parser.add_argument(
+            "--ane",
+            type=SimpleMode,
+            default=SimpleMode.show,
+            choices=list(SimpleMode),
+            help='Show Apple Neural Engine utilization. Hotkey: "a"',
+        )
 
     def process_data(self, raw_data: Dict[str, Any]) -> Dict[str, float]:
         """Convert collector data to display format."""
@@ -52,3 +57,7 @@ class AccelPresenter(BasePresenter):
             result["ANE util %"] = raw_data["accel.ane.utilization.percent"]
 
         return result
+
+    def toggle_visibility(self) -> None:
+        """Toggle the visibility of the ANE metric."""
+        self.visible = not self.visible
